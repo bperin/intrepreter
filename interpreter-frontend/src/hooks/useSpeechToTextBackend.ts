@@ -5,8 +5,29 @@ export type SttStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | '
 // Define the type for the new message callback function
 // Adjust the 'any' to match your actual message object structure from the backend
 type OnNewMessage = (message: any) => void; 
-// Define the type for the TTS audio callback function
-type OnTtsAudio = (audioBase64: string) => void;
+// Define the type for the TTS audio callback function - EXPECTS ArrayBuffer
+type OnTtsAudio = (audioBuffer: ArrayBuffer) => void;
+
+// --- Helper: Convert Base64 string to ArrayBuffer --- 
+// (Moved here or import if defined elsewhere)
+const base64ToArrayBuffer = (base64: string): ArrayBuffer | null => {
+    console.log('[Base64Decode Hook] Attempting to decode base64 string (first 50 chars):', base64.substring(0, 50));
+    try {
+        const base64String = base64.split(",")[1] || base64;
+        const binaryString = window.atob(base64String);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        console.log('[Base64Decode Hook] Decoded successfully. Byte length:', bytes.buffer.byteLength);
+        return bytes.buffer;
+    } catch (error) {
+        console.error("[Base64Decode Hook] Error decoding Base64 string:", error);
+        return null;
+    }
+};
+// ---------------------------------------------------
 
 interface SpeechToTextResult {
   status: SttStatus;
@@ -26,12 +47,12 @@ interface SpeechToTextResult {
  * 
  * @param conversationId The ID of the current conversation.
  * @param onNewMessage Callback function triggered when the backend broadcasts a newly saved message.
- * @param onTtsAudio Callback function triggered when the backend sends synthesized TTS audio.
+ * @param onTtsAudio Callback function triggered with the decoded TTS audio ArrayBuffer.
  */
 export const useSpeechToTextBackend = (
   conversationId: string | null,
   onNewMessage?: OnNewMessage, 
-  onTtsAudio?: OnTtsAudio // Add new callback parameter
+  onTtsAudio?: OnTtsAudio // Expects (audioBuffer: ArrayBuffer) => void
 ): SpeechToTextResult => {
   console.log(`[useSpeechToTextBackend] Hook initialized. Conversation ID: ${conversationId}`);
   const [status, setStatus] = useState<SttStatus>('idle');
@@ -222,13 +243,19 @@ export const useSpeechToTextBackend = (
               setTranscript(null); 
               console.log('🚀 [useSpeechToTextBackend] ====== NEW_MESSAGE HANDLING COMPLETE ======');
           }
-          // +++ Add Handling for TTS Audio +++
+          // +++ Handle TTS Audio +++
           else if (data.type === 'tts_audio') {
               logDebug('Received tts_audio message', data.payload);
               const audioBase64 = data.payload?.audioBase64;
               if (onTtsAudio && audioBase64 && typeof audioBase64 === 'string') {
-                  logDebug('Calling onTtsAudio callback...');
-                  onTtsAudio(audioBase64);
+                  logDebug('Decoding base64 audio before calling callback...');
+                  const audioBuffer = base64ToArrayBuffer(audioBase64);
+                  if (audioBuffer) {
+                      logDebug('Audio decoded, calling onTtsAudio callback...');
+                      onTtsAudio(audioBuffer); // Pass the ArrayBuffer
+                  } else {
+                       logError('Failed to decode base64 audio for TTS.');
+                  }
               } else if (!onTtsAudio) {
                   logError('Received tts_audio but onTtsAudio callback is not provided!');
               } else {

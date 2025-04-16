@@ -344,7 +344,60 @@ const ChatInterface: React.FC = () => {
     const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([]);
     const audioContextRef = useRef<AudioContext | null>(null);
 
-    // Define onNewMessage callback to handle saved messages from the backend
+    // Define getAudioContext FIRST
+    const getAudioContext = (): AudioContext | null => {
+        if (!audioContextRef.current) {
+            try {
+                console.log('[AudioContext] Creating new AudioContext...');
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+                console.log('[AudioContext] AudioContext created, state:', audioContextRef.current.state);
+            } catch (e) {
+                console.error("[AudioContext] Web Audio API is not supported in this browser", e);
+                showError("Audio playback not supported in this browser.", "error");
+                return null;
+            }
+        }
+        if (audioContextRef.current.state === "suspended") {
+            console.log('[AudioContext] Resuming suspended AudioContext...');
+            audioContextRef.current.resume().then(() => {
+                console.log('[AudioContext] AudioContext resumed successfully.');
+            }).catch((err) => console.error("[AudioContext] Error resuming AudioContext:", err));
+        }
+        return audioContextRef.current;
+    };
+
+    // Define playAudio SECOND (depends on getAudioContext)
+    const playAudio = useCallback(async (audioData: ArrayBuffer) => {
+        console.log('[PlayAudio] Attempting to play audio buffer, size:', audioData.byteLength);
+        const context = getAudioContext();
+        if (!context) {
+            console.error('[PlayAudio] Cannot play audio, AudioContext not available.');
+            showError("Audio context not available for playback.", "error");
+            return;
+        }
+        if (context.state !== 'running') {
+             console.warn(`[PlayAudio] AudioContext state is ${context.state}. Playback might require user interaction.`);
+             context.resume(); 
+        }
+        try {
+            console.log('[PlayAudio] Decoding audio data...');
+            const audioBuffer = await context.decodeAudioData(audioData);
+            console.log('[PlayAudio] Audio data decoded successfully. Duration:', audioBuffer.duration);
+            const source = context.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(context.destination);
+            console.log('[PlayAudio] Starting playback...');
+            source.start(0);
+            source.onended = () => {
+                 console.log('[PlayAudio] Playback finished.');
+            };
+        } catch (error) {
+            console.error("[PlayAudio] Error decoding or playing audio data:", error);
+            showError("Failed to play received audio.", "error");
+        }
+    }, [showError]); // Dependency array only includes external dependencies like showError
+
+    // Define handleNewMessage THIRD (might be used by the hook)
     const handleNewMessage = useCallback((messageData: any) => {
         console.log('🔵 [ChatInterface] handleNewMessage called with data:', JSON.stringify(messageData, null, 2));
         
@@ -372,19 +425,20 @@ const ChatInterface: React.FC = () => {
         } catch (error) {
             console.error('❌ [ChatInterface] Error processing new message:', error);
         }
-    }, []);
+    }, []); // Empty dependency array if it doesn't rely on changing component state/props
 
-    const {
-        status,
-        error,
-        transcript,
+    // Call useSpeechToTextBackend LAST (depends on handleNewMessage and playAudio)
+    const { 
+        status, 
+        error, 
+        transcript, 
         isProcessing,
         language,
         startRecording,
-        stopRecording,
-        pauseRecording,
-        resumeRecording,
-    } = useSpeechToTextBackend(selectedConversationId, handleNewMessage, playAudio);
+        stopRecording, 
+        pauseRecording, 
+        resumeRecording, 
+    } = useSpeechToTextBackend(selectedConversationId, handleNewMessage, playAudio); // Correct types should now match
 
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
@@ -394,171 +448,6 @@ const ChatInterface: React.FC = () => {
             messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
         }
     }, []);
-
-    const getAudioContext = (): AudioContext | null => {
-        if (!audioContextRef.current) {
-            try {
-                console.log('[AudioContext] Creating new AudioContext...');
-                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-                console.log('[AudioContext] AudioContext created, state:', audioContextRef.current.state);
-            } catch (e) {
-                console.error("[AudioContext] Web Audio API is not supported in this browser", e);
-                showError("Audio playback not supported in this browser.", "error");
-                return null;
-            }
-        }
-        if (audioContextRef.current.state === "suspended") {
-            console.log('[AudioContext] Resuming suspended AudioContext...');
-            audioContextRef.current.resume().then(() => {
-                console.log('[AudioContext] AudioContext resumed successfully.');
-            }).catch((err) => console.error("[AudioContext] Error resuming AudioContext:", err));
-        }
-        return audioContextRef.current;
-    };
-
-    const playAudio = useCallback(async (audioData: ArrayBuffer) => {
-        console.log('[PlayAudio] Attempting to play audio buffer, size:', audioData.byteLength);
-        const context = getAudioContext();
-        if (!context) {
-            console.error('[PlayAudio] Cannot play audio, AudioContext not available.');
-            showError("Audio context not available for playback.", "error");
-            return;
-        }
-        if (context.state !== 'running') {
-             console.warn(`[PlayAudio] AudioContext state is ${context.state}. Playback might require user interaction.`);
-             // Attempt to resume again just in case
-             context.resume(); 
-        }
-
-        try {
-            console.log('[PlayAudio] Decoding audio data...');
-            const audioBuffer = await context.decodeAudioData(audioData);
-            console.log('[PlayAudio] Audio data decoded successfully. Duration:', audioBuffer.duration);
-            const source = context.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(context.destination);
-            console.log('[PlayAudio] Starting playback...');
-            source.start(0);
-            source.onended = () => {
-                 console.log('[PlayAudio] Playback finished.');
-            };
-        } catch (error) {
-            console.error("[PlayAudio] Error decoding or playing audio data:", error);
-            showError("Failed to play received audio.", "error");
-        }
-    }, [showError]);
-
-    // Effect to handle incoming WebSocket messages (message_list, new_message, etc.)
-    useEffect(() => {
-        console.log('[WS Effect] Running. lastMessage:', JSON.stringify(lastMessage));
-        if (lastMessage && isBackendMessage(lastMessage)) {
-            const message = lastMessage;
-            console.log('[WS Effect] Processing type:', message.type);
-
-            // Check payload for message_list data
-            if (message.type === 'message_list' && message.payload && message.payload.messages && message.payload.conversationId === selectedConversationId) {
-                console.log(`[ChatInterface] Received message list for conv ${message.payload.conversationId}:`, message.payload.messages);
-
-                // Explicitly cast the messages array
-                const messagesArray = message.payload.messages as Message[];
-
-                // Define the mapping function with explicit type
-                const mapMessageToDisplay = (msg: Message): DisplayMessage | null => {
-                    return convertToDisplayMessage(msg);
-                };
-
-                const newDisplayMessages = messagesArray // Use the casted array
-                    .map(mapMessageToDisplay) // Use the defined function
-                    .filter((msg): msg is DisplayMessage => msg !== null);
-                console.log(`[ChatInterface] Converted historical messages:`, newDisplayMessages); // Log converted array
-                setDisplayMessages(newDisplayMessages);
-                console.log(`[ChatInterface] Called setDisplayMessages with ${newDisplayMessages.length} historical messages.`); // Log after set state
-            }
-
-            else if (message.type === 'new_message' && message.payload && message.conversationId === selectedConversationId) {
-                const newMessage = message.payload as Message;
-                const displayMsg = convertToDisplayMessage(newMessage);
-                if (displayMsg) {
-                    setDisplayMessages(prev => [...prev, displayMsg]);
-                }
-            }
-
-            else if (message.type === 'speech_audio') {
-                if (message.payload && typeof message.payload.audio === 'string') {
-                    const audioBuffer = base64ToArrayBuffer(message.payload.audio);
-                    if (audioBuffer) {
-                        playAudio(audioBuffer);
-                    } else {
-                        console.error("[ChatInterface] Failed to decode audio data.");
-                        showError("Failed to decode received audio data.", "error");
-                    }
-                } else {
-                    console.error("[ChatInterface] Received speech_audio message without valid audio payload.", message);
-                    showError("Received invalid audio data from server.", "warning");
-                }
-            }
-
-            else if (message.type === 'translation_result' && message.payload) {
-                 const { original_text, translated_text, original_language, target_language } = message.payload;
-                 console.log(`[ChatInterface] Translation: ${original_language} -> ${target_language}: "${original_text}" -> "${translated_text}"`);
-                 const translationMsg: DisplayMessage = {
-                     id: `trans-${Date.now()}`,
-                     sender: 'translation',
-                     text: `"${original_text}" -> "${translated_text}" (${original_language} -> ${target_language})`,
-                 };
-                 setDisplayMessages(prev => [...prev, translationMsg]);
-            }
-
-            else if (message.type === 'error') {
-                console.error('[ChatInterface] Received error from backend:', message.payload);
-                showError(message.payload?.message || 'An unknown error occurred on the server.', 'error');
-                const errorMsg: DisplayMessage = {
-                    id: `error-${Date.now()}`,
-                    sender: 'error',
-                    text: `Error: ${message.payload?.message || 'Unknown server error'}`,
-                };
-                setDisplayMessages(prev => [...prev, errorMsg]);
-            }
-
-            else if (message.type === 'tts_audio' && message.payload) {
-                console.log('[WS Effect] Received tts_audio message:', message.payload);
-                const audioBase64 = message.payload.audioBase64;
-                const originalMsgId = message.payload.originalMessageId;
-                console.log(`[WS Effect] TTS Audio for original message ID: ${originalMsgId}. Base64 length: ${audioBase64?.length}`);
-
-                if (audioBase64 && typeof audioBase64 === 'string') {
-                    console.log('[WS Effect] Decoding Base64 audio data...');
-                    const audioBuffer = base64ToArrayBuffer(audioBase64);
-                    if (audioBuffer) {
-                        console.log('[WS Effect] Base64 decoded successfully, buffer size:', audioBuffer.byteLength);
-                        playAudio(audioBuffer); // Call playAudio function
-                    } else {
-                        console.error("[WS Effect] Failed to decode Base64 TTS audio data.");
-                        showError("Failed to process received TTS audio.", "error");
-                    }
-                } else {
-                    console.error("[WS Effect] Received tts_audio message without valid audioBase64 payload.", message);
-                    showError("Received invalid TTS audio data from server.", "warning");
-                }
-            }
-
-            else if (message.type === 'session_ended') {
-                 console.log('[ChatInterface] Session ended by backend signal.');
-                 endCurrentSession();
-                 showError("Session ended by server.", "info");
-                 setIsRecording(false);
-                 setIsPaused(false);
-                 const sessionEndMsg: DisplayMessage = {
-                     id: `session-end-${Date.now()}`,
-                     sender: 'system',
-                     text: 'Session ended.',
-                 };
-                 setDisplayMessages(prev => [...prev, sessionEndMsg]);
-            }
-        } else {
-            console.log('[WS Effect] lastMessage is null or not a BackendMessage.');
-        }
-    }, [lastMessage, selectedConversationId, showError, playAudio, endCurrentSession, handleNewMessage, sendMessage]); // Added missing dependencies
 
     useEffect(() => {
         scrollToBottom();
@@ -649,6 +538,58 @@ const ChatInterface: React.FC = () => {
         }
     };
 
+    // Correct the dependency array: remove playAudio and handleNewMessage
+    useEffect(() => {
+        if (lastMessage) {
+            if (isBackendMessage(lastMessage)) {
+                console.log('[WS Effect] lastMessage is a valid BackendMessage.');
+                handleNewMessage(lastMessage);
+            } else {
+                console.log('[WS Effect] lastMessage is not a valid BackendMessage.');
+            }
+        } else {
+            console.log('[WS Effect] lastMessage is null.');
+        }
+    }, [lastMessage, selectedConversationId, showError, endCurrentSession, sendMessage]); 
+
+    // Effect to scroll message area
+    useEffect(() => {
+        scrollToBottom();
+    }, [displayMessages, scrollToBottom]);
+
+    // Effect to log transcript changes (Debug)
+    useEffect(() => {
+        if (transcript !== null) {
+            console.log('📝 [ChatInterface] Transcript updated:', transcript);
+        }
+    }, [transcript]);
+
+    // Effect to show STT errors
+    useEffect(() => {
+        if (error) {
+            console.error("[ChatInterface] STT Error:", error);
+            showError(`Speech-to-text error: ${error.message}`, "error");
+            const sttErrorMsg: DisplayMessage = {
+                id: `stt-error-${Date.now()}`,
+                sender: 'error',
+                text: `STT Error: ${error.message}`,
+            };
+            setDisplayMessages(prev => [...prev, sttErrorMsg]);
+        }
+    }, [error, showError]);
+
+    // Effect to react to STT status changes
+    useEffect(() => {
+        console.log("[ChatInterface] STT Status:", status);
+        if (status === 'failed' || status === 'error') {
+            // Optionally add a system message or indicator
+        } else if (status === 'closed' || status === 'disconnected') {
+             // Reset recording state if connection closes unexpectedly
+             setIsRecording(false); 
+             setIsPaused(false);
+        }
+    }, [status]);
+
     return (
         <ChatContainer>
             <TopStatusContainer>
@@ -707,10 +648,9 @@ const ChatInterface: React.FC = () => {
                     <NoSessionText>No active session.</NoSessionText>
                 ) : (
                     <>
-                        {/* Remove the explicit Start/Pause/Resume button */}
                         {/* Pause/Resume might still be needed, but let's simplify first */}
 
-                        {/* Keep Stop and End Session */} 
+                        {/* Keep Stop and End Session */}
                         <button 
                             onClick={stopRecording} 
                             disabled={status !== 'connected' && status !== 'connecting'} // Disable if not connected or connecting
