@@ -1,10 +1,10 @@
 import { PrismaClient, Conversation, Patient, Prisma, Message } from "../../generated/prisma";
 import { IConversationRepository, ConversationWithRelations } from "../../domain/repositories/IConversationRepository";
-import { injectable } from "tsyringe";
+import { injectable, inject } from "tsyringe";
 
 @injectable()
 export class PrismaConversationRepository implements IConversationRepository {
-    private prisma = new PrismaClient();
+    constructor(@inject("PrismaClient") private prisma: PrismaClient) {}
 
     async findById(id: string): Promise<ConversationWithRelations | null> {
         return this.prisma.conversation.findUnique({
