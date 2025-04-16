@@ -538,19 +538,48 @@ const ChatInterface: React.FC = () => {
         }
     };
 
-    // Correct the dependency array: remove playAudio and handleNewMessage
+    // Effect to handle incoming WebSocket messages
     useEffect(() => {
-        if (lastMessage) {
-            if (isBackendMessage(lastMessage)) {
-                console.log('[WS Effect] lastMessage is a valid BackendMessage.');
-                handleNewMessage(lastMessage);
-            } else {
-                console.log('[WS Effect] lastMessage is not a valid BackendMessage.');
+        console.log('[WS Effect] Running. SelectedID:', selectedConversationId, 'lastMessage:', JSON.stringify(lastMessage)); // Log selected ID too
+        if (lastMessage && isBackendMessage(lastMessage)) {
+            const message = lastMessage;
+            console.log('[WS Effect] Processing type:', message.type);
+
+            // Check payload for message_list data
+            if (message.type === 'message_list' && message.payload) {
+                console.log('[WS Effect] Received message_list payload:', message.payload);
+                // Log IDs for comparison
+                console.log(`[WS Effect] Comparing received ConvID (${message.payload.conversationId}) with selected ConvID (${selectedConversationId})`);
+                
+                if (message.payload.messages && message.payload.conversationId === selectedConversationId) {
+                    console.log(`[ChatInterface] ConvID match. Processing ${message.payload.messages.length} historical messages.`);
+                    const messagesArray = message.payload.messages as Message[]; 
+                    if (!Array.isArray(messagesArray)) {
+                        console.error('[ChatInterface] Error: message.payload.messages is not an array!');
+                        return;
+                    }
+
+                    const mapMessageToDisplay = (msg: Message): DisplayMessage | null => {
+                        return convertToDisplayMessage(msg);
+                    };
+
+                    const newDisplayMessages = messagesArray
+                        .map(mapMessageToDisplay)
+                        .filter((msg): msg is DisplayMessage => msg !== null);
+                    console.log(`[ChatInterface] Converted historical messages:`, newDisplayMessages); 
+                    setDisplayMessages(newDisplayMessages); 
+                    console.log(`[ChatInterface] Called setDisplayMessages with ${newDisplayMessages.length} historical messages.`);
+                } else {
+                     console.log('[ChatInterface] message_list received, but ConvID mismatch or no messages array.');
+                }
             }
+
+            // ... other message type handling ...
+
         } else {
-            console.log('[WS Effect] lastMessage is null.');
+            // console.log('[WS Effect] lastMessage is null or not a BackendMessage.');
         }
-    }, [lastMessage, selectedConversationId, showError, endCurrentSession, sendMessage]); 
+    }, [lastMessage, selectedConversationId, showError, endCurrentSession, sendMessage]);
 
     // Effect to scroll message area
     useEffect(() => {
