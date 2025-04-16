@@ -103,6 +103,9 @@ export const useSpeechToTextBackend = (
   // Flag to track if pause was triggered by visibility change
   const pausedByVisibilityRef = useRef<boolean>(false);
 
+  // +++ Add ref to track intentional stops +++
+  const intentionalStopRef = useRef<boolean>(false);
+
   // Constants for WebSocket connection
   const getBackendWsUrl = useCallback(() => {
     console.log(`[useSpeechToTextBackend] Constructing transcription WS URL. Base URL: ${rawBackendUrl}, Conversation ID: ${conversationId}`);
@@ -169,13 +172,17 @@ export const useSpeechToTextBackend = (
 
     // Close existing websocket if any
     if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-      isWsOpenRef.current = false;
+        // --- Ensure intentionalStopRef is false before closing previous --- 
+        intentionalStopRef.current = false; 
+        wsRef.current.close();
+        wsRef.current = null;
+        isWsOpenRef.current = false;
     }
 
     logDebug(`Initializing WebSocket connection to ${wsUrl}`);
     setStatus('connecting');
+    // --- Reset error on new connection attempt --- 
+    setError(null);
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -185,18 +192,35 @@ export const useSpeechToTextBackend = (
         logDebug("WebSocket connection to backend opened");
         isWsOpenRef.current = true;
         setStatus('connected');
+         // --- Reset intentional stop flag on successful open --- 
+         intentionalStopRef.current = false;
       };
 
       ws.onclose = (event) => {
         logDebug(`WebSocket connection closed: ${event.code} ${event.reason}`);
         isWsOpenRef.current = false;
-        setStatus('closed');
+        // --- Check for intentional stop --- 
+        if (intentionalStopRef.current) {
+            logDebug("WebSocket closed intentionally by stopRecording.");
+            setStatus('idle'); // Set to idle after intentional stop
+            intentionalStopRef.current = false; // Reset flag
+        } else {
+            logError(`WebSocket closed unexpectedly. Code: ${event.code}, Reason: ${event.reason}`);
+            setError(new Error(`WebSocket closed unexpectedly: ${event.code} ${event.reason || 'Unknown reason'}`))
+            setStatus('disconnected'); // Use a different status for unexpected closure
+            // Optional: Trigger reconnection logic here if desired, but currently handled by ChatInterface effect
+        }
       };
 
       ws.onerror = (event) => {
         logError("WebSocket error", event);
-        setError(new Error("WebSocket connection error"));
+        // Check if it's an error event or just a general error object
+        const errorMessage = (event instanceof ErrorEvent) ? event.message : "WebSocket connection error";
+        setError(new Error(errorMessage));
         setStatus('error');
+        isWsOpenRef.current = false; // Ensure state reflects connection is lost
+        // --- Reset intentional stop flag on error too ---
+        intentionalStopRef.current = false;
       };
 
       ws.onmessage = (event) => {
@@ -272,26 +296,16 @@ export const useSpeechToTextBackend = (
               console.log('🚀 [useSpeechToTextBackend] ====== NEW_MESSAGE HANDLING COMPLETE ======');
           }
           // +++ Handle TTS Audio +++
-          else if (data.type === 'tts_audio') {
-              // *** Added Debug Logging: Entered tts_audio block ***
-              console.log('[WS Debug] Entered tts_audio handler.');
-              logDebug('Received tts_audio message', data.payload);
-              const audioBase64 = data.payload?.audioBase64;
-              if (onTtsAudio && audioBase64 && typeof audioBase64 === 'string') {
-                  logDebug('Decoding base64 audio before calling callback...');
-                  const audioBuffer = base64ToArrayBuffer(audioBase64);
-                  if (audioBuffer) {
-                      // *** Added Debug Logging: About to call onTtsAudio ***
-                      console.log('[WS Debug] Audio decoded, about to call onTtsAudio callback...');
-                      onTtsAudio(audioBuffer); // Pass the ArrayBuffer
-                  } else {
-                       logError('Failed to decode base64 audio for TTS.');
-                  }
-              } else if (!onTtsAudio) {
-                  logError('Received tts_audio but onTtsAudio callback is not provided!');
-              } else {
-                  logError('Received tts_audio message without valid audioBase64 payload', data.payload);
-              }
+          else if (data.type === 'tts_audio' && data.payload && data.payload.audioBase64) { 
+              logDebug('Received TTS audio data from backend.');
+              // Access audioBase64 from the payload
+              const audioBuffer = base64ToArrayBuffer(data.payload.audioBase64); 
+              if (audioBuffer && onTtsAudio) {
+                   logDebug('Calling onTtsAudio callback with decoded buffer.');
+                   onTtsAudio(audioBuffer);
+              } else if (!audioBuffer) {
+                  logError('Failed to decode received TTS audio base64 data.');
+              } else { logDebug('No onTtsAudio callback provided.'); }
           }
           // +++ Handle Command Execution Result +++
           else if (data.type === 'command_executed') {
@@ -350,8 +364,8 @@ export const useSpeechToTextBackend = (
         }
       };
     } catch (err) {
-      logError("Failed to initialize WebSocket", err);
-      setError(err instanceof Error ? err : new Error("Failed to initialize WebSocket"));
+      logError("Error creating WebSocket", err);
+      setError(err instanceof Error ? err : new Error("Failed to create WebSocket"));
       setStatus('failed');
     }
   }, [getBackendWsUrl, onNewMessage, language, onTtsAudio, addAction]); // Update dependency array
@@ -391,197 +405,136 @@ export const useSpeechToTextBackend = (
    * Start recording audio
    */
   const startRecording = useCallback(async () => {
-    logDebug('Attempting to start recording...');
-    if (status === 'connected') {
-      logError('Cannot start recording: Already connected or recording.');
-      return;
+    logDebug('startRecording called');
+    if (status === 'connected' || status === 'connecting') {
+        logDebug('Already connected or connecting, ignoring startRecording call.');
+        return;
     }
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      logError('getUserMedia not supported on your browser!');
-      setError(new Error('MediaDevices API not supported.'));
-      setStatus('failed');
-      return;
-    }
-
-    // Clear previous state
+    // Reset state before starting
     setError(null);
-    setTranscript(null);
-      accumulatedTranscriptRef.current = '';
-      audioChunksRef.current = [];
+    setTranscript('');
+    accumulatedTranscriptRef.current = '';
     setIsPaused(false);
-      
-    // Ensure WebSocket is ready before getting media
-      initializeWebSocket();
-      
+    intentionalStopRef.current = false; // Ensure flag is reset
+
+    // 1. Initialize WebSocket
+    initializeWebSocket(); // Establishes connection
+
+    // 2. Get audio stream (moved after WS init)
+    logDebug('Requesting microphone access...');
     try {
-      logDebug('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioStreamRef.current = stream;
-      logDebug('Microphone access granted.');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioStreamRef.current = stream;
+        logDebug('Microphone access granted.');
 
-      // --- MediaRecorder Setup --- 
-      const supportedTypes: { mimeType: string; options?: MediaRecorderOptions }[] = [
-           { mimeType: 'audio/wav' }, // Try PCM WAV first
-           { mimeType: 'audio/webm;codecs=opus' },
-           { mimeType: 'audio/ogg;codecs=opus' },
-           { mimeType: 'audio/mp4' }, // Fallback
-           { mimeType: '' } // Browser default
-      ];
-
-      let selectedMimeType = '';
-      for (const typeInfo of supportedTypes) {
-           const isSupported = MediaRecorder.isTypeSupported(typeInfo.mimeType);
-           logDebug(`Checking support for mimeType: '${typeInfo.mimeType}' -> Supported: ${isSupported}`);
-           if (isSupported) {
-                selectedMimeType = typeInfo.mimeType;
-                break;
-           }
-      }
-      
-      if (!selectedMimeType && supportedTypes[supportedTypes.length - 1].mimeType === '') {
-           logDebug('No specific mimeType supported, using browser default.');
-           selectedMimeType = ''; // Explicitly use default
-      }
-      
-      logDebug(`Attempting to create MediaRecorder with mimeType: '${selectedMimeType || 'default'}'`);
-      const options = selectedMimeType ? { mimeType: selectedMimeType } : {};
-      mediaRecorderRef.current = new MediaRecorder(stream, options);
-      logDebug(`MediaRecorder created. Actual mimeType: '${mediaRecorderRef.current.mimeType}'`);
-      // -------------------------
-
-      mediaRecorderRef.current.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
-          logDebug(`[ondataavailable] Chunk received. Size: ${event.data.size}, Type: ${event.data.type}`);
-          audioChunksRef.current.push(event.data);
-          if (!isPaused) {
-              // Send chunk immediately if not paused
-              try {
-                   const base64Audio = await blobToBase64(event.data);
-                   logDebug(`[ondataavailable] Sending chunk. Base64 Start: ${base64Audio.substring(0, 50)}...`);
-                   // Send via WebSocket (assuming sendAudioChunk handles base64 conversion if needed or is adapted)
-                   // Based on review, sendAudioChunk expects a Blob, let's keep it that way or adapt it.
-                   // Let's assume sendAudioChunk handles the blob correctly as per previous code review.
-                   sendAudioChunk(event.data); // Send the blob directly
-              } catch (error) {
-                   logError("Error processing or sending audio chunk", error);
-              }
-          }
+        // 3. Setup MediaRecorder
+        if (!MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+             console.warn('audio/webm;codecs=opus not supported, falling back to default.');
         }
-      };
+        const options = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+            ? { mimeType: 'audio/webm;codecs=opus' } 
+            : {}; // Let browser choose default
+        
+        const recorder = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = recorder;
+        audioChunksRef.current = [];
 
-      mediaRecorderRef.current.onstart = () => {
+        recorder.ondataavailable = async (event) => { // Make async to use await
+            if (event.data.size > 0 && wsRef.current && isWsOpenRef.current) {
+                logDebug(`Processing audio chunk, size: ${event.data.size}`);
+                try {
+                    // 1. Convert Blob to Base64
+                    const base64Audio = await blobToBase64(event.data);
+                    
+                    // 2. Construct JSON message
+                    const audioMessage = {
+                        type: "input_audio_buffer.append",
+                        audio: base64Audio
+                    };
+                    
+                    // 3. Send stringified JSON
+                    logDebug(`Sending audio chunk as JSON (Base64 size: ${base64Audio.length}).`);
+                    wsRef.current.send(JSON.stringify(audioMessage));
+                    
+                } catch (error) {
+                    logError("Error processing or sending audio chunk", error);
+                    // Optionally notify the UI or handle the error
+                }
+            } else if (!wsRef.current || !isWsOpenRef.current) {
+                logDebug('WebSocket not open, discarding audio chunk.');
+                // Discard chunk if WS is not open
+            }
+        };
+
+        recorder.onstop = () => {
+            logDebug('MediaRecorder stopped.');
+            // If WS still open, send any final buffered chunk (if buffering was implemented)
+            // const finalBlob = new Blob(audioChunksRef.current, { type: options.mimeType });
+            // if (finalBlob.size > 0 && wsRef.current && isWsOpenRef.current) { ... send finalBlob ... }
+            audioChunksRef.current = [];
+        };
+
+        recorder.onerror = (event) => {
+             logError('MediaRecorder error', event);
+             //setError(new Error(`MediaRecorder error: ${event.error.name}`));
+             //setStatus('error'); // Consider setting status
+        };
+
+        // Start recording, sending data periodically
+        recorder.start(1000); // Send data every 1000ms (1 second)
         logDebug('MediaRecorder started.');
-        setStatus('connected'); // Consider this connected for UI purposes
-        setIsProcessing(true);
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        logDebug('MediaRecorder stopped.');
-        setIsProcessing(false);
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-             logDebug('Sending finalize message to backend.');
-             wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.finalize' }));
-        }
-        // Clean up stream tracks
-        audioStreamRef.current?.getTracks().forEach(track => track.stop());
-        audioStreamRef.current = null;
-        // Maybe set status to idle or disconnected?
-        // setStatus('idle'); 
-      };
-
-      mediaRecorderRef.current.onerror = (event) => {
-        logError('MediaRecorder error', event);
-        setError(new Error('MediaRecorder encountered an error.'));
-        setStatus('failed');
-      };
-      
-      const timeslice = 500; // Send data approx every 500ms
-      // --- Delay MediaRecorder start slightly --- 
-      const startDelay = 200; // Delay in milliseconds (adjust if needed)
-      logDebug(`MediaRecorder configured. Starting after ${startDelay}ms delay...`);
-      setTimeout(() => {
-          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
-               logDebug(`Starting MediaRecorder now (after ${startDelay}ms delay). Timeslice: ${timeslice}ms`);
-               mediaRecorderRef.current.start(timeslice);
-          } else {
-              logDebug(`Delay ended, but MediaRecorder ref is missing or state is not inactive (${mediaRecorderRef.current?.state}). Not starting.`);
-          }
-      }, startDelay);
-      // ------------------------------------
 
     } catch (err) {
-      logError('Error starting recording', err);
-      setError(err instanceof Error ? err : new Error('Failed to start recording'));
-      setStatus('failed');
-      // Clean up stream tracks if acquired before error
-      audioStreamRef.current?.getTracks().forEach(track => track.stop());
-        audioStreamRef.current = null;
-      }
-  }, [status, initializeWebSocket, isPaused, sendAudioChunk]); // Dependencies adjusted
+        logError('Error getting media stream or starting recorder', err);
+        setError(err instanceof Error ? err : new Error('Could not start recording'));
+        setStatus('failed');
+        // Clean up WS if media failed
+        if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+            isWsOpenRef.current = false;
+        }
+    }
+}, [initializeWebSocket, status]); // Include status
 
   /**
    * Stop recording and finalize
    */
   const stopRecording = useCallback(async () => {
-    logDebug('== stopRecording called =='); // Make log more prominent
-    
-    // Stop media recorder
-    logDebug(`Checking MediaRecorder... Ref exists: ${!!mediaRecorderRef.current}, State: ${mediaRecorderRef.current?.state}`);
+    logDebug('stopRecording called');
+    // --- Signal intentional stop --- 
+    intentionalStopRef.current = true; 
+
+    // Stop MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      logDebug('--> Stopping MediaRecorder...');
-      try {
-        mediaRecorderRef.current.stop(); // stop() triggers onstop handler eventually
-        logDebug('--> MediaRecorder.stop() called.');
-      } catch (err) {
-        logError("Error calling MediaRecorder.stop()", err);
-      }
-    } else { 
-        logDebug('--> MediaRecorder already inactive or null.');
+      mediaRecorderRef.current.stop();
+      logDebug('MediaRecorder stopping...');
     }
     
-    // Clean up audio stream tracks (releases microphone hardware)
-    logDebug(`Checking audio stream... Ref exists: ${!!audioStreamRef.current}`);
+    // Stop audio stream tracks
     if (audioStreamRef.current) {
-      logDebug('--> Stopping audio stream tracks...');
-      audioStreamRef.current.getTracks().forEach(track => {
-           logDebug(`Stopping track: ${track.label}, Kind: ${track.kind}, ReadyState: ${track.readyState}`);
-           track.stop();
-      });
+      audioStreamRef.current.getTracks().forEach(track => track.stop());
       audioStreamRef.current = null;
-      logDebug('--> Audio stream tracks stopped and ref cleared.');
-    } else { 
-        logDebug('--> Audio stream already null.');
+      logDebug('Audio tracks stopped.');
     }
-    
+
     // Close WebSocket connection
-    // Note: Finalize message is usually sent in mediaRecorder.onstop
-    logDebug(`Checking WebSocket... Ref exists: ${!!wsRef.current}, State: ${wsRef.current?.readyState}`);
     if (wsRef.current) {
-      logDebug('--> Closing WebSocket connection...');
-      // Fallback: If stopRecording is called before onstop fires, ensure finalize is sent.
-      if (mediaRecorderRef.current?.state !== 'inactive' && wsRef.current.readyState === WebSocket.OPEN) {
-           logDebug('--> Fallback: Sending finalize message before closing WebSocket.');
-           try {
-                wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.finalize' }));
-           } catch (sendErr) {
-                logError("Error sending fallback finalize message", sendErr);
-           }
-      }
-      wsRef.current.close();
+      logDebug('Closing WebSocket connection intentionally...');
+      wsRef.current.close(1000, 'Client stopped recording'); // Use standard close code
       wsRef.current = null;
       isWsOpenRef.current = false;
-      logDebug('--> WebSocket closed and refs cleared.');
-    } else { 
-        logDebug('--> WebSocket already null.');
     }
     
-    // Reset component state
-    logDebug('--> Resetting component state (paused, status, processing).');
-    setIsPaused(false);
-    setStatus('closed'); // Set clear final state
+    // Reset state associated with recording
+    // setStatus('idle'); // Let onclose handle setting status to idle
+    setTranscript('');
+    accumulatedTranscriptRef.current = '';
     setIsProcessing(false);
-    logDebug('== stopRecording finished ==');
-  }, [mediaRecorderRef, audioStreamRef, wsRef, isWsOpenRef, logDebug, logError, setStatus, setIsPaused, setIsProcessing]); // Added refs to dependency array for safety
+    setIsPaused(false); // Ensure pause state is reset
+    // Don't reset error state here
+
+  }, []); // No dependencies needed if it only uses refs and setters
 
   /**
    * Pause recording

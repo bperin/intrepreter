@@ -226,28 +226,47 @@ export class TranscriptionService {
     }));
   }
 
-  // --- NEW Conversation Resource Management Methods ---
   /**
    * Ensures OpenAI connection and FFmpeg process are running for a specific conversation.
-   * Initiates connection/process if they don't exist.
+   * Initiates connection/process if needed, ensuring old resources are handled.
    */
   private _ensureConversationResources(conversationId: string): void {
     const conversationState = this.conversationStates.get(conversationId);
     if (!conversationState) {
       console.error(`[TranscriptionService][${conversationId}] Attempted to ensure resources for non-existent state.`);
-      return;
+      // Attempt to initialize state if missing, as handleConnection should have set it.
+      // This might indicate a race condition or error elsewhere.
+      console.warn(`[TranscriptionService][${conversationId}] Re-initializing missing state.`);
+      this.conversationStates.set(conversationId, {
+          openaiConnection: null, ffmpegProcess: null, isOpenAIConnected: false, isConnecting: false,
+          openaiConnectionCooldownUntil: 0, openaiReconnectionAttempts: 0, ffmpegStdinEnded: false,
+       });
+       // Proceed to connect after initializing state
+       this._connectOpenAIForConversation(conversationId);
+       return;
     }
 
-    // Check if already connected or connecting
-    if (conversationState.openaiConnection || conversationState.isConnecting) {
-        console.log(`[TranscriptionService][${conversationId}] Resources already ensured or in progress.`);
-        // Optionally check ffmpeg process state here too if needed
-        return;
+    // --- Refined Check --- 
+    // Check if already connecting OR if a connection exists AND is OPEN
+    if (conversationState.isConnecting || 
+        (conversationState.openaiConnection && conversationState.openaiConnection.readyState === WebSocket.OPEN)) 
+    {
+        console.log(`[TranscriptionService][${conversationId}] Resources already ensured (connecting or open).`);
+        // Additionally ensure FFmpeg is running if WS is open but process is missing (edge case)
+        if (conversationState.openaiConnection?.readyState === WebSocket.OPEN && !conversationState.ffmpegProcess) {
+             console.warn(`[TranscriptionService][${conversationId}] OpenAI connection is open, but FFmpeg process missing. Restarting FFmpeg.`);
+             this._startFFmpegForConversation(conversationId);
+        }
+        return; // Exit if connecting or already connected and open
     }
+    // --- End Refined Check ---
 
-    console.log(`[TranscriptionService][${conversationId}] Ensuring resources: Initiating OpenAI connection...`);
+    // If we reach here, it means:
+    // - No connection attempt is in progress (isConnecting is false)
+    // - EITHER no openaiConnection exists OR it exists but is NOT OPEN (CLOSING/CLOSED/null)
+    // Therefore, we should proceed to establish a fresh connection.
+    console.log(`[TranscriptionService][${conversationId}] Ensuring resources: Existing connection is not open or doesn't exist. Initiating connection process...`);
     this._connectOpenAIForConversation(conversationId);
-    // FFmpeg start is triggered within the OpenAI 'open' event handler
   }
 
   /**
@@ -277,17 +296,24 @@ export class TranscriptionService {
    */
   private _connectOpenAIForConversation(conversationId: string): void {
     const conversationState = this.conversationStates.get(conversationId);
-    if (!conversationState || conversationState.openaiConnection || conversationState.isConnecting) {
-      console.log(`[TranscriptionService][${conversationId}] OpenAI connection attempt skipped (already connected, connecting, or state missing).`);
-      return;
+    // Guard against missing state (should have been handled by ensureResources)
+    if (!conversationState) {
+        console.error(`[TranscriptionService][${conversationId}] _connectOpenAI called with missing conversation state.`);
+        return;
+    }
+    
+    // Guard against starting if already connecting or connected & open
+    if (conversationState.isConnecting || (conversationState.openaiConnection && conversationState.openaiConnection.readyState === WebSocket.OPEN)) {
+        console.log(`[TranscriptionService][${conversationId}] _connectOpenAI skipped: Already connecting or connected.`);
+        return;
     }
 
     const now = Date.now();
     if (now < conversationState.openaiConnectionCooldownUntil) {
-      const waitTimeSeconds = Math.ceil((conversationState.openaiConnectionCooldownUntil - now) / 1000);
-      console.log(`[TranscriptionService][${conversationId}] OpenAI connection attempt skipped due to cooldown. Retrying in ${waitTimeSeconds}s.`);
-      setTimeout(() => this._connectOpenAIForConversation(conversationId), conversationState.openaiConnectionCooldownUntil - now + 50);
-      return;
+        const waitTimeSeconds = Math.ceil((conversationState.openaiConnectionCooldownUntil - now) / 1000);
+        console.log(`[TranscriptionService][${conversationId}] OpenAI connection attempt skipped due to cooldown. Retrying in ${waitTimeSeconds}s.`);
+        setTimeout(() => this._connectOpenAIForConversation(conversationId), conversationState.openaiConnectionCooldownUntil - now + 50);
+        return;
     }
 
     if (!this.openaiApiKey) {
@@ -300,56 +326,56 @@ export class TranscriptionService {
     console.log(`[TranscriptionService][${conversationId}] Attempting connection to OpenAI...`);
     conversationState.isConnecting = true;
     conversationState.isOpenAIConnected = false;
-    this._killFFmpegForConversation(conversationId); // Ensure any old process for THIS convo is gone
+    
+    // --- Explicit Cleanup Before Connecting --- 
+    console.log(`[TranscriptionService][${conversationId}] Cleaning up any stale resources before connecting...`);
+    this._killFFmpegForConversation(conversationId); 
+    this._closeOpenAIConnectionForConversation(conversationId); // Ensure previous WS is closed
+    // ------------------------------------------
 
     try {
+      console.log(`[TranscriptionService][${conversationId}] Creating new OpenAI WebSocket...`);
       const newWs = new WebSocket('wss://api.openai.com/v1/realtime?intent=transcription', {
-        headers: {
-          'Authorization': `Bearer ${this.openaiApiKey}`,
-          'OpenAI-Beta': 'realtime=v1'
-        }
+        headers: { 'Authorization': `Bearer ${this.openaiApiKey}`, 'OpenAI-Beta': 'realtime=v1' }
       });
 
-      conversationState.openaiConnection = newWs; // Store the WS temporarily even before open
+      // Store immediately, even before 'open'
+      conversationState.openaiConnection = newWs; 
 
       newWs.on('open', () => {
         console.log(`[TranscriptionService][${conversationId}] OpenAI connection established.`);
         // Update state for this specific conversation
-        conversationState.isOpenAIConnected = true;
-        conversationState.isConnecting = false;
-        conversationState.openaiReconnectionAttempts = 0;
-
-        // Start FFmpeg process specific to this conversation
-        this._startFFmpegForConversation(conversationId);
-
-        console.log(`[TranscriptionService][${conversationId}] Sending configuration update to OpenAI...`);
-        const updateConfig = {
-          type: "transcription_session.update",
-          session: {
-          input_audio_transcription: {
-              model: "whisper-1",
-              prompt: "Transcribe the input audio to text"
-          },
-          turn_detection: {
-            type: "server_vad",
-              silence_duration_ms: 500,
-            prefix_padding_ms: 300,
-              threshold: 0.5
-            },
-            include: ["item.input_audio_transcription.logprobs"]
-          }
-        };
-
-        try {
-          this._sendToOpenAIForConversation(conversationId, JSON.stringify(updateConfig));
-          console.log(`[TranscriptionService][${conversationId}] Configuration update sent successfully.`);
-        } catch (configError) {
-          console.error(`[TranscriptionService][${conversationId}] Error sending configuration update:`, configError);
-          // Close this specific connection if config fails?
-          // this._cleanupConversationResources(conversationId);
+        if (this.conversationStates.has(conversationId)) { // Check state still exists
+            const currentState = this.conversationStates.get(conversationId)!;
+            currentState.isOpenAIConnected = true;
+            currentState.isConnecting = false;
+            currentState.openaiReconnectionAttempts = 0;
+            
+            // Start FFmpeg process specific to this conversation
+            this._startFFmpegForConversation(conversationId);
+            
+            console.log(`[TranscriptionService][${conversationId}] Sending configuration update to OpenAI...`);
+            const updateConfig = {
+                 type: "transcription_session.update",
+                 session: { 
+                     input_audio_transcription: { model: "whisper-1", prompt: "Transcribe the input audio to text" },
+                     turn_detection: { type: "server_vad", silence_duration_ms: 500, prefix_padding_ms: 300, threshold: 0.5 },
+                     include: ["item.input_audio_transcription.logprobs"]
+                 }
+            };
+            try {
+                 this._sendToOpenAIForConversation(conversationId, JSON.stringify(updateConfig));
+                 console.log(`[TranscriptionService][${conversationId}] Configuration update sent successfully.`);
+            } catch (configError) {
+                console.error(`[TranscriptionService][${conversationId}] Error sending configuration update:`, configError);
+                // Consider cleanup if config fails critically
+                 this._cleanupConversationResources(conversationId);
+            }
+            this.broadcastToClients(conversationId, { type: 'openai_connected', message: 'Ready for audio' });
+        } else {
+             console.warn(`[TranscriptionService][${conversationId}] OpenAI connection opened, but conversation state was removed. Closing WS.`);
+             newWs.close();
         }
-
-        this.broadcastToClients(conversationId, { type: 'openai_connected', message: 'Ready for audio' });
       });
 
       newWs.on('message', async (data) => {
@@ -608,42 +634,67 @@ export class TranscriptionService {
         }
       });
 
-      newWs.on('close', (code, reason) => {
-        console.log(`[TranscriptionService][${conversationId}] OpenAI connection closed. Code: ${code}, Reason: ${reason?.toString()}`);
-        // Update state for this conversation only
-        conversationState.openaiConnection = null;
-        conversationState.isOpenAIConnected = false;
-        conversationState.isConnecting = false;
-        this._killFFmpegForConversation(conversationId); // Ensure FFmpeg is killed
-
-        // Handle reconnection attempt for this conversation
-        conversationState.openaiReconnectionAttempts++;
-        const cooldownMs = Math.min(30000, Math.pow(2, conversationState.openaiReconnectionAttempts) * 1000);
-        conversationState.openaiConnectionCooldownUntil = Date.now() + cooldownMs;
-        console.log(`[TranscriptionService][${conversationId}] Setting OpenAI reconnect cooldown for ${cooldownMs}ms.`);
-        this.broadcastToClients(conversationId, { type: 'openai_disconnected', message: 'Disconnected. Attempting reconnect...' });
-
-        // Attempt reconnect only if clients are still connected for this conversation
-        if (this.clientConnections.has(conversationId) && (this.clientConnections.get(conversationId)?.size || 0) > 0) {
-          setTimeout(() => this._connectOpenAIForConversation(conversationId), cooldownMs);
-        }
-      });
-
       newWs.on('error', (error) => {
-        console.error(`[TranscriptionService][${conversationId}] OpenAI WebSocket error:`, error);
-        conversationState.isConnecting = false;
-        // Let the 'close' event handle state changes and reconnection attempt
-        // Consider immediate cleanup if error is severe: this._cleanupConversationResources(conversationId);
+        console.error(`[TranscriptionService][${conversationId}] OpenAI WebSocket Error:`, error);
+         if (this.conversationStates.has(conversationId)) {
+            const currentState = this.conversationStates.get(conversationId)!;
+            currentState.isOpenAIConnected = false;
+            currentState.isConnecting = false;
+            currentState.openaiConnection = null; // Clear the connection ref on error
+            // Implement backoff strategy
+            currentState.openaiReconnectionAttempts++;
+            const delay = Math.min(30000, (1000 * Math.pow(2, currentState.openaiReconnectionAttempts))); // Exponential backoff capped at 30s
+            currentState.openaiConnectionCooldownUntil = Date.now() + delay;
+            console.log(`[TranscriptionService][${conversationId}] OpenAI connection error. Attempt ${currentState.openaiReconnectionAttempts}. Retrying in ${delay / 1000}s.`);
+            this.broadcastToClients(conversationId, { type: 'error', message: `OpenAI connection error. Retrying...` });
+            setTimeout(() => this._ensureConversationResources(conversationId), delay); // Retry ensuring resources after delay
+         } else {
+             console.warn(`[TranscriptionService][${conversationId}] OpenAI WS error, but state already removed.`);
+         }
       });
 
-    } catch (err) {
-      console.error(`[TranscriptionService][${conversationId}] Error initiating OpenAI connection:`, err);
-      conversationState.isConnecting = false;
-      conversationState.isOpenAIConnected = false;
-      this._killFFmpegForConversation(conversationId); // Ensure FFmpeg is killed
-      this.broadcastToClients(conversationId, { type: 'error', message: `Failed to connect to OpenAI: ${err instanceof Error ? err.message : String(err)}` });
-      // Consider removing the state entirely
-      // this.conversationStates.delete(conversationId);
+      newWs.on('close', (code, reason) => {
+        const reasonString = reason.toString();
+        console.log(`[TranscriptionService][${conversationId}] OpenAI WebSocket closed. Code: ${code}, Reason: ${reasonString}`);
+        if (this.conversationStates.has(conversationId)) {
+            const currentState = this.conversationStates.get(conversationId)!;
+            currentState.isOpenAIConnected = false;
+            currentState.isConnecting = false;
+            currentState.openaiConnection = null; // Clear the connection ref
+
+            // Decide whether to reconnect based on close code/reason
+            // Avoid reconnecting on normal closure (e.g., code 1000) unless explicitly desired
+            if (code !== 1000) { 
+                // Implement backoff strategy for unexpected closures
+                currentState.openaiReconnectionAttempts++;
+                const delay = Math.min(30000, (1000 * Math.pow(2, currentState.openaiReconnectionAttempts))); // Exponential backoff capped at 30s
+                currentState.openaiConnectionCooldownUntil = Date.now() + delay;
+                console.log(`[TranscriptionService][${conversationId}] OpenAI connection closed unexpectedly. Attempt ${currentState.openaiReconnectionAttempts}. Retrying in ${delay / 1000}s.`);
+                this.broadcastToClients(conversationId, { type: 'error', message: `OpenAI connection lost. Retrying...` });
+                setTimeout(() => this._ensureConversationResources(conversationId), delay); // Retry ensuring resources after delay
+            } else {
+                 console.log(`[TranscriptionService][${conversationId}] OpenAI connection closed normally.`);
+                 this.broadcastToClients(conversationId, { type: 'openai_disconnected', message: 'OpenAI connection closed.' });
+                 // Don't automatically reconnect on normal closure unless specific logic requires it.
+            }
+        } else {
+             console.warn(`[TranscriptionService][${conversationId}] OpenAI WS closed, but state already removed.`);
+         }
+      });
+
+    } catch (error) {
+      console.error(`[TranscriptionService][${conversationId}] Failed to create OpenAI WebSocket:`, error);
+      if (this.conversationStates.has(conversationId)) {
+        const currentState = this.conversationStates.get(conversationId)!;
+        currentState.isConnecting = false;
+        // Apply cooldown even if WebSocket constructor fails
+        currentState.openaiReconnectionAttempts++;
+        const delay = Math.min(30000, (1000 * Math.pow(2, currentState.openaiReconnectionAttempts)));
+        currentState.openaiConnectionCooldownUntil = Date.now() + delay;
+         console.log(`[TranscriptionService][${conversationId}] WebSocket creation failed. Attempt ${currentState.openaiReconnectionAttempts}. Retrying in ${delay / 1000}s.`);
+         this.broadcastToClients(conversationId, { type: 'error', message: `Failed to connect to OpenAI. Retrying...` });
+        setTimeout(() => this._ensureConversationResources(conversationId), delay);
+      }
     }
   }
 

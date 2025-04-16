@@ -769,10 +769,12 @@ const ChatInterface: React.FC = () => {
     const handleEndSession = () => {
         if (selectedConversationId) {
             console.log(`[ChatInterface] User initiated end session for ${selectedConversationId}`);
-            // TODO: Add UI feedback like disabling button, showing spinner
+            // Stop the microphone recording immediately
+            stopRecording();
+            // Send the end_session message to the backend
             sendMessage({ type: 'end_session', payload: { conversationId: selectedConversationId } });
         }
-        // ... (rest of handler)
+        // No else needed, button should be disabled if no selectedConversationId or session inactive
     };
 
     // Function to handle clicking the summary tab
