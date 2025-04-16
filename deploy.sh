@@ -2,22 +2,33 @@
 
 # Deploys both backend and frontend to Google Cloud Run.
 # Requires gcloud, Docker, and necessary permissions/APIs enabled.
-# Replace placeholder values below before running.
+# --- > Loads secrets from deploy.secrets.env < --- 
 
 set -e # Exit immediately if a command exits with a non-zero status.
 # set -u # Temporarily disable strict unset variable checking for optional vars
 
 echo "--- Deployment Script Started ---"
 
-# --- Configuration (Hardcoded - REPLACE PLACEHOLDERS) ---
+# --- Load Secrets --- 
+SECRETS_FILE="./deploy.secrets.env"
+if [[ -f "$SECRETS_FILE" ]]; then
+    echo "Loading secrets from $SECRETS_FILE..."
+    source "$SECRETS_FILE"
+else
+    echo "Error: Secrets file not found at $SECRETS_FILE! Create it with DATABASE_URL, JWT_SECRET, OPENAI_API_KEY."
+    exit 1
+fi
+
+# --- Verify Secrets Loaded --- 
+if [[ -z "$DATABASE_URL" || -z "$JWT_SECRET" || -z "$OPENAI_API_KEY" ]]; then
+    echo "Error: One or more required secrets (DATABASE_URL, JWT_SECRET, OPENAI_API_KEY) not found in $SECRETS_FILE or environment."
+    exit 1
+fi
+
+# --- Configuration (Project Specific - Non-Secret) ---
 PROJECT_ID="brian-test-454620" # e.g., my-gcp-project
 REGION="us-central1"       # e.g., us-central1
 REPO="interpreter-app" # e.g., my-app-repo
-
-# !! SECURITY WARNING: Hardcoding secrets is insecure. Use Secret Manager for production. !!
-DATABASE_URL="postgresql://db_user:C8D7gsHJiv5LXBL35kHsrQ==@34.46.226.55:5432/interpreter_db?schema=public"   # e.g., postgresql://user:pass@ip:port/db?schema=public
-JWT_SECRET="k9+a+sPm9aw8BkdyMabTODJ3MVawLaIsvqQ98ZuSSZI="
-OPENAI_API_KEY="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"
 JWT_ISSUER="interpreter-backend-issuer"
 
 # --- Optional Configuration --- (Uses defaults if not set externally)
