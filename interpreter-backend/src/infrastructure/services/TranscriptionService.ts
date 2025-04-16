@@ -8,6 +8,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { IMessageService, IMessageService as IMessageServiceToken } from '../../domain/services/IMessageService';
+import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken } from '../../domain/services/ITextToSpeechService';
 
 // Set the path for fluent-ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -61,7 +62,8 @@ export class TranscriptionService {
   // --------------------------------------------------
 
   constructor(
-      @inject(IMessageServiceToken) private messageService: IMessageService
+      @inject(IMessageServiceToken) private messageService: IMessageService,
+      @inject(ITextToSpeechServiceToken) private ttsService: ITextToSpeechService
   ) {}
 
   /**
@@ -278,13 +280,40 @@ export class TranscriptionService {
                                sender,
                                detectedLanguage
                            );
-                           console.log(`[TranscriptionService] Message saved (ID: ${savedMessage.id}). Broadcasting 'new_message' event.`);
+                           console.log(`[TranscriptionService] Message saved (ID: ${savedMessage.id}). Broadcasting 'new_message' and triggering TTS.`);
 
                            // Broadcast the newly saved message object to clients
                            this.broadcastToClients(targetConversationId, {
                                type: 'new_message',
                                payload: savedMessage
                            });
+
+                           // --- Trigger TTS Synthesis --- 
+                           try {
+                               console.log(`[TranscriptionService] Synthesizing speech for message ID: ${savedMessage.id}`);
+                               // TODO: Determine target language/voice based on conversation/user settings?
+                               const audioBuffer = await this.ttsService.synthesizeSpeech(completedText); // Use default voice for now
+                               
+                               if (audioBuffer && audioBuffer.length > 0) {
+                                   const audioBase64 = audioBuffer.toString('base64');
+                                   console.log(`[TranscriptionService] Speech synthesized (${audioBuffer.length} bytes). Broadcasting 'tts_audio' event.`);
+                                   
+                                   this.broadcastToClients(targetConversationId, {
+                                       type: 'tts_audio',
+                                       payload: {
+                                           audioBase64: audioBase64,
+                                           format: 'audio/mpeg', // OpenAI default is MP3
+                                           originalMessageId: savedMessage.id // Link TTS to original message
+                                       }
+                                   });
+                               } else {
+                                    console.log('[TranscriptionService] TTS returned empty buffer, skipping broadcast.');
+                               }
+                           } catch (ttsError) {
+                                console.error(`[TranscriptionService] Failed to synthesize or broadcast TTS for message ${savedMessage.id}:`, ttsError);
+                                // Don't broadcast TTS error to client? Or maybe a specific notification?
+                           }
+                           // --- End TTS --- 
 
                        } catch (saveError) {
                            console.error(`[TranscriptionService] Failed to save or broadcast message for ${targetConversationId}:`, saveError);
