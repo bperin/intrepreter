@@ -298,11 +298,14 @@ export class TranscriptionService {
                    
                    console.log(`[TranscriptionService] Received completed transcription for ${targetConversationId}. Text: "${completedText.substring(0,50)}..."`);
                    const detectedLanguage = await this.detectLanguage(completedText);
-                   const sender = (detectedLanguage === 'en' || detectedLanguage === 'unknown') ? 'patient' : 'user';
-                   let textForTTS: string = completedText; // Initialize TTS text with the original transcription
+                   
+                   // Determine sender based on corrected roles
+                   const sender = (detectedLanguage === 'en' || detectedLanguage === 'unknown') ? 'user' : 'patient';
+                   
+                   let textForTTS: string = completedText; // Default TTS text
                    let savedOriginalMessageId: string | undefined = undefined;
 
-                   // 1. Save the original message regardless of who spoke
+                   // 1. Save the original message
                    try {
                        console.log(`[TranscriptionService] Saving original message. Sender: ${sender}, Lang: ${detectedLanguage}...`);
                        const savedMessage = await this.messageService.createMessage(
@@ -311,64 +314,78 @@ export class TranscriptionService {
                            sender, 
                            detectedLanguage
                        );
-                       savedOriginalMessageId = savedMessage.id; // Store ID for potential linking
+                       savedOriginalMessageId = savedMessage.id; 
                        console.log(`[TranscriptionService] Original message saved (ID: ${savedOriginalMessageId}). Broadcasting.`);
                        this.broadcastToClients(targetConversationId, { type: 'new_message', payload: savedMessage });
                    } catch (saveError) {
                        console.error(`[TranscriptionService] Failed to save original message:`, saveError);
                        this.broadcastToClients(targetConversationId, { type: 'error', message: 'Failed to save transcription.' });
-                       return; // Stop processing if original save fails
+                       return; 
                    }
 
-                   // 2. Handle translation and determine text for TTS based on sender
-                   if (sender === 'user') { // Clinician spoke Non-English
-                       console.log(`[TTS Logic] Clinician spoke ${detectedLanguage}. Translating to English for Patient TTS & saving.`);
-                       const translatedToEnText = await this.translateText(completedText, detectedLanguage, 'en');
-                       
-                       if (translatedToEnText) {
-                           textForTTS = translatedToEnText; // Patient hears the English translation
-                           console.log(`[TTS Logic] English translation successful: "${translatedToEnText.substring(0, 50)}..."`);
-                           
-                           // Save the English translation message
-                           try {
-                               console.log(`[TranscriptionService] Saving translated (en) message...`);
-                               const savedTranslation = await this.messageService.createMessage(
-                                   targetConversationId,
-                                   translatedToEnText, 
-                                   'translation',    
-                                   'en',             
-                                   savedOriginalMessageId 
-                               );
-                               console.log(`[TranscriptionService] Translated (en) message saved (ID: ${savedTranslation.id}). Broadcasting.`);
-                               this.broadcastToClients(targetConversationId, { type: 'new_message', payload: savedTranslation });
-                           } catch (saveTranslationError) {
-                               console.error(`[TranscriptionService] Failed to save translated (en) message:`, saveTranslationError);
-                               this.broadcastToClients(targetConversationId, { type: 'error', message: 'Failed to save English translation.' });
-                           }
-                       } else {
-                           console.warn(`[TTS Logic] Failed to translate ${detectedLanguage} -> en. Patient TTS will use original ${detectedLanguage} text.`);
-                           // textForTTS remains completedText (non-English)
-                       }
-                   } else if (sender === 'patient') { // Patient spoke English
-                       const clinicianTargetLang = 'es'; // <<< Placeholder: Replace with dynamic lookup later
-                       console.log(`[TTS Logic] Patient spoke English. Translating to ${clinicianTargetLang} for Clinician TTS.`);
-                       const translatedToNonEnText = await this.translateText(completedText, 'en', clinicianTargetLang);
+                   // 2. Handle Translation & Determine TTS Text
+                   let translatedText: string | null = null;
+                   let targetTranslationLang: string | null = null;
+                   let translationSenderType: string = 'translation'; // Default for saved translations
 
-                       if (translatedToNonEnText) {
-                           textForTTS = translatedToNonEnText; // Clinician hears the non-English translation
-                           console.log(`[TTS Logic] Translation to ${clinicianTargetLang} successful: "${translatedToNonEnText.substring(0, 50)}..."`);
-                           // Do NOT save this translation as a message
+                   if (sender === 'patient' && detectedLanguage !== 'en' && detectedLanguage !== 'unknown') {
+                       // Patient spoke Non-English -> Translate to English for Clinician TTS
+                       console.log(`[Translation Logic] Patient spoke ${detectedLanguage}. Translating to English for Clinician.`);
+                       targetTranslationLang = 'en';
+                       translatedText = await this.translateText(completedText, detectedLanguage, targetTranslationLang);
+                       if (translatedText) {
+                           textForTTS = translatedText; // Clinician hears English
                        } else {
-                           console.warn(`[TTS Logic] Failed to translate en -> ${clinicianTargetLang}. Clinician TTS will use original English text.`);
-                           // textForTTS remains completedText (English)
+                           console.warn(`[Translation Logic] Failed to translate ${detectedLanguage} -> en. Clinician TTS will use original text.`);
+                           // textForTTS remains original non-English
+                       }
+                   
+                   } else if (sender === 'user') {
+                       // Clinician spoke English -> Translate to Patient's language for Patient TTS
+                       // <<< Placeholder: Determine Patient's actual language dynamically >>>
+                       const patientTargetLang = 'es'; // Using 'es' for now
+                       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                       console.log(`[Translation Logic] Clinician spoke English. Translating to ${patientTargetLang} for Patient.`);
+                       targetTranslationLang = patientTargetLang;
+                       translatedText = await this.translateText(completedText, 'en', patientTargetLang);
+                       if (translatedText) {
+                           textForTTS = translatedText; // Patient hears their language
+                       } else {
+                           console.warn(`[Translation Logic] Failed to translate en -> ${patientTargetLang}. Patient TTS will use original English text.`);
+                           // textForTTS remains original English
+                       }
+                    } else { 
+                          // Patient spoke English (sender === 'patient' && detectedLanguage === 'en')
+                          console.log(`[Translation Logic] Patient spoke English. No translation needed for TTS.`);
+                          // textForTTS remains original English, no translation message to save
+                     }
+
+                   // 3. Save Translation if one was generated
+                   if (translatedText && targetTranslationLang) {
+                       try {
+                           console.log(`[TranscriptionService] Saving translated (${targetTranslationLang}) message...`);
+                           const savedTranslation = await this.messageService.createMessage(
+                               targetConversationId,
+                               translatedText, 
+                               translationSenderType, // Use 'translation' sender type
+                               targetTranslationLang, // Language of the translation           
+                               savedOriginalMessageId 
+                           );
+                           console.log(`[TranscriptionService] Translated (${targetTranslationLang}) message saved (ID: ${savedTranslation.id}). Broadcasting.`);
+                           this.broadcastToClients(targetConversationId, { type: 'new_message', payload: savedTranslation });
+                       } catch (saveTranslationError) {
+                           console.error(`[TranscriptionService] Failed to save translated (${targetTranslationLang}) message:`, saveTranslationError);
+                           this.broadcastToClients(targetConversationId, { type: 'error', message: `Failed to save ${targetTranslationLang} translation.` });
                        }
                    }
 
-                   // 3. Trigger TTS with the determined text
-                   if (textForTTS) { // Only synthesize if we have some text
+                   // 4. Trigger TTS with the final determined text
+                   if (textForTTS) { 
                         try {
                             console.log(`[TranscriptionService] Synthesizing speech linked to original message ID: ${savedOriginalMessageId}. Using text (first 50): "${textForTTS.substring(0, 50)}..."`);
-                            const audioBuffer = await this.ttsService.synthesizeSpeech(textForTTS);
+                            // <<< Placeholder: Pass appropriate voice/language to TTS service if needed >>>
+                            const audioBuffer = await this.ttsService.synthesizeSpeech(textForTTS); 
+                            // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                             if (audioBuffer && audioBuffer.length > 0) {
                                 const audioBase64 = audioBuffer.toString('base64');
                                 console.log(`[TranscriptionService] Speech synthesized (${audioBuffer.length} bytes). Broadcasting 'tts_audio' event linked to original message ID: ${savedOriginalMessageId}.`);
