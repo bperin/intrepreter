@@ -56,10 +56,11 @@ export const useSpeechToTextBackend = (
     
     // Use secure WebSocket if on HTTPS
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = "localhost:8080"
+    // Use environment variable for backend host, fallback to window location
+    const backendHost = import.meta.env.VITE_BACKEND_WS_HOST || window.location.host;
     
     // Construct the WebSocket URL with query params
-    return `${protocol}//${host}/transcription?conversationId=${conversationId}`;
+    return `${protocol}//${backendHost}/transcription?conversationId=${conversationId}`;
   }, [conversationId]);
   
   // Logging utility functions

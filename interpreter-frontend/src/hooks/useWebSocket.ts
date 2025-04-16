@@ -5,7 +5,7 @@ const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8080/ws"; // Corre
 
 interface WebSocketHook {
     isConnected: boolean;
-    lastMessage: string | null; // Keep as string for now, parsing happens in component
+    lastMessage: any | null; // Change type to allow parsed object
     sendMessage: (message: string | object | Blob) => void; // Allow sending Blob
     error: Error | null;
 }
@@ -13,7 +13,7 @@ interface WebSocketHook {
 export const useWebSocket = (): WebSocketHook => {
     const { accessToken } = useAuth();
     const [isConnected, setIsConnected] = useState(false);
-    const [lastMessage, setLastMessage] = useState<string | null>(null);
+    const [lastMessage, setLastMessage] = useState<any | null>(null); // Change type
     const [error, setError] = useState<Error | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
     // Use number for browser setTimeout/clearTimeout return type
@@ -98,7 +98,18 @@ export const useWebSocket = (): WebSocketHook => {
             // Handle both text and binary messages
             if (typeof event.data === "string") {
                 console.log("WebSocket: Text Message Received:", event.data);
-                setLastMessage(event.data);
+                try {
+                    const parsedMessage = JSON.parse(event.data);
+                    setLastMessage(parsedMessage);
+                } catch (e) {
+                    console.error("WebSocket: Failed to parse incoming JSON:", e, "Raw data:", event.data);
+                    // Handle non-JSON text messages or parsing errors
+                    // Option 1: Set raw string if needed for some messages
+                    // setLastMessage(event.data); 
+                    // Option 2: Set an error state or a specific error message object
+                    setLastMessage({ type: 'error', payload: { message: 'Received invalid JSON from server.' } });
+                    setError(new Error("Received invalid JSON message from server."));
+                }
             } else if (event.data instanceof Blob) {
                 console.log("WebSocket: Binary Message (Blob) Received, size:", event.data.size);
                 // Convert Blob to Base64 or ArrayBuffer before setting state if needed

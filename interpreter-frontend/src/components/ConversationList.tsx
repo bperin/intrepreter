@@ -148,42 +148,47 @@ const ConversationList: React.FC = () => {
 
     // Effect to handle incoming messages
     useEffect(() => {
-        if (lastMessage) {
-            try {
-                const message = JSON.parse(lastMessage);
-                console.log("Received WebSocket message:", message.type, message.payload);
+        if (lastMessage && typeof lastMessage === 'object') { 
+            const message = lastMessage; // Use directly
+            console.log("Received WebSocket message object:", message.type, message.payload);
 
-                if (message.type === "conversation_list" && Array.isArray(message.payload)) {
-                    console.log("Updating conversation list state.");
-                    setConversations(message.payload as Conversation[]);
-                } else if (message.type === "session_started" && message.payload) {
-                    const { conversationId } = message.payload;
-                    const newConversationObject: Conversation = message.payload;
-                    
-                    console.log(`New session started successfully! ConvID: ${conversationId}`);
-                    
-                    sendMessage({ type: "get_conversations" }); 
-                    
-                    if (newConversationObject && newConversationObject.id === conversationId) {
-                         console.log("Auto-selecting newly started conversation:", newConversationObject);
-                         selectConversation(newConversationObject);
-                    } else {
-                         console.warn("session_started payload did not contain full conversation object for auto-selection.");
-                    }
-                    
-                } else if (message.type === "conversation_selected" && message.payload) {
-                    const { conversationId, isActive } = message.payload;
-                    
-                    console.log(`Conversation selected confirmation received: ID=${conversationId}, Active=${isActive}`);
-                    
+            if (message.type === "conversation_list" && Array.isArray(message.payload)) {
+                console.log("Updating conversation list state.");
+                setConversations(message.payload as Conversation[]);
+            } else if (message.type === "session_started" && message.payload) {
+                const { conversationId } = message.payload;
+                // Assuming payload IS the conversation object for simplicity, adjust if needed
+                const newConversationObject: Conversation = message.payload; 
+                
+                console.log(`New session started successfully! ConvID: ${conversationId}`);
+                
+                // Request updated list after starting a new one
+                sendMessage({ type: "get_conversations" }); 
+                
+                // Attempt to auto-select
+                if (newConversationObject && newConversationObject.id === conversationId) {
+                    console.log("Auto-selecting newly started conversation:", newConversationObject);
+                    selectConversation(newConversationObject);
                 } else {
-                    // console.log("Ignoring message type:", message.type);
+                    console.warn("session_started payload might not be the full Conversation object required for selection.");
+                    // Maybe just select by ID if the object isn't complete?
+                    // selectConversation({ id: conversationId }); // Or however selectConversation works
                 }
-            } catch (error) {
-                console.error("Error parsing WebSocket message:", error, "Raw message:", lastMessage);
+                
+            } else if (message.type === "conversation_selected" && message.payload) {
+                const { conversationId, isActive } = message.payload;
+                console.log(`Conversation selected confirmation received: ID=${conversationId}, Active=${isActive}`);
+                // No state update needed here usually, just confirming backend processed selection
+            } else if (message.type === 'error') { // Handle error messages from the hook
+                console.error("Received error message object:", message.payload);
+                showError(message.payload?.message || 'Received error from server', 'error');
+            } else {
+                // console.log("Ignoring message type:", message.type);
             }
+        } else if (lastMessage) {
+            console.warn("Received WebSocket message, but it wasn't an object:", lastMessage);
         }
-    }, [lastMessage, sendMessage, selectConversation]);
+    }, [lastMessage, sendMessage, selectConversation, showError]); // Added showError dependency
 
     const handleOpenModal = () => {
         setIsModalOpen(true);
