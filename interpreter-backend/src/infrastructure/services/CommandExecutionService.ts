@@ -30,7 +30,7 @@ export class CommandExecutionService {
                     }
                     const note = await this.noteService.createNote(conversationId, args.note_content);
                     console.log(`[CommandExecutor][${conversationId}] Note created successfully (ID: ${note.id}).`);
-                    return { status: 'success', name: toolName, payload: { noteId: note.id } };
+                    return { status: 'success', name: toolName, payload: note };
 
                 case 'schedule_follow_up':
                     if (args?.duration === undefined || typeof args.duration !== 'number' || args.duration <= 0) {
@@ -49,7 +49,7 @@ export class CommandExecutionService {
                         details
                     );
                     console.log(`[CommandExecutor][${conversationId}] Follow-up scheduled successfully for ${followUp.scheduledFor?.toISOString()} (ID: ${followUp.id}).`);
-                    return { status: 'success', name: toolName, payload: { followUpId: followUp.id, scheduledFor: followUp.scheduledFor } };
+                    return { status: 'success', name: toolName, payload: followUp };
 
                 case 'write_prescription':
                     if (!args?.medication_name || typeof args.medication_name !== 'string') {
@@ -71,7 +71,7 @@ export class CommandExecutionService {
                         presDetails
                     );
                     console.log(`[CommandExecutor][${conversationId}] Prescription created successfully (ID: ${prescription.id}).`);
-                    return { status: 'success', name: toolName, payload: { prescriptionId: prescription.id } };
+                    return { status: 'success', name: toolName, payload: prescription };
 
                 default:
                     console.warn(`[CommandExecutor][${conversationId}] Attempted to execute unhandled command: ${toolName}`);
