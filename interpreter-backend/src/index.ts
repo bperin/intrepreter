@@ -17,7 +17,8 @@ import { authMiddleware } from "./infrastructure/auth/authMiddleware";
 import { AuthApplicationService } from "./application/services/AuthApplicationService";
 import { RegisterUserCommand } from "./application/commands/RegisterUserCommand";
 import { LoginUserCommand } from "./application/commands/LoginUserCommand";
-import { TranscriptionService } from './infrastructure/services/TranscriptionService';
+import { ConversationPipelineService } from './infrastructure/services/ConversationPipelineService';
+import { TranslationService } from './infrastructure/services/TranslationService';
 import { IMessageService, IMessageService as IMessageServiceToken } from "./domain/services/IMessageService";
 import { MessageService } from "./infrastructure/services/MessageService";
 import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken } from "./domain/services/ITextToSpeechService";
@@ -49,12 +50,13 @@ container.register<IMessageService>(IMessageServiceToken, { useClass: MessageSer
 // Register TextToSpeechService implementation for ITextToSpeechService
 container.register<ITextToSpeechService>(ITextToSpeechServiceToken, { useClass: TextToSpeechService });
 container.register("SummaryService", { useClass: SummaryService });
+container.register(TranslationService, { useClass: TranslationService });
 
 const authAppService = container.resolve(AuthApplicationService);
 const authService = container.resolve<IAuthService>("IAuthService");
 const conversationService = container.resolve<IConversationService>("IConversationService");
 const conversationRepository = container.resolve<IConversationRepository>("IConversationRepository");
-const transcriptionService = container.resolve(TranscriptionService);
+const conversationPipelineService = container.resolve(ConversationPipelineService);
 const notificationService = container.resolve<INotificationService>("INotificationService");
 const medicalHistoryService = container.resolve(MedicalHistoryService);
 const aggregationService = container.resolve<IAggregationService>("IAggregationService");
@@ -409,7 +411,7 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
         console.log(`[WebSocket Router] /transcription: New connection for conversation: ${conversationId}`);
         try {
             console.log(`[WebSocket Router] /transcription: Calling transcriptionService.handleConnection for ${conversationId}`);
-            transcriptionService.handleConnection(ws, conversationId);
+            conversationPipelineService.handleConnection(ws, conversationId);
             // Basic error/close handlers for transcription stream
             ws.on('close', (code, reason) => {
                 console.log(`[WebSocket Router] /transcription: Connection closed for conversation ${conversationId}. Code: ${code}, Reason: ${reason?.toString()}`);
