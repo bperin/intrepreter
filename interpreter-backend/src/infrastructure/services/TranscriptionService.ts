@@ -390,87 +390,41 @@ export class TranscriptionService {
                 }
                 // --------------------------------------
 
-                // +++ Voice Command Check (Clinician Only) - BEFORE MESSAGE SAVING +++
+                // +++ Voice Command Check (Clinician Only) - NEW Logic +++
+                isVoiceCommand = false; // Reset flag for each message
                 if (sender === 'user') {
-                    console.log(`[Voice Command Debug][${conversationId}] Checking for voice command in text: "${completedText}"`);
                     const lowerCaseText = completedText.toLowerCase().trim();
-                    // Using first word as trigger for flexibility
-                    const triggerWords = ["clara","claira","claire","clairea", "c"]; // Added "c"
-                    const firstWordMatch = lowerCaseText.match(/^([a-z]+)/i);
-                    const firstWord = firstWordMatch ? firstWordMatch[1].toLowerCase() : '';
+                    const triggerPhrase = "hey clara ";
 
-                    console.log(`[Voice Command Debug][${conversationId}] First word extracted: "${firstWord}"`);
-                    console.log(`[Voice Command Debug][${conversationId}] Checking against trigger words:`, triggerWords);
+                    if (lowerCaseText.startsWith(triggerPhrase)) {
+                        const commandText = lowerCaseText.substring(triggerPhrase.length).trim();
+                        console.log(`[Voice Command][${conversationId}] Detected trigger phrase. Extracted command: "${commandText}"`);
+                        
+                        // Clean the command for matching (remove leading punctuation like ',', '.')
+                        const cleanedCommandText = commandText.replace(/^[.,\s]+/, '').trim();
+                        console.log(`[Voice Command][${conversationId}] Cleaned command for matching: "${cleanedCommandText}"`);
 
-                    const hasCommand = triggerWords.includes(firstWord);
-
-                    console.log(`[Voice Command Debug][${conversationId}] Has command: ${hasCommand}`);
-
-                    if (hasCommand) {
-                        isVoiceCommand = true; // Set flag to skip message saving/translation/TTS
-                        // Extract everything after the first word and any punctuation
-                        const commandText = lowerCaseText.replace(/^[a-z]+[.,!?;:\s]*/i, '').trim(); // Improved regex to handle punctuation
-                        console.log(`[Voice Command Debug][${conversationId}] Extracted command text: "${commandText}"`);
-
-                        console.log(`[Voice Command][${conversationId}] Detected command attempt from clinician: "${commandText}"`);
-
-                        // Process structured commands (Note, Follow-up) via VoiceCommandService
-                        if (commandText.startsWith("take a note") ||
-                            commandText.startsWith("note") ||
-                            commandText.startsWith("follow up") ||
-                            commandText.startsWith("schedule follow up")) {
-                            console.log(`[Voice Command][${conversationId}] Routing structured command to VoiceCommandService: "${commandText}"`);
-                            // Pass the *original* text for context if needed by the service
+                        // Check for specific allowed commands using the cleaned text
+                        if (cleanedCommandText.startsWith("take a note") || cleanedCommandText.startsWith("schedule follow up")) {
+                            console.log(`[Voice Command][${conversationId}] Recognized command: "${cleanedCommandText}". Routing to VoiceCommandService.`);
+                            isVoiceCommand = true; // It's a valid command, prevent further processing
+                            // Pass the *original* completedText for context
                             this.voiceCommandService.processCommand(completedText, conversationId)
-                                .then(() => console.log(`[Voice Command][${conversationId}] VoiceCommandService processed structured command.`))
+                                .then(() => console.log(`[Voice Command][${conversationId}] VoiceCommandService processed command.`))
                                 .catch(err => console.error(`[TranscriptionService][${conversationId}] Error processing command via VoiceCommandService:`, err));
-                            // Don't proceed further with this message
-                            return;
+                            return; // Stop processing this message further
+                        } else {
+                            // Trigger phrase found, but command not recognized
+                            console.log(`[Voice Command][${conversationId}] Command "${commandText}" not recognized after trigger phrase. Treating as regular speech.`);
+                            // DO NOT set isVoiceCommand = true, allow message to be processed normally
                         }
-
-                        // --- Handle Simple Phrase Matching Commands Directly --- 
-                        switch (commandText) {
-                            case "pause session":
-                                console.log(`[Voice Command][${conversationId}] Recognized: Pause Session`);
-                                // TODO: Implement pause logic (e.g., emit event, call service)
-                                this.broadcastToClients(conversationId, { type: 'session_paused' });
-                                break;
-                            case "resume session":
-                                console.log(`[Voice Command][${conversationId}] Recognized: Resume Session`);
-                                // TODO: Implement resume logic
-                                this.broadcastToClients(conversationId, { type: 'session_resumed' });
-                                break;
-                            case "end session":
-                                console.log(`[Voice Command][${conversationId}] Recognized: End Session`);
-                                // TODO: Implement end logic (e.g., call conversationService.endAndSummarizeConversation)
-                                this.broadcastToClients(conversationId, { type: 'session_ended' }); // Example event
-                                // Consider cleanup: this._cleanupConversationResources(conversationId);
-                                break;
-                            case "repeat that":
-                            case "say again":
-                                console.log(`[Voice Command][${conversationId}] Recognized: Repeat Last Utterance`);
-                                // TODO: Implement repeat logic (needs access to last TTS content - complex)
-                                this.broadcastToClients(conversationId, { type: 'repeat_last_tts_request' });
-                                break;
-                            case "show summary":
-                                console.log(`[Voice Command][${conversationId}] Recognized: Show Summary`);
-                                this.broadcastToClients(conversationId, { type: 'ui_command', payload: { command: 'show_summary' } });
-                                break;
-                            case "list actions":
-                                console.log(`[Voice Command][${conversationId}] Recognized: List Actions`);
-                                this.broadcastToClients(conversationId, { type: 'ui_command', payload: { command: 'list_actions' } });
-                                break;
-                            default:
-                                console.log(`[Voice Command][${conversationId}] Command "${commandText}" not recognized.`);
-                                // Optionally send a feedback message to the user?
-                                // this.broadcastToClients(conversationId, { type: 'command_not_recognized', payload: { command: commandText } });
-                                break;
-                        }
-                        // Skip the rest of the processing (saving, translation, TTS) for *all* voice commands
-                        return;
                     }
+                    // If it doesn't start with "hey clara ", it's just regular speech.
                 }
                 // +++ End Voice Command Check +++
+
+                // If isVoiceCommand is true, we returned earlier. 
+                // If it's false, proceed with saving/translation/TTS.
 
                 // +++ Send transcription_started event +++
                 this.broadcastToClients(conversationId, { type: 'transcription_started' });
