@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useActions } from '../context/ActionContext';
-import { AggregatedAction, isActionEntityType } from '../types/actions';
+import { AggregatedAction } from '../types/actions';
 
 export type SttStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'failed' | 'closed' | 'error';
 
@@ -296,25 +296,43 @@ export const useSpeechToTextBackend = (
           // +++ Handle Command Execution Result +++
           else if (data.type === 'command_executed') {
               console.log('🚀 [useSpeechToTextBackend] ====== RECEIVED COMMAND_EXECUTED ====== ');
-              console.log('📄 [useSpeechToTextBackend] Payload:', JSON.stringify(data.payload, null, 2));
-              if (data.payload?.status === 'success' && data.payload.payload) {
-                  console.log('✅ [useSpeechToTextBackend] Command successful. Extracted entity:', data.payload.payload);
+              const executionResult = data.payload; // Simplify variable name
+              console.log('📄 [useSpeechToTextBackend] Payload:', JSON.stringify(executionResult, null, 2));
+
+              if (executionResult?.status === 'success' && executionResult.payload?.type && executionResult.payload?.data) {
+                  const { type: actionType, data: actionData } = executionResult.payload;
+                  console.log(`✅ [useSpeechToTextBackend] Command successful. Type: ${actionType}, Extracted data:`, actionData);
+
+                  // Construct the AggregatedAction object expected by the context
+                  // We assume AggregatedAction might need properties directly from actionData
+                  const newAggregatedAction: AggregatedAction = {
+                      id: actionData.id, // From the specific entity data
+                      type: actionType, // Explicit type from payload wrapper
+                      conversationId: actionData.conversationId, // From the specific entity data
+                      status: actionData.status, // From the specific entity data (e.g., 'created')
+                      createdAt: actionData.createdAt, // From the specific entity data
+                      updatedAt: actionData.updatedAt, // From the specific entity data
+                      data: actionData, // Nest the original data object
+                  };
+
+                  // Check if essential fields are present after construction
+                  if (!newAggregatedAction.id || !newAggregatedAction.createdAt || !newAggregatedAction.type) {
+                      console.error('❌ [useSpeechToTextBackend] Failed to construct valid AggregatedAction from payload:', executionResult.payload);
+                      return; // Don't proceed if essential fields are missing
+                  }
+
                   if (onNewMessage) {
-                      console.log('🔄 [useSpeechToTextBackend] Calling onNewMessage with command result entity...');
-                      onNewMessage(data.payload.payload); // Pass the created entity (Note, FollowUp, Prescription)
-                      // console.log('✅ [useSpeechToTextBackend] onNewMessage callback executed for command result.'); // Keep separate logging if needed
+                      // Decide if onNewMessage should still be called, and what it should receive.
+                      // Maybe it should receive the AggregatedAction? Or the raw data?
+                      // For now, let's assume ActionContext handles the update via addAction.
+                      console.log('🔵 [useSpeechToTextBackend] Skipping onNewMessage for command_executed, handled by addAction.');
                   }
-                  // +++ Also call addAction from ActionContext +++
-                  const entity = data.payload.payload;
-                  // Ensure the entity looks like one of our action types before adding
-                  if (isActionEntityType(entity)) { // Use a type guard
-                      console.log('➕ [useSpeechToTextBackend] Calling addAction for command result entity...');
-                      addAction(entity as AggregatedAction); // Add to ActionContext
-                      console.log('✅ [useSpeechToTextBackend] addAction callback executed.');
-                  } else {
-                      console.warn('⚠️ [useSpeechToTextBackend] Command result payload did not match expected action structure:', entity);
-                  }
-              } else if (data.payload?.status === 'error') {
+                  // Call addAction from ActionContext
+                  console.log('➕ [useSpeechToTextBackend] Calling addAction with constructed AggregatedAction...');
+                  addAction(newAggregatedAction);
+                  console.log('✅ [useSpeechToTextBackend] addAction callback executed.');
+
+              } else if (executionResult?.status === 'error') {
                   logError(`Command execution failed: ${data.payload.name}`, data.payload.message);
                   // Optionally, notify the parent component of the error?
                   // Maybe call an onError callback if it existed, or use setError state?
