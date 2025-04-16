@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./interpreter-backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # Map host port 8080 to container port 8080
+    env_file:
+      - ./interpreter-backend/.env # Load environment variables from .env file
+    # Optional: Add volume for local development if needed (e.g., for SQLite file)
+    # volumes:
+    #   - ./interpreter-backend/prisma:/app/prisma
+    environment:
+      # Ensure PORT is set if not in .env, or rely on EXPOSE in Dockerfile
+      - PORT=8080
+      # DATABASE_URL, JWT_SECRET, OPENAI_API_KEY should be in the .env file
+    # Add healthcheck if desired
+
+  frontend:
+    build:
+      context: ./interpreter-frontend
+      dockerfile: Dockerfile
+      # Optional: Pass build-time args for env vars needed during build
+      # args:
+      #   - VITE_BACKEND_WS_HOST=backend:8080 # Example using service name
+    ports:
+      - "5173:80" # Map host port 5173 to Nginx port 80 in container
+    depends_on:
+      - backend # Ensure backend starts before frontend (optional but good practice)
+
+# Optional: Define volumes if needed (e.g., for persistent database data)
+# volumes:
+#   prisma_data:

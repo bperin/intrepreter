@@ -49,9 +49,7 @@ ws.on('message', (data) => {
           // id: currentSessionId, // Session ID inside the nested object
           // input_audio_format: "pcm16", // Cannot set format here
           input_audio_transcription: {
-            model: "whisper-1", 
-            language: "en",
-            prompt: "Transcribe speech to text in English."
+            model: "whisper-1"
           },
           turn_detection: {
             type: "server_vad",
@@ -76,13 +74,19 @@ ws.on('message', (data) => {
     } else if (message.type === 'transcription_session.updated') {
          console.log('*** Received session.updated confirmation ***', JSON.stringify(message.session, null, 2));
     } else if (message.type === 'error') {
-      console.error('>>> OpenAI returned an error message <<<');
+      console.error('>>> OpenAI returned an error message <<<' );
       if (message.error) {
         console.error(`Error details: ${message.error.type} - ${message.error.message}`);
       }
     } 
+    // Add specific handling for transcription text events
+    else if (message.type === 'transcription.text.delta') {
+      console.log(`>>> Transcription DELTA: [Lang: ${message.language || 'N/A'}] "${message.text || ''}"`);
+    } else if (message.type === 'transcription.text.final') {
+      console.log(`>>> Transcription FINAL: [Lang: ${message.language || 'N/A'}] "${message.text || ''}"`);
+    }
+    // Log other potentially interesting message types
     else {
-        // Log other potentially interesting messages (like transcription results if they appear)
         console.log(`Received other message type: ${message.type}`);
     }
     
