@@ -54,10 +54,8 @@ container.register<ITextToSpeechService>(ITextToSpeechServiceToken, { useClass: 
 const authAppService = container.resolve(AuthApplicationService);
 const authService = container.resolve<IAuthService>("IAuthService");
 const conversationService = container.resolve<IConversationService>("IConversationService");
-const audioProcessingService = container.resolve<IAudioProcessingService>("IAudioProcessingService");
 const conversationRepository = container.resolve<IConversationRepository>("IConversationRepository");
 const transcriptionService = container.resolve(TranscriptionService);
-const messageService = container.resolve<IMessageService>(IMessageServiceToken);
 const actionService = container.resolve<IActionService>("IActionService");
 const notificationService = container.resolve<INotificationService>("INotificationService");
 const prisma = container.resolve<PrismaClient>("PrismaClient");
@@ -101,6 +99,8 @@ app.post("/auth/login", (req: Request, res: Response, next: NextFunction) => {
                 res.status(200).json({
                     accessToken: result.token,
                     refreshToken: result.refreshToken,
+                    userId: result.userId,
+                    username: result.username
                 });
             } else {
                 res.status(401).json({ message: result.error || "Invalid username or password." });
@@ -143,12 +143,70 @@ app.post("/auth/refresh", (req: Request, res: Response, next: NextFunction) => {
 
 app.get("/conversations", authMiddleware, async (req, res, next) => {
     try {
-        const userId = req.user!.id; // if its undefined will have thrown error in middleware
+        const userId = req.user!.id;
         const conversations = await conversationRepository.findByUserId(userId);
         res.status(200).json(conversations);
     } catch (error) {
         console.error("Error fetching conversations:", error);
         next(error);
+    }
+});
+
+// New route to get actions for a specific conversation
+app.get("/conversations/:conversationId/actions", authMiddleware, async (req, res, next): Promise<void> => {
+    try {
+        const userId = req.user!.id; 
+        const { conversationId } = req.params;
+        
+        console.log(`[Route /actions] Request received for conversation ID: ${conversationId} by user ID: ${userId}`);
+
+        // 1. Verify conversation exists and user has access
+        const conversation = await conversationRepository.findById(conversationId);
+        if (!conversation) {
+            console.warn(`[Route /actions] Conversation ${conversationId} not found.`);
+            res.status(404).json({ message: "Conversation not found." });
+            return;
+        }
+        if (conversation.userId !== userId) {
+            console.warn(`[Route /actions] User ${userId} does not own conversation ${conversationId}.`);
+            res.status(403).json({ message: "Forbidden: You do not have access to this conversation." });
+            return;
+        }
+
+        // 2. Fetch actions using the ActionService
+        console.log(`[Route /actions] Fetching actions for conversation ${conversationId}...`);
+        const actions = await actionService.getActionsByConversationId(conversationId);
+        console.log(`[Route /actions] Found ${actions.length} actions.`);
+        
+        res.status(200).json(actions);
+
+    } catch (error) {
+        console.error(`Error fetching actions for conversation ${req.params.conversationId}:`, error);
+        next(error); // Pass error to the default error handler
+    }
+});
+
+// New route to get authenticated user profile
+app.get("/auth/me", authMiddleware, async (req, res, next) => {
+    try {
+        // authMiddleware has already verified the token and attached the user payload
+        const userPayload = req.user; 
+        console.log(`[Route /auth/me] Request received for user:`, userPayload);
+
+        if (userPayload && userPayload.id && userPayload.username) {
+             // Return the necessary info directly from the token payload
+            res.status(200).json({
+                id: userPayload.id,
+                username: userPayload.username
+            });
+        } else {
+            // This case indicates an issue with the token payload or middleware
+            console.error("[Route /auth/me] Missing user information in request after authMiddleware.");
+            res.status(401).json({ message: "Invalid authentication token data." });
+        }
+    } catch (error) {
+        console.error("Error processing /auth/me:", error);
+        next(error); // Pass error to the default error handler
     }
 });
 

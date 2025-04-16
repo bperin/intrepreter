@@ -68,6 +68,17 @@ export class AuthApplicationService {
             return { success: false, error: error.message || "Token refresh failed" };
         }
     }
+
+    async getUserProfile(userId: string): Promise<{ id: string, username: string } | null> {
+        console.log(`[AppService] Fetching profile for user ID: ${userId}`);
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+            console.warn(`[AppService] User profile not found for ID: ${userId}`);
+            return null;
+        }
+        // Return only necessary, non-sensitive info
+        return { id: user.id, username: user.username };
+    }
 }
 
 // --- Placeholder Command/Result Types (Move to application/commands) ---
