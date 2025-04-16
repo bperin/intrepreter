@@ -48,6 +48,8 @@ export const useSpeechToTextBackend = (
   
   // Accumulated transcript ref
   const accumulatedTranscriptRef = useRef<string>('');
+  // Buffer for chunks arriving before WS is open
+  const pendingChunksRef = useRef<Blob[]>([]);
 
   // Constants for WebSocket connection
   const getBackendWsUrl = useCallback(() => {
@@ -107,7 +109,7 @@ export const useSpeechToTextBackend = (
    */
   const initializeWebSocket = useCallback(() => {
     const wsUrl = getBackendWsUrl();
-    console.log(`[useSpeechToTextBackend] initializeWebSocket called. URL: ${wsUrl}`);
+    console.log(`[useSpeechToTextBackend] Attempting to connect WebSocket to: ${wsUrl}`);
     
     if (!wsUrl) {
       logError("Cannot initialize WebSocket: Missing conversationId");
@@ -139,16 +141,30 @@ export const useSpeechToTextBackend = (
         logDebug("WebSocket connection to backend opened");
         isWsOpenRef.current = true;
         setStatus('connected');
+
+        // --- Send any pending chunks --- 
+        if (pendingChunksRef.current.length > 0) {
+            logDebug(`WebSocket open, sending ${pendingChunksRef.current.length} pending chunk(s)...`);
+            const chunksToSend = [...pendingChunksRef.current]; // Create copy
+            pendingChunksRef.current = []; // Clear original queue
+            chunksToSend.forEach(chunk => {
+                // Call sendAudioChunk directly - it will handle base64 conversion etc.
+                // Need to ensure sendAudioChunk doesn't re-queue when called from here!
+                // The readyState check within sendAudioChunk handles this.
+                sendAudioChunk(chunk);
+            });
+        }
+        // -------------------------------
       };
 
       ws.onclose = (event) => {
-        logDebug(`WebSocket connection closed: ${event.code} ${event.reason}`);
+        console.error(`❌ [useSpeechToTextBackend] WebSocket CLOSED. Code: ${event.code}, Reason: ${event.reason || 'No reason given'}, Was Clean: ${event.wasClean}`);
         isWsOpenRef.current = false;
         setStatus('closed');
       };
 
       ws.onerror = (event) => {
-        logError("WebSocket error", event);
+        console.error('❌ [useSpeechToTextBackend] WebSocket ERROR event fired.', event);
         setError(new Error("WebSocket connection error"));
         setStatus('error');
       };
@@ -233,7 +249,7 @@ export const useSpeechToTextBackend = (
         }
       };
     } catch (err) {
-      logError("Failed to initialize WebSocket", err);
+      console.error('❌ [useSpeechToTextBackend] Error during WebSocket constructor or handler attachment:', err);
       setError(err instanceof Error ? err : new Error("Failed to initialize WebSocket"));
       setStatus('failed');
     }
@@ -243,28 +259,46 @@ export const useSpeechToTextBackend = (
    * Send audio data over WebSocket
    */
   const sendAudioChunk = useCallback(async (audioBlob: Blob) => {
-    if (!wsRef.current) {
-      logError("Cannot send audio chunk: WebSocket not initialized");
+    // Added check for null wsRef before accessing readyState
+    if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED || wsRef.current.readyState === WebSocket.CLOSING) {
+      logError("Cannot send audio chunk: WebSocket not initialized or is closed/closing");
       return;
     }
     
-    if (wsRef.current.readyState !== WebSocket.OPEN) {
-      logError(`Cannot send audio chunk: WebSocket not open (state: ${wsRef.current.readyState})`);
-      return;
+    // If connecting, queue the chunk
+    if (wsRef.current.readyState === WebSocket.CONNECTING) {
+        logDebug(`WebSocket connecting, queuing audio chunk (size: ${audioBlob.size})`);
+        pendingChunksRef.current.push(audioBlob);
+        return;
     }
 
+    // If OPEN, process immediately (and flush queue if needed, though onopen handles initial flush)
     try {
-      // Convert blob to base64
-      const base64Audio = await blobToBase64(audioBlob);
-      logDebug(`[useSpeechToTextBackend] Sending audio chunk (Base64 size: ${base64Audio.length})`);
-      
-      // Send audio data
-      const audioMessage = {
-        type: "input_audio_buffer.append",
-        audio: base64Audio
-      };
-      
-      wsRef.current.send(JSON.stringify(audioMessage));
+        // Defensive check: If this call happens *after* onopen but before queue is flushed by onopen,
+        // ensure queue is sent first. This might be redundant if onopen is reliable.
+        if (pendingChunksRef.current.length > 0) {
+            logDebug(`sendAudioChunk: Sending ${pendingChunksRef.current.length} pending chunk(s) before current chunk...`);
+            const chunksToSend = [...pendingChunksRef.current];
+            pendingChunksRef.current = [];
+            for (const chunk of chunksToSend) { // Use for...of with await
+                // We need to await the base64 conversion and send for each chunk
+                const base64Pending = await blobToBase64(chunk);
+                const pendingMessage = { type: "input_audio_buffer.append", audio: base64Pending };
+                wsRef.current.send(JSON.stringify(pendingMessage));
+            }
+        }
+
+        // Convert current blob to base64
+        const base64Audio = await blobToBase64(audioBlob);
+        logDebug(`[useSpeechToTextBackend] Sending audio chunk (Base64 size: ${base64Audio.length})`);
+        
+        // Send audio data
+        const audioMessage = {
+          type: "input_audio_buffer.append",
+          audio: base64Audio
+        };
+        
+        wsRef.current.send(JSON.stringify(audioMessage));
     } catch (err) {
       logError("Failed to send audio chunk", err);
     }
@@ -292,6 +326,9 @@ export const useSpeechToTextBackend = (
     accumulatedTranscriptRef.current = '';
     audioChunksRef.current = [];
     setIsPaused(false);
+
+    // Also clear pending chunks from any previous attempt
+    pendingChunksRef.current = [];
 
     // Ensure WebSocket is ready before getting media
     initializeWebSocket();

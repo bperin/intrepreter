@@ -121,6 +121,55 @@ const ConnectionStatus = styled.div<ThemedProps & { $isConnected: boolean }>`
     gap: ${({ theme }) => theme.spacing.xs};
 `;
 
+// New container for top-right status indicators
+const TopStatusContainer = styled.div`
+    position: absolute;
+    top: ${({ theme }) => theme.spacing.sm};
+    right: ${({ theme }) => theme.spacing.sm};
+    display: flex;
+    gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+// Renamed for clarity
+const WsConnectionStatus = styled.div<ThemedProps & { $isConnected: boolean }>`
+    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+    border-radius: ${({ theme }) => theme.borderRadius.full};
+    font-size: ${({ theme }) => theme.typography.sizes.xs};
+    background-color: ${({ $isConnected, theme }) => ($isConnected ? theme.colors.status.success : theme.colors.status.error)}20;
+    color: ${({ $isConnected, theme }) => ($isConnected ? theme.colors.status.success : theme.colors.status.error)};
+    display: flex;
+    align-items: center;
+    gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+// New styled component for STT status
+const SttStatusDisplay = styled.div<ThemedProps & { $status: string }>`
+    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+    border-radius: ${({ theme }) => theme.borderRadius.full};
+    font-size: ${({ theme }) => theme.typography.sizes.xs};
+    background-color: ${({ $status, theme }) => {
+        switch ($status) {
+            case 'connected': return theme.colors.status.success + '20';
+            case 'connecting': return theme.colors.status.warning + '20';
+            case 'error':
+            case 'failed': return theme.colors.status.error + '20';
+            default: return theme.colors.background.hover + '50'; // idle, closed, disconnected
+        }
+    }};
+    color: ${({ $status, theme }) => {
+        switch ($status) {
+            case 'connected': return theme.colors.status.success;
+            case 'connecting': return theme.colors.status.warning;
+            case 'error':
+            case 'failed': return theme.colors.status.error;
+            default: return theme.colors.text.secondary;
+        }
+    }};
+    display: flex;
+    align-items: center;
+    gap: ${({ theme }) => theme.spacing.xs};
+`;
+
 const ControlsArea = styled.div<ThemedProps>`
     padding: ${({ theme }) => theme.spacing.md};
     border-top: 1px solid ${({ theme }) => theme.colors.border.light};
@@ -515,6 +564,25 @@ const ChatInterface: React.FC = () => {
         }
     }, [selectedConversationId, sendMessage]); // Depend on selection and sendMessage function
 
+    // Effect to automatically start recording when a session becomes active
+    useEffect(() => {
+        if (selectedConversationId && isSessionActive && (status === 'idle' || status === 'closed')) {
+            console.log(`[ChatInterface] Session active (${selectedConversationId}), auto-starting STT recording.`);
+            startRecording();
+            setIsRecording(true); // Update local state
+            setIsPaused(false);
+        } else if (!selectedConversationId || !isSessionActive) {
+             // Stop recording if conversation is deselected or becomes inactive
+            if (isRecording) {
+                console.log(`[ChatInterface] Session inactive or deselected, stopping STT recording.`);
+                stopRecording();
+                setIsRecording(false);
+                setIsPaused(false);
+            }
+        }
+        // Add startRecording and stopRecording to dependencies if they are stable references (useCallback)
+    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording]); // Added start/stop recording dependencies
+
     const handleEndSession = () => {
         if (selectedConversationId) {
             console.log(`[ChatInterface] User initiated end session for ${selectedConversationId}`);
@@ -532,10 +600,19 @@ const ChatInterface: React.FC = () => {
 
     return (
         <ChatContainer>
-            <ConnectionStatus $isConnected={isConnected}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isConnected ? 'currentColor' : 'currentColor', display: 'inline-block' }}></span>
-                {isConnected ? "Connected" : "Disconnected"}
-            </ConnectionStatus>
+            <TopStatusContainer>
+                <WsConnectionStatus $isConnected={isConnected}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'currentColor', display: 'inline-block' }}></span>
+                    Backend: {isConnected ? "Connected" : "Disconnected"}
+                </WsConnectionStatus>
+                {isSessionActive && (
+                    <SttStatusDisplay $status={status}>
+                         {/* Optional: Add an icon based on status */} 
+                        Mic: {status} {isRecording && !isPaused && '��'} {isPaused && '⏸️'} {isProcessing && '...'}
+                        {/* {error ? `(${error.message})` : ''} */}
+                    </SttStatusDisplay>
+                )}
+            </TopStatusContainer>
 
             <MessageArea ref={messageAreaRef}>
                 {displayMessages.length === 0 && !isSessionActive && (
@@ -579,20 +656,23 @@ const ChatInterface: React.FC = () => {
                     <NoSessionText>No active session.</NoSessionText>
                 ) : (
                     <>
-                        <button onClick={isRecording ? (isPaused ? resumeRecording : pauseRecording) : startRecording} disabled={status === 'connecting'}>
+                        {/* <button onClick={isRecording ? (isPaused ? resumeRecording : pauseRecording) : startRecording} disabled={status === 'connecting'}>
                              {isRecording ? (isPaused ? 'Resume' : 'Pause') : 'Start Mic'}
                              {isRecording && !isPaused && ' 🔴'}
                              {isPaused && ' ⏸️'}
+                        </button> */}
+                        {isRecording && (
+                            <button onClick={isPaused ? resumeRecording : pauseRecording}>
+                                {isPaused ? 'Resume' : 'Pause'}
+                                {isPaused ? ' ⏸️' : ' '}
+                            </button>
+                        )}
+                        <button onClick={stopRecording} disabled={!isRecording}>
+                            Stop Mic
                         </button>
-                         <button onClick={stopRecording} disabled={!isRecording}>
-                             Stop Mic
-                         </button>
                         <EndSessionButton onClick={handleEndSession} disabled={!isSessionActive}>
                             End Session
                         </EndSessionButton>
-                         <span style={{ fontSize: '12px', color: error ? 'red' : 'grey' }}>
-                             STT: {status} {error ? `(${error.message})` : ''}
-                         </span>
                     </>
                 )}
             </ControlsArea>
