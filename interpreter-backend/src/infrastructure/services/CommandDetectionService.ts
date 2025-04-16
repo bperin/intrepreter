@@ -40,8 +40,79 @@ export class CommandDetectionService implements ICommandDetectionService {
                 description: "Requests the display or retrieval of the patient's mock medical history.",
                 parameters: { type: "object", properties: {} } // No specific arguments needed
             }
+        },
+        {
+            type: "function",
+            function: {
+                name: "take_note",
+                description: "Records a clinical note about the patient or the conversation context.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        note_content: {
+                            type: "string",
+                            description: "The full content of the note to be recorded.",
+                        },
+                    },
+                    required: ["note_content"],
+                },
+            },
+        },
+        {
+            type: "function",
+            function: {
+                name: "schedule_follow_up",
+                description: "Schedules a follow-up task or appointment based on the conversation, specifying the timeframe.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        duration: {
+                            type: "number",
+                            description: "The numerical value for the follow-up timeframe (e.g., 1, 7, 2).",
+                        },
+                        unit: {
+                            type: "string",
+                            enum: ["day", "week", "month"],
+                            description: "The unit of time for the follow-up (day, week, or month). Singular form.",
+                        },
+                        details: {
+                            type: "string",
+                            description: "Optional additional details or reason for the follow-up.",
+                        },
+                    },
+                    required: ["duration", "unit"],
+                },
+            },
+        },
+        {
+            type: "function",
+            function: {
+                name: "write_prescription",
+                description: "Records the key details for a medication prescription based on the clinician's dictation.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        medication_name: {
+                            type: "string",
+                            description: "The name of the medication to prescribe.",
+                        },
+                        dosage: {
+                            type: "string",
+                            description: "The dosage of the medication (e.g., '10mg', '250mg/5ml').",
+                        },
+                        frequency: {
+                            type: "string",
+                            description: "How often the medication should be taken (e.g., 'once daily', 'twice a day', 'every 6 hours as needed').",
+                        },
+                        details: {
+                            type: "string",
+                            description: "Optional additional details like quantity, refills, or specific instructions.",
+                        },
+                    },
+                    required: ["medication_name", "dosage", "frequency"],
+                },
+            },
         }
-        // Add more tool definitions here
     ];
 
     constructor() {

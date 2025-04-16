@@ -416,6 +416,7 @@ export class ConversationPipelineService {
                 }
                 
                 // --- Command Detection (Async - remains the same) ---
+                console.log(`[Command Check][${conversationId}] Sender determined as: ${sender}`);
                 if (sender === 'user') {
                      this.commandDetectionService.detectCommand(completedText)
                         .then(commandResult => {
