@@ -3,6 +3,11 @@ FROM node:18-slim AS builder
 
 WORKDIR /app
 
+# --- Explicitly install OpenSSL --- 
+# Recommended by Prisma warning when auto-detection fails in slim images
+RUN apt-get update -y && apt-get install -y openssl --no-install-recommends && rm -rf /var/lib/apt/lists/*
+# ----------------------------------
+
 # Install dependencies
 COPY package*.json ./
 RUN npm ci
