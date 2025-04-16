@@ -13,6 +13,7 @@ import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken
 import dotenv from 'dotenv';
 import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
 import { VoiceCommandService } from './VoiceCommandService';
+import { CommandDetectionService } from './CommandDetectionService';
 
 // Load environment variables from .env file in the parent directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -92,7 +93,8 @@ export class TranscriptionService {
       @inject(IMessageServiceToken) private messageService: IMessageService,
       @inject(ITextToSpeechServiceToken) private ttsService: ITextToSpeechService,
       @inject('IConversationRepository') private conversationRepository: IConversationRepository,
-      @inject(VoiceCommandService) private voiceCommandService: VoiceCommandService
+      @inject(VoiceCommandService) private voiceCommandService: VoiceCommandService,
+      @inject(CommandDetectionService) private commandDetectionService: CommandDetectionService
   ) {
       this.openaiApiKey = process.env.OPENAI_API_KEY || '';
       // --- DEBUG LOG ---
@@ -398,53 +400,41 @@ export class TranscriptionService {
                 }
                 // --------------------------------------
 
-                /*
-                // +++ Voice Command Check (Clinician Only) - NEW Logic +++
-                isVoiceCommand = false; // Reset flag for each message
+                // --- Process based on sender --- 
                 if (sender === 'user') {
-                    const lowerCaseText = completedText.toLowerCase().trim();
-                    const triggerPhrase = "hey clara ";
-
-                    if (lowerCaseText.startsWith(triggerPhrase)) {
-                        const commandText = lowerCaseText.substring(triggerPhrase.length).trim();
-                        console.log(`[Voice Command][${conversationId}] Detected trigger phrase. Extracted command: "${commandText}"`);
-                        
-                        // Clean the command for matching (remove leading punctuation like ',', '.')
-                        const cleanedCommandText = commandText.replace(/^[.,\s]+/, '').trim();
-                        console.log(`[Voice Command][${conversationId}] Cleaned command for matching: "${cleanedCommandText}"`);
-
-                        // Check for specific allowed commands using the cleaned text
-                        if (cleanedCommandText.startsWith("take a note") || cleanedCommandText.startsWith("schedule follow up")) {
-                            console.log(`[Voice Command][${conversationId}] Recognized command: "${cleanedCommandText}". Routing to VoiceCommandService.`);
-                            isVoiceCommand = true; // It's a valid command, prevent further processing
-                            // Pass the *original* completedText for context
-                            this.voiceCommandService.processCommand(completedText, conversationId)
-                                .then(() => console.log(`[Voice Command][${conversationId}] VoiceCommandService processed command.`))
-                                .catch(err => console.error(`[TranscriptionService][${conversationId}] Error processing command via VoiceCommandService:`, err));
-                            return; // Stop processing this message further
-                        } else {
-                            // Trigger phrase found, but command not recognized
-                            console.log(`[Voice Command][${conversationId}] Command "${commandText}" not recognized after trigger phrase. Treating as regular speech.`);
-                            // DO NOT set isVoiceCommand = true, allow message to be processed normally
-                        }
-                    }
-                    // If it doesn't start with "hey clara ", it's just regular speech.
+                    // Clinician spoke - check for commands using the new service ASYNCHRONOUSLY
+                    console.log(`[TranscriptionService][${conversationId}] Clinician spoke. Starting async command detection...`);
+                    
+                    // Call detectCommand without await and handle the promise
+                    this.commandDetectionService.detectCommand(completedText)
+                        .then(commandResult => {
+                            if (commandResult) {
+                                // Command detected!
+                                console.log(`[TranscriptionService][${conversationId}][Async] Command detected by service: ${commandResult.toolName}. Routing...`);
+                                // Call the handler for the detected tool
+                                this.voiceCommandService.handleToolCall(commandResult.toolName, commandResult.arguments, conversationId)
+                                    .then(() => console.log(`[TranscriptionService][${conversationId}][Async] VoiceCommandService processed tool call: ${commandResult.toolName}.`))
+                                    .catch(err => console.error(`[TranscriptionService][${conversationId}][Async] Error processing tool call via VoiceCommandService:`, err));
+                            } else {
+                                // No command detected by the async check
+                                console.log(`[TranscriptionService][${conversationId}][Async] No command detected by service.`);
+                            }
+                        })
+                        .catch(detectionError => {
+                            // Log errors specifically from the command detection process
+                            console.error(`[TranscriptionService][${conversationId}][Async] Error during command detection:`, detectionError);
+                        });
+                    
+                    // ** IMPORTANT: Do NOT return here. Proceed immediately with regular message handling **
                 }
-                // +++ End Voice Command Check +++
-                */
+                // --- End command check initiation ---
 
-                // Ensure isVoiceCommand is false if the block above is commented out
-                isVoiceCommand = false;
-
-                // If isVoiceCommand is true, we returned earlier. 
-                // If it's false, proceed with saving/translation/TTS.
-
+                // Proceed with standard message processing REGARDLESS of command check outcome
+                
                 // +++ Send transcription_started event +++
                 this.broadcastToClients(conversationId, { type: 'transcription_started' });
-                // ++++++++++++++++++++++++++++++++++++++++
-
-                // 1. Save the original message (only if NOT a voice command)
-                // isVoiceCommand flag ensures this doesn't run for commands
+                
+                // 1. Save the original message
                 try {
                     if (!completedText || completedText.trim() === '') {
                         console.log(`[TranscriptionService][${conversationId}] Skipping save for empty original message.`);
@@ -465,7 +455,6 @@ export class TranscriptionService {
                     this.broadcastToClients(conversationId, { type: 'error', message: 'Failed to save transcription.' });
                     return; // Don't proceed if saving failed
                 }
-
 
                 // 2. Handle Translation, Patient Language Update, and Determine TTS Text
                 if (sender === 'patient' && detectedLanguage !== 'en' && detectedLanguage !== 'unknown') {

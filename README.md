@@ -1,141 +1,160 @@
-# Interpreter App
+# Clara - AI Medical Interpreter
 
-**LiveDemo [GoogleCloudRun](https://interpreter-frontend-service-rc7cuwbtwa-uc.a.run.app)**
+This project is a real-time medical interpretation application designed to facilitate communication between clinicians and patients speaking different languages. It leverages AI for transcription, translation, text-to-speech, command detection, and summarization.
 
-This application provides real-time transcription and potential action item detection during conversations, aimed initially at clinician-patient interactions involving different languages.
+---
 
-## Architecture
+## Summary / How it Works
 
-The application follows principles inspired by **Domain-Driven Design (DDD)**, separating concerns into distinct layers (Domain, Application, Infrastructure). It consists of two main services deployed on Google Cloud Run:
+The core goal is to provide seamless, real-time interpretation during medical consultations.
 
-1.  **Backend (`interpreter-backend`):** A Node.js/Express application using Prisma to interact with a PostgreSQL database (Google Cloud SQL). It handles:
-    - User authentication (registration, login, token refresh) using JWT.
-    - Managing conversation sessions and patient data (Domain entities).
-    - WebSocket connections for real-time communication (control channel and transcription stream), enabling **concurrent processing** of multiple client interactions via Node.js's event loop.
-    - Proxying audio streams to OpenAI for transcription and **language detection** (via `TranscriptionService`).
-    - Processing specific **voice commands** (e.g., "C take a note") using regex matching (via `VoiceCommandService`).
-    - Storing messages and detected actions (Repositories pattern).
-    - Generating conversation summaries (potentially).
-    - Dependency Injection managed by `tsyringe`.
-2.  **Frontend (`interpreter-frontend`):** A React/Vite application served by Nginx. It provides the user interface for:
-    - Login/Registration.
-    - Starting new sessions and selecting existing ones.
-    - Displaying conversation transcripts and messages in real-time.
-    - Capturing audio via the browser's MediaRecorder API.
-    - Interacting with the backend via HTTP API calls (Axios) and WebSockets.
+**Key Features:**
 
-**Supporting Infrastructure:**
+- **Real-time Transcription:** Captures audio from the microphone and transcribes it into text using OpenAI Whisper via a streaming WebSocket connection.
+- **Automatic Language Detection:** Identifies the language spoken (e.g., English, Spanish) for each utterance.
+- **Real-time Translation:** Translates utterances into the other participant's language using OpenAI.
+- **Text-to-Speech (TTS):** Synthesizes the translated text into audible speech using OpenAI TTS, allowing participants to hear the interpretation.
+- **Voice Command Detection:** Allows clinicians to issue specific commands (e.g., "Hey Clara, take a note...") using natural language, processed via OpenAI function/tool calling.
+- **Session Management:** Supports multiple concurrent interpretation sessions.
+- **Conversation History:** Stores original transcriptions and translations.
+- **Action Tracking:** Detects and logs actionable items mentioned during the conversation (e.g., follow-ups, notes).
+- **Summarization:** Generates a concise summary of the conversation upon completion.
+- **Mock Medical History:** Automatically generates contextually relevant mock medical history at the start of a session.
 
-- **Database:** Google Cloud SQL (PostgreSQL)
-- **Container Registry:** Google Artifact Registry (Docker format)
-- **Containerization:** Docker (`Dockerfile` for each service)
-- **Deployment:** Google Cloud Run, managed via a deployment script (`deploy.sh`).
+**Basic User Flow:**
 
-## Tech Stack
+1.  Clinician logs in.
+2.  Clinician starts a new session, providing basic patient details.
+3.  The system establishes WebSocket connections for audio streaming and control.
+4.  Participants speak into their microphone.
+5.  Audio is streamed to the backend, transcribed, and language is detected.
+6.  The backend determines the speaker (clinician/patient) based on language.
+7.  If the clinician speaks, the system checks for voice commands using OpenAI tool calling.
+    - If a command is detected, the corresponding action is processed (e.g., saving a note).
+    - If no command, or if the patient speaks, the utterance is processed as speech.
+8.  The original utterance is saved and displayed in the chat interface with a language tag.
+9.  If translation is needed (e.g., patient spoke Spanish, or clinician spoke English and patient language is Spanish), the text is translated.
+10. The translation is saved and displayed (labeled as "System" or similar).
+11. The appropriate text (original or translation) is sent to the TTS service for the _other_ participant to hear in their language.
+12. Detected actions (notes, follow-ups) appear in the Action Stream.
+13. Mock Medical History is generated and viewable in a dedicated tab.
+14. At the end, the clinician can end the session, triggering summary generation.
 
-- **Frontend:** React, TypeScript, Vite, Axios, Styled Components (or similar CSS solution)
-- **Backend:** Node.js, Express, TypeScript, Prisma, **tsyringe (DI)**, OpenAI API, **DDD concepts (Services, Repositories)**
-- **Database:** PostgreSQL (specifically Google Cloud SQL)
-- **WebSockets:** `ws` library (backend), native browser API (frontend)
-- **Containerization:** Docker, Docker Compose (for local dev)
-- **Deployment:** Google Cloud Run, Google Artifact Registry, Google Cloud Build (optional for automation), Bash (`deploy.sh`)
-- **Linting/Formatting:** ESLint, Prettier
+---
 
-## Prerequisites
+## Technical Details / Architecture
 
-- Node.js (LTS version recommended, for local tooling)
+This application follows best practices for structure and employs modern technologies.
+
+**Architecture & Design:**
+
+- **Domain-Driven Design (DDD):** The backend is structured around core domain concepts (Conversation, Patient, Message, Action, User) with clear separation between:
+  - **Domain:** Contains core entities, value objects, interfaces for repositories and services.
+  - **Application:** Orchestrates use cases, handles commands.
+  - **Infrastructure:** Implements interfaces using specific technologies (Prisma, OpenAI, WebSockets, Express, etc.).
+- **Separation of Concerns:** Services have distinct responsibilities (e.g., `TranscriptionService`, `CommandDetectionService`, `MedicalHistoryService`, `ConversationService`).
+- **Dependency Injection:** Uses `tsyringe` for managing dependencies, promoting loose coupling and testability.
+
+**Technology Stack:**
+
+- **Backend:**
+  - Runtime: Node.js
+  - Language: TypeScript
+  - Framework: Express.js
+  - ORM: Prisma
+  - Database: PostgreSQL (Cloud SQL compatible)
+  - WebSockets: `ws` library
+  - DI Container: `tsyringe`
+  - AI: OpenAI API (Whisper for Transcription, Chat Completions for Language Detection/Translation/Commands/Summarization/History, TTS)
+- **Frontend:**
+  - Library: React
+  - Language: TypeScript
+  - Styling: Styled Components
+  - State Management: React Context API (potentially others like Zustand/Redux if needed later)
+  - WebSockets: Native browser WebSocket API
+
+**Key Technical Implementations:**
+
+- **Proxy WebSocket:** The frontend connects to the backend via WebSockets. The backend acts as a proxy, establishing its own secure connections to external services like OpenAI's real-time transcription API. This keeps API keys secure and allows backend processing.
+- **FFmpeg Audio Conversion:** The frontend typically sends audio in WebM Opus format. The backend uses `ffmpeg` (via `fluent-ffmpeg` and `@ffmpeg-installer/ffmpeg`) to transcode this stream in real-time into the required format for OpenAI Whisper (PCM S16LE, mono, typically 16kHz or 24kHz - currently set to 24kHz).
+- **Automatic Language Detection:** After receiving a transcription, the backend makes a separate API call to OpenAI (using `gpt-4o-mini`) with a specific prompt to identify the primary language of the transcribed text.
+- **Parallel Processing / Async Operations:**
+  - When the clinician speaks, the command detection via OpenAI runs asynchronously (`.then/.catch` pattern) _after_ the regular message processing (saving, translation, TTS) has already started. This avoids blocking the main chat flow while still allowing commands to be processed.
+  - Medical history generation is also triggered asynchronously when a session starts.
+- **Multi-User/Conversation Handling:** The backend manages multiple WebSocket connections. State related to specific conversations (like the OpenAI transcription session, FFmpeg process, connected clients) is managed in memory using Maps keyed by `conversationId` (e.g., `conversationStates` in `TranscriptionService`). Connections and resources are cleaned up when the last client for a conversation disconnects.
+- **Function/Tool Calling for Commands:** Instead of relying on simple local regex or keyword matching, the system uses OpenAI's function/tool calling capability. When the clinician speaks, the text is sent to the Chat Completions API along with schemas defining available tools (`take_note`, `schedule_follow_up`, `write_prescription`). OpenAI determines if the utterance matches a tool's description and extracts the required parameters (like note content or medication details) into a structured JSON object, which the backend then processes.
+
+---
+
+## Deployment Instructions
+
+Follow these steps to set up and run the application.
+
+**Prerequisites:**
+
+- Node.js (v18 or later recommended)
+- npm or yarn
 - Docker & Docker Compose
-- Google Cloud SDK (`gcloud`) installed and configured
-- Access to a Google Cloud Project with necessary APIs enabled (Cloud Run, Artifact Registry, Cloud SQL, Secret Manager - even if not used directly by script)
+- Access to a PostgreSQL database
+- OpenAI API Key
 
-## Local Development Setup
+**1. Local Development Setup:**
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <your-repo-url>
-    cd intrepreter
-    ```
-2.  **Configure Backend Environment:**
-    - Copy `.env.example` to `.env` in the `interpreter-backend` directory (if an example file exists) or create `.env`.
-    - Set the required variables:
-      - `DATABASE_URL`: Connection string for your **local** PostgreSQL or SQLite database (e.g., `postgresql://user:password@localhost:5432/interpreter_dev_local` or `file:./prisma/dev.db`). If using Postgres locally, ensure it's running.
-      - `JWT_SECRET`: A secure random string.
-      - `JWT_ISSUER`: An identifier string (e.g., `interpreter-backend-local`).
-      - `OPENAI_API_KEY`: Your OpenAI API key.
-3.  **Configure Frontend Environment:**
-    - The frontend relies on `VITE_APP_BACKEND_URL` being set at build time. For local development using Docker Compose, the URL used inside the build step within compose (`http://localhost:8080`) should work correctly as configured in `docker-compose.yml` and the frontend Dockerfile.
-4.  **Run Docker Compose:**
-    ```bash
-    docker-compose up --build -d
-    ```
-    - This will build the images, start the backend, frontend (Nginx), and potentially a local database container (if configured in `docker-compose.yml`).
-    - The backend command within `docker-compose.yml` handles Prisma generation and schema push (`db push`).
-5.  **Access the application:** Open your browser to `http://localhost` (or the port mapped for the frontend service in `docker-compose.yml`).
+- **Clone Repository:** `git clone ...`
+- **Install Dependencies:**
+  - `cd interpreter-backend && npm install`
+  - `cd ../interpreter-frontend && npm install`
+- **Environment Variables:**
+  - Create `.env` file in the **root** project directory.
+  - Create `.env` file in the `interpreter-backend` directory.
+  - Populate both files with necessary variables:
+    - `DATABASE_URL`: PostgreSQL connection string (e.g., `postgresql://user:password@host:port/database?schema=public`)
+    - `OPENAI_API_KEY`: Your secret key from OpenAI.
+    - `JWT_SECRET`: A strong, random string for signing authentication tokens.
+    - `PORT`: (Optional) Port for the backend server (defaults to 8080).
+    - `VITE_APP_BACKEND_URL`: For the frontend, the _host-accessible_ URL of the backend (e.g., `http://localhost:8080` for local Docker setup).
+- **Database Migration:**
+  - Navigate to `interpreter-backend`.
+  - Run `npx prisma migrate dev` to apply schema changes and create the database if it doesn't exist.
+  - Run `npx prisma generate` to generate the Prisma Client.
+- **Run Application:**
+  - In one terminal, start the backend: `cd interpreter-backend && npm run dev`
+  - In another terminal, start the frontend: `cd interpreter-frontend && npm run dev`
+  - Access the frontend in your browser (usually `http://localhost:5173`).
 
-## Deployment to Google Cloud Run
+**2. Docker Compose (Local):**
 
-The deployment is handled by the `deploy.sh` script located in the root directory. This script automates building images, pushing them to Google Artifact Registry, and deploying both services to Cloud Run.
+- Ensure your root `.env` and `interpreter-backend/.env` files are correctly populated (Docker Compose uses these).
+- From the **root** project directory, run: `docker-compose up --build -d`
+- This builds the images and starts the backend, frontend, and database containers.
+- Access the frontend in your browser (usually `http://localhost:5174` or as configured in `docker-compose.yml`).
+- View logs: `docker-compose logs backend`, `docker-compose logs frontend`.
+- Stop: `docker-compose down`.
 
-**Prerequisites for Deployment:**
+**3. Cloud Run Deployment (Conceptual):**
 
-1.  **Google Cloud SDK (`gcloud`):** Ensure it's installed, authenticated (`gcloud auth login`), and configured for your target project (`gcloud config set project YOUR_PROJECT_ID`).
-2.  **Docker:** Ensure Docker Desktop (or daemon) is running.
-3.  **Artifact Registry API Enabled:** In your GCP project.
-4.  **Cloud Run API Enabled:** In your GCP project.
-5.  **Artifact Registry Repository:** Create a **Docker** repository in Artifact Registry within your target region and project.
-6.  **Docker Authentication for Artifact Registry:** Configure Docker to authenticate with your registry:
-    ```bash
-    gcloud auth configure-docker YOUR_GCP_REGION-docker.pkg.dev
-    ```
-    (Replace `YOUR_GCP_REGION` with the region of your repository, e.g., `us-central1`).
-7.  **Database:** Ensure your Cloud SQL (PostgreSQL) instance is created and accessible. Obtain its connection string.
+- **Prerequisites:** Google Cloud SDK (`gcloud`), Docker, GCP project with Cloud Run, Cloud SQL (PostgreSQL), and Secret Manager enabled.
+- **Secrets:** Store sensitive variables (`DATABASE_URL`, `OPENAI_API_KEY`, `JWT_SECRET`) in Google Secret Manager.
+- **Environment Variables:** Configure Cloud Run service environment variables to:
+  - Reference the secrets stored in Secret Manager.
+  - Set `PORT` to `8080` (or the port your container listens on).
+  - Set frontend's `VITE_APP_BACKEND_URL` during its build process to the URL of the deployed backend service.
+- **Dockerfile:** Ensure `Dockerfile` (for backend) and potentially `frontend.Dockerfile` correctly build production-ready images (install only production dependencies, run Prisma generate, build code).
+- **Build & Push:** Build the Docker images and push them to Google Artifact Registry:
+  - `gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/interpreter-backend:latest ./interpreter-backend`
+  - `gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/interpreter-frontend:latest ./interpreter-frontend` (Adjust Dockerfile path if needed)
+- **Deploy Backend:**
+  - Use `gcloud run deploy interpreter-backend ...` command.
+  - Specify the backend image URL.
+  - Configure CPU/memory, concurrency.
+  - Set environment variables referencing secrets.
+  - Ensure network connectivity to the Cloud SQL database (using Cloud SQL proxy sidecar or direct VPC connection).
+  - Allow unauthenticated access initially for testing, configure authentication later.
+- **Deploy Frontend:**
+  - Use `gcloud run deploy interpreter-frontend ...` command.
+  - Specify the frontend image URL.
+  - Set environment variables (like `VITE_APP_BACKEND_URL` pointing to the deployed backend service URL).
+  - Allow unauthenticated access.
+- **Deployment Scripts:** The `deploy.sh` and `deploy-prod.sh` scripts provide a starting point for automating deployment, handling environment variables and `gcloud` commands. Review and adapt them for your specific GCP setup.
 
-**Deployment Steps:**
-
-1.  **Configure `deploy.sh`:**
-    - Open the `deploy.sh` script in the root directory.
-    - **Crucially, replace the placeholder values** (`YOUR_..._HERE`) for `PROJECT_ID`, `REGION`, `REPO`, `DATABASE_URL`, `JWT_SECRET`, `JWT_ISSUER`, and `OPENAI_API_KEY` with your actual configuration.
-    - **SECURITY WARNING:** Do **NOT** commit this file with your real secrets hardcoded. Use environment variables or Google Secret Manager for production workflows.
-2.  **Make Script Executable:**
-    ```bash
-    chmod +x deploy.sh
-    ```
-3.  **Run the Deployment Script:**
-
-    ```bash
-    ./deploy.sh
-    ```
-
-    - The script will perform the following:
-      - Build the backend image for `linux/amd64`.
-      - Push the backend image to Artifact Registry.
-      - Deploy the backend service to Cloud Run, setting environment variables (including secrets) and configuring the startup command (`prisma generate`, `prisma db push`, `node dist/index.js`).
-      - Fetch the public HTTPS URL of the deployed backend service.
-      - Build the frontend image for `linux/amd64`, injecting the backend's public URL as the `VITE_APP_BACKEND_URL` build argument.
-      - Push the frontend image to Artifact Registry.
-      - Deploy the frontend service (Nginx) to Cloud Run.
-      - Print the final public URLs for both services.
-
-4.  **Access the Deployed Application:** Use the Frontend Service URL printed by the script.
-
-## Environment Variables
-
-- **Backend (`.env` / Cloud Run):**
-  - `DATABASE_URL`: PostgreSQL connection string.
-  - `JWT_SECRET`: Secret for signing JWTs.
-  - `JWT_ISSUER`: Issuer name for JWTs.
-  - `OPENAI_API_KEY`: API Key for OpenAI services.
-  - `PORT`: (Set automatically by Cloud Run, used by the application).
-- **Frontend (`Dockerfile` build arg / Vite):**
-  - `VITE_APP_BACKEND_URL`: The **publicly accessible base URL** of the deployed backend service (e.g., `https://your-backend-service-xyz.a.run.app`). This is set automatically during the `deploy.sh` process.
-
-## TODO / Future Improvements
-
-- Implement robust error handling and user feedback on the frontend.
-- Secure secrets using Google Secret Manager instead of hardcoding or direct environment variables in `deploy.sh`.
-- Refine CORS policy on the backend to be more restrictive than `*` for production.
-- Implement proper database migration workflow (`prisma migrate dev/deploy`) instead of relying solely on `db push` for deployment.
-- Add more comprehensive tests (unit, integration, e2e).
-- Set up CI/CD using Google Cloud Build triggers for automated deployments.
-- Fix the missing `vite.svg` issue in the frontend build/deployment.
-- Improve WebSocket error handling and reconnection logic.
+---

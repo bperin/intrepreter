@@ -2,36 +2,39 @@
 
 This file lists voice commands you can use to interact with the AI assistant, Clara, during an active interpretation session.
 
-**How to Use:** To issue a command, first say the trigger word "Clara," followed by your request. For example: "Clara, pause session."
+**How to Use:** To issue a command, first say the trigger phrase "Hey Clara," followed by your request. For example: "Hey Clara, take a note about the patient's cough."
 
-Command parsing will only activate for utterances identified as coming from the clinician.
+The system uses AI to detect if your speech contains a command and extract relevant details. Command detection only activates for utterances identified as coming from the clinician.
 
 ## Action-Oriented Commands
 
-These commands trigger specific backend actions. Some may require confirmation or further details via the UI.
+These commands trigger specific backend actions, often creating an item in the "Actions" list for review or completion.
 
-- `Clara write prescription [medication name] [dosage] [frequency]`: Initiates the prescription writing process (likely setting status to `pending_review`). Needs robust entity extraction for medication details.
-- `Clara send lab order [lab test name]`: Triggers sending a lab order (e.g., CBC, TSH). Needs entity extraction for test name.
-- `Clara schedule follow-up [number] [days/weeks/months]`: Initiates scheduling a follow-up appointment.
-- `Clara refer patient to [specialty]`: Initiates a referral process.
-- `Clara add note to chart [note content]`: Allows adding a quick dictated note to the patient's chart (associated with the session).
-- `Clara update vital signs temperature [value] blood pressure [systolic]/[diastolic] heart rate [value]`: Allows dictating vital signs.
+- `Hey Clara, take a note [note content]`: Records a clinical note. The AI extracts the content of your note.
+  _Example: "Hey Clara, take a note patient reports intermittent dizziness for the past 3 days."_
 
-## Session Control / Information Commands
+- `Hey Clara, schedule follow-up [details]`: Records the intent to schedule a follow-up. The AI extracts details like timeframe or reason.
+  _Example: "Hey Clara, schedule follow up in 2 weeks to check blood pressure."_
 
-These commands control the session flow or request information.
+- `Hey Clara, write prescription [medication details]`: Initiates the prescription writing process by capturing the details. The AI extracts medication name, dosage, frequency etc. Requires UI review/confirmation.
+  _Example: "Hey Clara, write prescription for Lisinopril 10mg once daily."_
 
-- `Clara repeat that` / `Clara say again`: Asks Clara to repeat the last translation/utterance.
-- `Clara pause session`: Temporarily pauses recording/interpretation.
-- `Clara resume session`: Resumes a paused session.
-- `Clara end session`: Marks the conversation as ended and potentially triggers summary generation.
-- `Clara show summary`: (If summary is real-time) Requests displaying the current summary.
-- `Clara list actions`: Requests displaying the list of detected actions for the current session.
-- `Clara switch language to [language name]`: Manually changes the target translation language (less ideal than auto-detection but could be a fallback).
+_Future commands may include: send lab order, refer patient, update vital signs._
+
+## Session Control / Information Commands (Not Currently Implemented via Voice)
+
+These commands were previously considered but are **not** currently handled by the voice command system. They would need separate implementation if desired.
+
+- `Clara repeat that` / `Clara say again`
+- `Clara pause session`
+- `Clara resume session`
+- `Clara end session`
+- `Clara show summary`
+- `Clara list actions`
 
 ## Implementation Notes
 
-- **Trigger Word:** Using "Clara" helps differentiate commands from regular conversation.
+- **Trigger Phrase:** Using "Hey Clara" helps differentiate commands.
 - **Speaker Identification:** Crucial for ensuring only the clinician can issue commands.
-- **Parsing:** Start simple (keyword/phrase matching), evolve to NLU/LLM for complex commands (e.g., prescriptions).
-- **Confirmation:** Critical actions (prescriptions, orders) MUST require explicit UI confirmation before final execution.
+- **Tool Calling:** Uses OpenAI's tool/function calling to understand commands and extract parameters.
+- **Confirmation:** Critical actions (prescriptions, orders) should ideally require explicit UI confirmation before final execution, even after being detected via voice.
