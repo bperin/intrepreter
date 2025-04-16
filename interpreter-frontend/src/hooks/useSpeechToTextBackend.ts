@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useActions } from '../context/ActionContext';
+import { AggregatedAction, isActionEntityType } from '../types/actions';
 
 export type SttStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'failed' | 'closed' | 'error';
 
@@ -93,6 +95,9 @@ export const useSpeechToTextBackend = (
   const wsRef = useRef<WebSocket | null>(null);
   const isWsOpenRef = useRef<boolean>(false);
   
+  // Get addAction from context
+  const { addAction } = useActions();
+
   // Accumulated transcript ref
   const accumulatedTranscriptRef = useRef<string>('');
   // Flag to track if pause was triggered by visibility change
@@ -297,9 +302,17 @@ export const useSpeechToTextBackend = (
                   if (onNewMessage) {
                       console.log('🔄 [useSpeechToTextBackend] Calling onNewMessage with command result entity...');
                       onNewMessage(data.payload.payload); // Pass the created entity (Note, FollowUp, Prescription)
-                      console.log('✅ [useSpeechToTextBackend] onNewMessage callback executed for command result.');
+                      // console.log('✅ [useSpeechToTextBackend] onNewMessage callback executed for command result.'); // Keep separate logging if needed
+                  }
+                  // +++ Also call addAction from ActionContext +++
+                  const entity = data.payload.payload;
+                  // Ensure the entity looks like one of our action types before adding
+                  if (isActionEntityType(entity)) { // Use a type guard
+                      console.log('➕ [useSpeechToTextBackend] Calling addAction for command result entity...');
+                      addAction(entity as AggregatedAction); // Add to ActionContext
+                      console.log('✅ [useSpeechToTextBackend] addAction callback executed.');
                   } else {
-                      console.warn('⚠️ [useSpeechToTextBackend] onNewMessage callback NOT PROVIDED - command result not handled by parent!');
+                      console.warn('⚠️ [useSpeechToTextBackend] Command result payload did not match expected action structure:', entity);
                   }
               } else if (data.payload?.status === 'error') {
                   logError(`Command execution failed: ${data.payload.name}`, data.payload.message);
@@ -323,7 +336,7 @@ export const useSpeechToTextBackend = (
       setError(err instanceof Error ? err : new Error("Failed to initialize WebSocket"));
       setStatus('failed');
     }
-  }, [getBackendWsUrl, onNewMessage, language, onTtsAudio]); // Update dependency array
+  }, [getBackendWsUrl, onNewMessage, language, onTtsAudio, addAction]); // Update dependency array
 
   /**
    * Send audio data over WebSocket

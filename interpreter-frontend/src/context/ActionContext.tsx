@@ -7,6 +7,7 @@ interface ActionContextType {
     actions: AggregatedAction[];
     loading: boolean;
     error: string | null;
+    addAction: (newAction: AggregatedAction) => void;
 }
 
 const ActionContext = createContext<ActionContextType | undefined>(undefined);
@@ -80,8 +81,26 @@ export const ActionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     }, [lastMessage, currentConversationId]);
 
+    const addAction = useCallback((newAction: AggregatedAction) => {
+        if (newAction?.conversationId !== currentConversationId) {
+            console.log(`[ActionContext] Ignoring addAction for different conversation: ${newAction?.conversationId}`);
+            return;
+        }
+        
+        console.log(`[ActionContext] addAction called for: ${newAction.id} (${newAction.type})`);
+        setActions(prev => {
+            if (prev.some(a => a.id === newAction.id)) {
+                console.log(`[ActionContext] Duplicate action ID ${newAction.id}, skipping add.`);
+                return prev;
+            }
+            const updatedActions = [...prev, newAction].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            console.log(`[ActionContext] Actions updated. Count: ${updatedActions.length}`);
+            return updatedActions;
+        });
+    }, [currentConversationId]);
+
     return (
-        <ActionContext.Provider value={{ actions, loading, error }}>
+        <ActionContext.Provider value={{ actions, loading, error, addAction }}>
             {children}
         </ActionContext.Provider>
     );
