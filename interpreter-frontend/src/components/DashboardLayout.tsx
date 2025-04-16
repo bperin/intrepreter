@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import styled, { useTheme } from "styled-components";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { Theme } from "../theme";
 import { useAuth } from "../context/AuthContext"; // Import useAuth
 import { useWebSocket } from "../hooks/useWebSocket"; // Import the WebSocket hook
+import CommandHelpModal from "./CommandHelpModal"; // Import the modal component
 
 
 type ThemedProps = { theme: Theme };
@@ -70,7 +71,48 @@ const LeftColumn = styled.aside<ThemedProps>`
     overflow: hidden;
 `;
 
-// LeftColumnHeader removed
+// Renamed from LeftColumnHeader to ColumnHeader (more generic)
+const ColumnHeader = styled.div<ThemedProps>`
+    min-height: 64px; // Ensure consistent height for headers
+    padding: ${({ theme }) => theme.spacing.lg};
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
+    color: ${({ theme }) => theme.colors.text.muted};
+    font-size: ${({ theme }) => theme.typography.sizes.sm};
+    font-weight: ${({ theme }) => theme.typography.weights.medium};
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0; // Prevent shrinking
+    display: flex; // Added for alignment
+    align-items: center; // Added for vertical alignment
+    justify-content: space-between; // Added for spacing title and button
+`;
+
+// New Help Button specific for this layout
+const HeaderHelpButton = styled.button<ThemedProps>`
+    background: none;
+    border: 1px solid transparent; // Transparent border initially
+    color: ${({ theme }) => theme.colors.text.secondary};
+    border-radius: 50%;
+    width: 24px; // Slightly smaller
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: ${({ theme }) => theme.typography.sizes.sm}; // Smaller font
+    font-weight: ${({ theme }) => theme.typography.weights.bold};
+    line-height: 1;
+    padding: 0;
+    transition: all 0.2s ease;
+    margin-left: ${({ theme }) => theme.spacing.sm}; // Add space between title and button
+
+    &:hover {
+        background-color: ${({ theme }) => theme.colors.background.hover};
+        color: ${({ theme }) => theme.colors.text.primary};
+        border-color: ${({ theme }) => theme.colors.text.secondary}40;
+        transform: scale(1.1);
+    }
+`;
 
 const LeftColumnContent = styled.div<ThemedProps>`
     flex: 1;
@@ -130,17 +172,7 @@ const RightColumn = styled.aside<ThemedProps>`
     overflow: hidden;
 `;
 
-const RightColumnHeader = styled.div<ThemedProps>`
-    min-height: 64px; // Match potential header height
-    padding: ${({ theme }) => theme.spacing.lg};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
-    color: ${({ theme }) => theme.colors.text.muted};
-    font-size: ${({ theme }) => theme.typography.sizes.sm};
-    font-weight: ${({ theme }) => theme.typography.weights.medium};
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    flex-shrink: 0; // Prevent shrinking
-`;
+// Removed RightColumnHeader (using generic ColumnHeader)
 
 const RightColumnContent = styled.div<ThemedProps>`
     flex: 1;
@@ -238,6 +270,7 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ leftColumnContent, middleColumnContent, rightColumnContent }) => {
     const { logout } = useAuth();
     const navigate = useNavigate();
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false); // State for modal
 
     const handleLogout = () => {
         logout();
@@ -246,18 +279,29 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ leftColumnContent, mi
 
     return (
         <LayoutContainer>
-            {/* Removed Topbar related lines */}
-            <MainContentArea> 
+            <Topbar>
+                <Logo>Clara.ai</Logo>
+                <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
+            </Topbar>
+            <MainContentArea>
                 <LeftColumn>
+                    <ColumnHeader>
+                        PREVIOUS SESSIONS
+                        {/* No help button needed here */}
+                    </ColumnHeader>
                     <LeftColumnContent>{leftColumnContent}</LeftColumnContent>
                     <CombinedStatus />
                 </LeftColumn>
                 <MiddleColumn>{middleColumnContent}</MiddleColumn>
                 <RightColumn>
-                    <RightColumnHeader>Actions</RightColumnHeader>
+                    <ColumnHeader>
+                        ACTIONS
+                        <HeaderHelpButton onClick={() => setIsHelpModalOpen(true)}>?</HeaderHelpButton>
+                    </ColumnHeader>
                     <RightColumnContent>{rightColumnContent}</RightColumnContent>
                 </RightColumn>
             </MainContentArea>
+            <CommandHelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
         </LayoutContainer>
     );
 };

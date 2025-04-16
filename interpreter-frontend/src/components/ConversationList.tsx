@@ -236,7 +236,7 @@ const ConversationList: React.FC = () => {
 
     return (
         <>
-            <Title>Previous Sessions</Title>
+         
             <ListContainer>
                 {conversations.length > 0 ? (
                     conversations
