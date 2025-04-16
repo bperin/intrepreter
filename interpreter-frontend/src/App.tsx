@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
 import { ThemeProvider } from 'styled-components';
@@ -11,6 +11,9 @@ import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
 import RegistrationPage from './pages/RegisterPage';
+
+// Log Backend URL at the top level (where import.meta.env is accessible)
+console.log("[App] Backend URL (from import.meta.env.VITE_APP_BACKEND_URL):", import.meta.env.VITE_APP_BACKEND_URL);
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -110,6 +113,7 @@ const MainContent = styled.main`
 // Component to handle protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAuth();
+    console.log(`[ProtectedRoute] Rendering - isLoading: ${isLoading}, isAuthenticated: ${isAuthenticated}`); // Log auth status
 
     if (isLoading) {
         return <div>Loading authentication status...</div>; // Or a spinner
@@ -122,6 +126,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const AppLayout: React.FC = () => {
     // Re-add user and logout to useAuth hook
     const { isAuthenticated, user, logout } = useAuth(); 
+    console.log(`[AppLayout] Rendering - isAuthenticated: ${isAuthenticated}, User:`, user); // Log layout render and user
 
     return (
         <AppContainer>
@@ -171,6 +176,7 @@ const AppLayout: React.FC = () => {
 };
 
 const App: React.FC = () => {
+    console.log("[App] Component Rendering..."); // Log App component render
     return (
         <ThemeProvider theme={theme}>
             <GlobalStyle />
