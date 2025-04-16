@@ -425,8 +425,28 @@ const ChatInterface: React.FC = () => {
     const clinicianUsername = useMemo(() => user?.username || 'Clinician', [user]);
     const patientName = useMemo(() => currentConversation?.patient?.firstName || 'Patient', [currentConversation]);
 
+    // --- WebSocket Hook ---
     const { sendMessage, lastMessage, isConnected, error } = useWebSocket();
 
+    // --- Audio Context Helper ---
+    // Define getAudioContext FIRST because playAudio depends on it
+    const getAudioContext = useCallback((): AudioContext | null => {
+        if (!audioContextRef.current) {
+            try {
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            } catch (e) {
+                showError("Audio playback not supported.", "error"); return null;
+            }
+        }
+        // Attempt to resume if suspended (might require user interaction)
+        if (audioContextRef.current.state === "suspended") {
+             console.log("[AudioContext] Resuming suspended context...");
+            audioContextRef.current.resume().catch(err => console.error("[AudioContext] Resume failed:", err));
+        }
+        return audioContextRef.current;
+    }, [showError]); // Dependency: showError
+
+    // --- Callbacks for Hooks ---
     const handleNewMessage = useCallback((messageData: Message) => {
         console.log('🔵 [ChatInterface] STT handleNewMessage called with data:', JSON.stringify(messageData, null, 2));
         const displayMsg = convertToDisplayMessage(messageData);
@@ -437,28 +457,51 @@ const ChatInterface: React.FC = () => {
 
     const playAudio = useCallback(async (audioData: ArrayBuffer) => {
         console.log('[PlayAudio] Attempting to play audio buffer, size:', audioData.byteLength);
-        const context = getAudioContext();
+        const context = getAudioContext(); // NOW defined above
         if (!context) {
             console.error('[PlayAudio] Cannot play audio, AudioContext not available.');
             showError("Audio context not available for playback.", "error");
             return;
         }
-        // ... rest of playAudio logic ...
-    }, [showError]);
 
-    const getAudioContext = (): AudioContext | null => {
-        if (!audioContextRef.current) {
-            try {
-                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-            } catch (e) {
-                showError("Audio playback not supported.", "error"); return null;
-            }
+        // Log context state before decoding
+        console.log(`[PlayAudio Debug] AudioContext state BEFORE decode: ${context.state}`);
+        if (context.state !== 'running') {
+             console.warn(`[PlayAudio] AudioContext state is ${context.state}. Attempting resume...`);
+             try {
+                 await context.resume();
+                 console.log(`[PlayAudio] AudioContext resume successful. New state: ${context.state}`);
+             } catch (resumeErr) {
+                 console.error("[PlayAudio] Error resuming AudioContext:", resumeErr);
+                 showError("Failed to resume audio context. Please interact with the page.", "warning");
+                 return; // Stop if resume fails
+             }
         }
-        if (audioContextRef.current.state === "suspended") {
-            audioContextRef.current.resume();
+
+        try {
+            console.log('[PlayAudio] Decoding audio data...');
+            const audioBuffer = await context.decodeAudioData(audioData);
+            console.log('[PlayAudio Debug] Audio data decoded successfully. Duration:', audioBuffer.duration);
+
+            const source = context.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(context.destination);
+
+            // Log context state JUST BEFORE starting playback
+            console.log(`[PlayAudio Debug] AudioContext state BEFORE source.start: ${context.state}`);
+
+            console.log('[PlayAudio] Starting playback...');
+            source.start(0);
+            source.onended = () => {
+                 console.log('[PlayAudio] Playback finished.');
+            };
+             console.log('[PlayAudio] source.start(0) called.'); // Confirm start was called
+
+        } catch (error) {
+            console.error("[PlayAudio] Error decoding or playing audio data:", error);
+            showError("Failed to play received audio.", "error");
         }
-        return audioContextRef.current;
-    };
+    }, [showError, getAudioContext]);
 
     const { 
         status: sttStatus, 
@@ -468,7 +511,11 @@ const ChatInterface: React.FC = () => {
         pauseRecording, 
         resumeRecording, 
         isPaused: hookIsPaused 
-    } = useSpeechToTextBackend(selectedConversationId);
+    } = useSpeechToTextBackend(
+        selectedConversationId, 
+        handleNewMessage,
+        playAudio
+    );
 
     const scrollToBottom = useCallback(() => {
         if (messageAreaRef.current) {
@@ -660,11 +707,21 @@ const ChatInterface: React.FC = () => {
                   console.log('[WS Effect] Received conversation_selected confirmation');
                   // Update local state based on payload if needed (e.g., status)
              }
+            else if (message.type === 'tts_audio' && message.payload?.audioBase64) {
+                 console.log('[WS Effect] Received tts_audio.');
+                 const audioBuffer = base64ToArrayBuffer(message.payload.audioBase64);
+                 if (audioBuffer) {
+                     console.log('[WS Effect] Decoding Base64 successful, attempting to play audio...');
+                     playAudio(audioBuffer);
+                 } else {
+                      console.error('[WS Effect] Failed to decode Base64 audio data from tts_audio message.');
+                 }
+             }
             else {
                  console.log(`[WS Effect] Received unhandled message type or invalid payload for known type: ${message.type}`);
             }
         } 
-    }, [lastMessage, selectedConversationId, handleNewMessage]);
+    }, [lastMessage, selectedConversationId, handleNewMessage, playAudio]);
 
     const handleEndSession = async () => {
         console.log("[ChatInterface] handleEndSession called");

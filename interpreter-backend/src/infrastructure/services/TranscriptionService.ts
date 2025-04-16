@@ -14,6 +14,7 @@ import dotenv from 'dotenv';
 import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
 import { CommandDetectionService } from './CommandDetectionService';
 import { CommandExecutionService, CommandExecutionResult } from './CommandExecutionService';
+import { ILanguageDetectionService } from '../../domain/services/ILanguageDetectionService';
 
 // Load environment variables from .env file in the parent directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -94,7 +95,8 @@ export class TranscriptionService {
       @inject(ITextToSpeechServiceToken) private ttsService: ITextToSpeechService,
       @inject('IConversationRepository') private conversationRepository: IConversationRepository,
       @inject(CommandDetectionService) private commandDetectionService: CommandDetectionService,
-      @inject(CommandExecutionService) private commandExecutionService: CommandExecutionService
+      @inject(CommandExecutionService) private commandExecutionService: CommandExecutionService,
+      @inject('ILanguageDetectionService') private languageDetectionService: ILanguageDetectionService
   ) {
       this.openaiApiKey = process.env.OPENAI_API_KEY || '';
       // --- DEBUG LOG ---
@@ -398,7 +400,7 @@ export class TranscriptionService {
 
                 console.log(`[TranscriptionService][${conversationId}] Processing completed transcription: "${completedText.substring(0, 50)}..."`);
 
-                const detectedLanguage = await this.detectLanguage(completedText);
+                const detectedLanguage = await this.languageDetectionService.detectLanguage(completedText);
                 const sender = (detectedLanguage === 'en' || detectedLanguage === 'unknown') ? 'user' : 'patient'; // user=clinician, patient=patient
 
                 let textForTTS: string = completedText; // Default TTS text
@@ -902,80 +904,6 @@ export class TranscriptionService {
     } catch (e) {
       return false;
     }
-  }
-
-  /**
-   * Detects the language of a given text using a secondary OpenAI API call.
-   * @param text The text to detect the language for.
-   * @returns A promise resolving to the ISO 639-1 language code (e.g., 'en', 'es') or 'unknown'.
-   */
-  private async detectLanguage(text: string): Promise<string> {
-      if (!this.openaiApiKey) {
-          console.warn('[TranscriptionService] Cannot detect language: OPENAI_API_KEY not set.');
-          return 'unknown';
-      }
-      if (!text || text.trim().length === 0) {
-          return 'unknown'; // No text to detect
-      }
-
-      const languageDetectionUrl = 'https://api.openai.com/v1/chat/completions';
-      const prompt = `Identify the predominant language of the following text and return only its two-letter ISO 639-1 code (e.g., en, es, fr, ja). Text: "${text}"`;
-
-      console.log(`[TranscriptionService] Detecting language for text (first 50 chars): "${text.substring(0, 50)}..."`);
-
-      try {
-          const response = await axios.post<OpenAIChatCompletionResponse>(
-              languageDetectionUrl,
-              {
-                  model: 'gpt-4o-mini',
-                  messages: [{ role: 'user', content: prompt }],
-                  max_tokens: 5,
-                  temperature: 0.1,
-              },
-              {
-                  headers: {
-                      'Authorization': `Bearer ${this.openaiApiKey}`,
-                      'Content-Type': 'application/json',
-                  },
-              }
-          );
-
-          const detectedLang = response.data?.choices?.[0]?.message?.content?.trim().toLowerCase();
-          
-          if (detectedLang && /^[a-z]{2}$/.test(detectedLang)) {
-               console.log(`[TranscriptionService] Detected language: ${detectedLang}`);
-               return detectedLang;
-          } else {
-               console.warn(`[TranscriptionService] Language detection returned unexpected result: '${detectedLang}'. Defaulting to 'unknown'. Full response:`, JSON.stringify(response.data));
-               return 'unknown'; 
-          }
-
-      } catch (error) {
-          console.error('[TranscriptionService] Error calling OpenAI Language Detection API:');
-          // Replace the type guard
-          if (error && typeof error === 'object' && 'isAxiosError' in error && error.isAxiosError) {
-              // Now we assume it's an AxiosError, but cast to access specific props safely
-              const axiosError = error as { response?: { status?: number; data?: any } }; 
-              console.error('Status:', axiosError.response?.status);
-              // Try to parse error data if it exists
-              if (axiosError.response?.data) {
-                  try {
-                      // Assuming error data might be JSON
-                      console.error('Data:', JSON.stringify(axiosError.response.data)); 
-                  } catch (parseError) {
-                      // If not JSON, log as is (might be ArrayBuffer or string)
-                      console.error('Data (raw):', axiosError.response.data);
-                  }
-              } else {
-                  console.error('No response data received.');
-              }
-          } else if (error instanceof Error) {
-               console.error(error.message);
-          } else {
-               console.error('An unknown error occurred:', String(error));
-          }
-          return 'unknown'; // Default on error
-      }
   }
 
   /**

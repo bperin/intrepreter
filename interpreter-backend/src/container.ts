@@ -20,6 +20,7 @@ import { IFollowUpService } from "./domain/services/IFollowUpService";
 import { IPrescriptionService } from "./domain/services/IPrescriptionService";
 import { INotificationService } from "./domain/services/INotificationService";
 import { IAggregationService } from "./domain/services/IAggregationService";
+import { ILanguageDetectionService } from "./domain/services/ILanguageDetectionService";
 
 // Import Implementations
 import { PrismaUserRepository } from "./infrastructure/persistence/PrismaUserRepository";
@@ -43,6 +44,8 @@ import { WebSocketNotificationService } from "./infrastructure/services/WebSocke
 import { MedicalHistoryService } from "./infrastructure/services/MedicalHistoryService";
 import { CommandDetectionService } from "./infrastructure/services/CommandDetectionService";
 import { AggregationService } from "./infrastructure/services/AggregationService";
+import { CommandExecutionService } from "./infrastructure/services/CommandExecutionService";
+import { LanguageDetectionService } from "./infrastructure/services/LanguageDetectionService";
 
 // --- Configuration ---
 
@@ -72,10 +75,12 @@ container.register("IFollowUpService", { useClass: FollowUpService });
 container.register("IPrescriptionService", { useClass: PrescriptionService });
 container.register("INotificationService", { useClass: WebSocketNotificationService });
 container.register("IAggregationService", { useClass: AggregationService });
+container.register<ILanguageDetectionService>('ILanguageDetectionService', { useClass: LanguageDetectionService });
 
 // Register services that might depend on others (ensure correct order or use singleton for automatic resolution)
 container.registerSingleton(MedicalHistoryService);
 container.registerSingleton(CommandDetectionService);
+container.registerSingleton(CommandExecutionService);
 
 // Finally register TranscriptionService (it now depends on Note/FollowUp/Prescription services)
 container.registerSingleton(TranscriptionService);

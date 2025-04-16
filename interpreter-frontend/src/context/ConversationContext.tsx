@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback, useEffect, useRef } from "react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import api from "../lib/api";
+import { useAuth } from "./AuthContext"; // Import useAuth
 
 // Reuse the Conversation type definition (ensure it's exported from where it's defined, or redefine/import)
 // Assuming it might be defined elsewhere, let's redefine for clarity here.
@@ -62,6 +63,7 @@ interface ConversationProviderProps {
 }
 
 export const ConversationProvider: React.FC<ConversationProviderProps> = ({ children }) => {
+    const { isAuthenticated } = useAuth(); // Get auth status
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -114,6 +116,15 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
 
     // Fetch conversations from REST API
     const fetchConversations = useCallback(async (isRefresh = false) => {
+        // --- ADDED Auth Check --- 
+        if (!isAuthenticated) {
+            console.log("[ConversationContext] Skipping fetchConversations: User not authenticated.");
+            setConversations([]); // Clear conversations if not authenticated
+            setIsLoading(false);
+            setIsRefreshing(false);
+            return;
+        }
+        // --- END Auth Check ---
         try {
             // Only set loading on initial load, not refreshes
             if (!isRefresh) {
@@ -157,15 +168,31 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, [selectConversation]);
+    }, [isAuthenticated, selectConversation]);
 
-    // Fetch conversations on initial load
+    // Fetch conversations on initial load *only if authenticated*
     useEffect(() => {
-        fetchConversations(false); // Initial load
-        // Set up an interval to refresh conversations every 30 seconds
-        const intervalId = setInterval(() => fetchConversations(true), 30000); // Refresh
-        return () => clearInterval(intervalId);
-    }, [fetchConversations]);
+        let intervalId: NodeJS.Timeout | null = null;
+
+        if (isAuthenticated) {
+            console.log("[ConversationContext] Auth detected, fetching initial conversations.");
+            fetchConversations(false); // Initial load
+            // Set up interval only if authenticated
+            intervalId = setInterval(() => fetchConversations(true), 30000); // Refresh
+        } else {
+             console.log("[ConversationContext] No auth on mount/change, clearing conversations.");
+             setConversations([]); // Ensure conversations are cleared if auth status changes to false
+             setCurrentConversation(null);
+             selectedConversationIdRef.current = null;
+        }
+
+        // Cleanup function
+        return () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        };
+    }, [isAuthenticated, fetchConversations]); // Trigger effect when auth status changes
 
     // Stable reference to functions
     const stableEndCurrentSession = useCallback(async () => {
@@ -196,7 +223,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         console.log(`[ConversationContext] addMessageToConversation called for ${conversationId}`, message);
     }, []);
 
-    // Memoize the context value once to avoid unnecessary re-renders
+    // Memoize the context value
     const stableValue = useMemo(() => ({
         conversations,
         conversationVersion,
