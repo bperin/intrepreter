@@ -22,47 +22,69 @@ datasource db {
 }
 
 model User {
-  id                 String         @id @default(uuid())
+  id                 String         @id @default(cuid())
   username           String         @unique
   hashedPassword     String
-  refreshToken       String?
-  refreshTokenExpiry DateTime?
-  conversations      Conversation[]
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
+  conversations      Conversation[]
+  refreshToken       String?        @unique // Made unique for potential revocation lookup
+  refreshTokenExpiry DateTime? // Field for refresh token expiry
 }
 
 model Patient {
   id            String         @id @default(cuid())
   firstName     String
   lastName      String
-  dateOfBirth   DateTime // Storing as DateTime, handle date-only part in application logic
+  dateOfBirth   DateTime // Consider using DateTime or String based on needs
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   conversations Conversation[]
-
-  @@index([firstName, lastName, dateOfBirth]) // Index for finding patients
 }
 
 model Conversation {
-  id                String    @id @default(cuid())
-  userId            String // Clinician/User who initiated
-  user              User      @relation(fields: [userId], references: [id])
-  patientId         String // Patient involved in the conversation
-  patient           Patient   @relation(fields: [patientId], references: [id])
-  startTime         DateTime  @default(now())
-  endTime           DateTime? // Nullable, set when conversation ends
-  summary           String? // Optional summary generated later
-  status            String    @default("active") // e.g., active, ended, summarized
-  preferredLanguage String? // Clinician's preferred language for interpretation output (UNUSED currently)
-  patientLanguage   String    @default("es") // Patient's detected/assumed language
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  messages          Message[]
-  actions           Action[]
+  id              String    @id @default(cuid())
+  userId          String
+  patientId       String
+  startTime       DateTime  @default(now())
+  endTime         DateTime? // Nullable for ongoing conversations
+  status          String // e.g., ACTIVE, SUMMARIZED, ENDED
+  patientLanguage String    @default("en") // Default language if not detected/set
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  messages       Message[] // Relation to messages
+  actions        Action[] // Relation to actions
+  summary        Summary? // Relation to Summary (one-to-one)
+  medicalHistory MedicalHistory? // Relation to MedicalHistory (one-to-one)
 
   @@index([userId])
-  @@index([patientId]) // Add index for patient lookup
+  @@index([patientId])
+}
+
+// New Model for Medical History
+model MedicalHistory {
+  id             String       @id @default(cuid())
+  content        String       @db.Text // Use Text type for potentially long content
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversationId String       @unique // Each conversation has one history
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Summary {
+  id      String @id @default(cuid())
+  content String @db.Text // Placeholder for summary content
+
+  // --- Add relation back to Conversation --- 
+  conversationId String       @unique // Each conversation has one summary
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  // ----------------------------------------
+
+  createdAt DateTime @default(now()) // Placeholder
+  updatedAt DateTime @updatedAt // Placeholder
 }
 
 model Message {

@@ -29,6 +29,16 @@ export type Patient = $Result.DefaultSelection<Prisma.$PatientPayload>
  */
 export type Conversation = $Result.DefaultSelection<Prisma.$ConversationPayload>
 /**
+ * Model MedicalHistory
+ * 
+ */
+export type MedicalHistory = $Result.DefaultSelection<Prisma.$MedicalHistoryPayload>
+/**
+ * Model Summary
+ * 
+ */
+export type Summary = $Result.DefaultSelection<Prisma.$SummaryPayload>
+/**
  * Model Message
  * 
  */
@@ -193,6 +203,26 @@ export class PrismaClient<
     * ```
     */
   get conversation(): Prisma.ConversationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.medicalHistory`: Exposes CRUD operations for the **MedicalHistory** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more MedicalHistories
+    * const medicalHistories = await prisma.medicalHistory.findMany()
+    * ```
+    */
+  get medicalHistory(): Prisma.MedicalHistoryDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.summary`: Exposes CRUD operations for the **Summary** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Summaries
+    * const summaries = await prisma.summary.findMany()
+    * ```
+    */
+  get summary(): Prisma.SummaryDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.message`: Exposes CRUD operations for the **Message** model.
@@ -656,6 +686,8 @@ export namespace Prisma {
     User: 'User',
     Patient: 'Patient',
     Conversation: 'Conversation',
+    MedicalHistory: 'MedicalHistory',
+    Summary: 'Summary',
     Message: 'Message',
     Action: 'Action'
   };
@@ -676,7 +708,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "patient" | "conversation" | "message" | "action"
+      modelProps: "user" | "patient" | "conversation" | "medicalHistory" | "summary" | "message" | "action"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -899,6 +931,154 @@ export namespace Prisma {
           count: {
             args: Prisma.ConversationCountArgs<ExtArgs>
             result: $Utils.Optional<ConversationCountAggregateOutputType> | number
+          }
+        }
+      }
+      MedicalHistory: {
+        payload: Prisma.$MedicalHistoryPayload<ExtArgs>
+        fields: Prisma.MedicalHistoryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.MedicalHistoryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.MedicalHistoryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>
+          }
+          findFirst: {
+            args: Prisma.MedicalHistoryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.MedicalHistoryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>
+          }
+          findMany: {
+            args: Prisma.MedicalHistoryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>[]
+          }
+          create: {
+            args: Prisma.MedicalHistoryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>
+          }
+          createMany: {
+            args: Prisma.MedicalHistoryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.MedicalHistoryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>[]
+          }
+          delete: {
+            args: Prisma.MedicalHistoryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>
+          }
+          update: {
+            args: Prisma.MedicalHistoryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>
+          }
+          deleteMany: {
+            args: Prisma.MedicalHistoryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.MedicalHistoryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.MedicalHistoryUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>[]
+          }
+          upsert: {
+            args: Prisma.MedicalHistoryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MedicalHistoryPayload>
+          }
+          aggregate: {
+            args: Prisma.MedicalHistoryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateMedicalHistory>
+          }
+          groupBy: {
+            args: Prisma.MedicalHistoryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<MedicalHistoryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.MedicalHistoryCountArgs<ExtArgs>
+            result: $Utils.Optional<MedicalHistoryCountAggregateOutputType> | number
+          }
+        }
+      }
+      Summary: {
+        payload: Prisma.$SummaryPayload<ExtArgs>
+        fields: Prisma.SummaryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.SummaryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.SummaryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>
+          }
+          findFirst: {
+            args: Prisma.SummaryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.SummaryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>
+          }
+          findMany: {
+            args: Prisma.SummaryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>[]
+          }
+          create: {
+            args: Prisma.SummaryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>
+          }
+          createMany: {
+            args: Prisma.SummaryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.SummaryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>[]
+          }
+          delete: {
+            args: Prisma.SummaryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>
+          }
+          update: {
+            args: Prisma.SummaryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>
+          }
+          deleteMany: {
+            args: Prisma.SummaryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.SummaryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.SummaryUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>[]
+          }
+          upsert: {
+            args: Prisma.SummaryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SummaryPayload>
+          }
+          aggregate: {
+            args: Prisma.SummaryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateSummary>
+          }
+          groupBy: {
+            args: Prisma.SummaryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<SummaryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.SummaryCountArgs<ExtArgs>
+            result: $Utils.Optional<SummaryCountAggregateOutputType> | number
           }
         }
       }
@@ -1137,6 +1317,8 @@ export namespace Prisma {
     user?: UserOmit
     patient?: PatientOmit
     conversation?: ConversationOmit
+    medicalHistory?: MedicalHistoryOmit
+    summary?: SummaryOmit
     message?: MessageOmit
     action?: ActionOmit
   }
@@ -1379,30 +1561,30 @@ export namespace Prisma {
     id: string | null
     username: string | null
     hashedPassword: string | null
-    refreshToken: string | null
-    refreshTokenExpiry: Date | null
     createdAt: Date | null
     updatedAt: Date | null
+    refreshToken: string | null
+    refreshTokenExpiry: Date | null
   }
 
   export type UserMaxAggregateOutputType = {
     id: string | null
     username: string | null
     hashedPassword: string | null
-    refreshToken: string | null
-    refreshTokenExpiry: Date | null
     createdAt: Date | null
     updatedAt: Date | null
+    refreshToken: string | null
+    refreshTokenExpiry: Date | null
   }
 
   export type UserCountAggregateOutputType = {
     id: number
     username: number
     hashedPassword: number
-    refreshToken: number
-    refreshTokenExpiry: number
     createdAt: number
     updatedAt: number
+    refreshToken: number
+    refreshTokenExpiry: number
     _all: number
   }
 
@@ -1411,30 +1593,30 @@ export namespace Prisma {
     id?: true
     username?: true
     hashedPassword?: true
-    refreshToken?: true
-    refreshTokenExpiry?: true
     createdAt?: true
     updatedAt?: true
+    refreshToken?: true
+    refreshTokenExpiry?: true
   }
 
   export type UserMaxAggregateInputType = {
     id?: true
     username?: true
     hashedPassword?: true
-    refreshToken?: true
-    refreshTokenExpiry?: true
     createdAt?: true
     updatedAt?: true
+    refreshToken?: true
+    refreshTokenExpiry?: true
   }
 
   export type UserCountAggregateInputType = {
     id?: true
     username?: true
     hashedPassword?: true
-    refreshToken?: true
-    refreshTokenExpiry?: true
     createdAt?: true
     updatedAt?: true
+    refreshToken?: true
+    refreshTokenExpiry?: true
     _all?: true
   }
 
@@ -1514,10 +1696,10 @@ export namespace Prisma {
     id: string
     username: string
     hashedPassword: string
-    refreshToken: string | null
-    refreshTokenExpiry: Date | null
     createdAt: Date
     updatedAt: Date
+    refreshToken: string | null
+    refreshTokenExpiry: Date | null
     _count: UserCountAggregateOutputType | null
     _min: UserMinAggregateOutputType | null
     _max: UserMaxAggregateOutputType | null
@@ -1541,10 +1723,10 @@ export namespace Prisma {
     id?: boolean
     username?: boolean
     hashedPassword?: boolean
-    refreshToken?: boolean
-    refreshTokenExpiry?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    refreshToken?: boolean
+    refreshTokenExpiry?: boolean
     conversations?: boolean | User$conversationsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
@@ -1553,33 +1735,33 @@ export namespace Prisma {
     id?: boolean
     username?: boolean
     hashedPassword?: boolean
-    refreshToken?: boolean
-    refreshTokenExpiry?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    refreshToken?: boolean
+    refreshTokenExpiry?: boolean
   }, ExtArgs["result"]["user"]>
 
   export type UserSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     username?: boolean
     hashedPassword?: boolean
-    refreshToken?: boolean
-    refreshTokenExpiry?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    refreshToken?: boolean
+    refreshTokenExpiry?: boolean
   }, ExtArgs["result"]["user"]>
 
   export type UserSelectScalar = {
     id?: boolean
     username?: boolean
     hashedPassword?: boolean
-    refreshToken?: boolean
-    refreshTokenExpiry?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    refreshToken?: boolean
+    refreshTokenExpiry?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "username" | "hashedPassword" | "refreshToken" | "refreshTokenExpiry" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "username" | "hashedPassword" | "createdAt" | "updatedAt" | "refreshToken" | "refreshTokenExpiry", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     conversations?: boolean | User$conversationsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1596,10 +1778,10 @@ export namespace Prisma {
       id: string
       username: string
       hashedPassword: string
-      refreshToken: string | null
-      refreshTokenExpiry: Date | null
       createdAt: Date
       updatedAt: Date
+      refreshToken: string | null
+      refreshTokenExpiry: Date | null
     }, ExtArgs["result"]["user"]>
     composites: {}
   }
@@ -2027,10 +2209,10 @@ export namespace Prisma {
     readonly id: FieldRef<"User", 'String'>
     readonly username: FieldRef<"User", 'String'>
     readonly hashedPassword: FieldRef<"User", 'String'>
-    readonly refreshToken: FieldRef<"User", 'String'>
-    readonly refreshTokenExpiry: FieldRef<"User", 'DateTime'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
+    readonly refreshToken: FieldRef<"User", 'String'>
+    readonly refreshTokenExpiry: FieldRef<"User", 'DateTime'>
   }
     
 
@@ -3560,9 +3742,7 @@ export namespace Prisma {
     patientId: string | null
     startTime: Date | null
     endTime: Date | null
-    summary: string | null
     status: string | null
-    preferredLanguage: string | null
     patientLanguage: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -3574,9 +3754,7 @@ export namespace Prisma {
     patientId: string | null
     startTime: Date | null
     endTime: Date | null
-    summary: string | null
     status: string | null
-    preferredLanguage: string | null
     patientLanguage: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -3588,9 +3766,7 @@ export namespace Prisma {
     patientId: number
     startTime: number
     endTime: number
-    summary: number
     status: number
-    preferredLanguage: number
     patientLanguage: number
     createdAt: number
     updatedAt: number
@@ -3604,9 +3780,7 @@ export namespace Prisma {
     patientId?: true
     startTime?: true
     endTime?: true
-    summary?: true
     status?: true
-    preferredLanguage?: true
     patientLanguage?: true
     createdAt?: true
     updatedAt?: true
@@ -3618,9 +3792,7 @@ export namespace Prisma {
     patientId?: true
     startTime?: true
     endTime?: true
-    summary?: true
     status?: true
-    preferredLanguage?: true
     patientLanguage?: true
     createdAt?: true
     updatedAt?: true
@@ -3632,9 +3804,7 @@ export namespace Prisma {
     patientId?: true
     startTime?: true
     endTime?: true
-    summary?: true
     status?: true
-    preferredLanguage?: true
     patientLanguage?: true
     createdAt?: true
     updatedAt?: true
@@ -3719,9 +3889,7 @@ export namespace Prisma {
     patientId: string
     startTime: Date
     endTime: Date | null
-    summary: string | null
     status: string
-    preferredLanguage: string | null
     patientLanguage: string
     createdAt: Date
     updatedAt: Date
@@ -3750,9 +3918,7 @@ export namespace Prisma {
     patientId?: boolean
     startTime?: boolean
     endTime?: boolean
-    summary?: boolean
     status?: boolean
-    preferredLanguage?: boolean
     patientLanguage?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -3760,6 +3926,8 @@ export namespace Prisma {
     patient?: boolean | PatientDefaultArgs<ExtArgs>
     messages?: boolean | Conversation$messagesArgs<ExtArgs>
     actions?: boolean | Conversation$actionsArgs<ExtArgs>
+    summary?: boolean | Conversation$summaryArgs<ExtArgs>
+    medicalHistory?: boolean | Conversation$medicalHistoryArgs<ExtArgs>
     _count?: boolean | ConversationCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["conversation"]>
 
@@ -3769,9 +3937,7 @@ export namespace Prisma {
     patientId?: boolean
     startTime?: boolean
     endTime?: boolean
-    summary?: boolean
     status?: boolean
-    preferredLanguage?: boolean
     patientLanguage?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -3785,9 +3951,7 @@ export namespace Prisma {
     patientId?: boolean
     startTime?: boolean
     endTime?: boolean
-    summary?: boolean
     status?: boolean
-    preferredLanguage?: boolean
     patientLanguage?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -3801,20 +3965,20 @@ export namespace Prisma {
     patientId?: boolean
     startTime?: boolean
     endTime?: boolean
-    summary?: boolean
     status?: boolean
-    preferredLanguage?: boolean
     patientLanguage?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type ConversationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "patientId" | "startTime" | "endTime" | "summary" | "status" | "preferredLanguage" | "patientLanguage" | "createdAt" | "updatedAt", ExtArgs["result"]["conversation"]>
+  export type ConversationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "patientId" | "startTime" | "endTime" | "status" | "patientLanguage" | "createdAt" | "updatedAt", ExtArgs["result"]["conversation"]>
   export type ConversationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | PatientDefaultArgs<ExtArgs>
     messages?: boolean | Conversation$messagesArgs<ExtArgs>
     actions?: boolean | Conversation$actionsArgs<ExtArgs>
+    summary?: boolean | Conversation$summaryArgs<ExtArgs>
+    medicalHistory?: boolean | Conversation$medicalHistoryArgs<ExtArgs>
     _count?: boolean | ConversationCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type ConversationIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -3833,6 +3997,8 @@ export namespace Prisma {
       patient: Prisma.$PatientPayload<ExtArgs>
       messages: Prisma.$MessagePayload<ExtArgs>[]
       actions: Prisma.$ActionPayload<ExtArgs>[]
+      summary: Prisma.$SummaryPayload<ExtArgs> | null
+      medicalHistory: Prisma.$MedicalHistoryPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -3840,9 +4006,7 @@ export namespace Prisma {
       patientId: string
       startTime: Date
       endTime: Date | null
-      summary: string | null
       status: string
-      preferredLanguage: string | null
       patientLanguage: string
       createdAt: Date
       updatedAt: Date
@@ -4244,6 +4408,8 @@ export namespace Prisma {
     patient<T extends PatientDefaultArgs<ExtArgs> = {}>(args?: Subset<T, PatientDefaultArgs<ExtArgs>>): Prisma__PatientClient<$Result.GetResult<Prisma.$PatientPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     messages<T extends Conversation$messagesArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$messagesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     actions<T extends Conversation$actionsArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$actionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    summary<T extends Conversation$summaryArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$summaryArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    medicalHistory<T extends Conversation$medicalHistoryArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$medicalHistoryArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4278,9 +4444,7 @@ export namespace Prisma {
     readonly patientId: FieldRef<"Conversation", 'String'>
     readonly startTime: FieldRef<"Conversation", 'DateTime'>
     readonly endTime: FieldRef<"Conversation", 'DateTime'>
-    readonly summary: FieldRef<"Conversation", 'String'>
     readonly status: FieldRef<"Conversation", 'String'>
-    readonly preferredLanguage: FieldRef<"Conversation", 'String'>
     readonly patientLanguage: FieldRef<"Conversation", 'String'>
     readonly createdAt: FieldRef<"Conversation", 'DateTime'>
     readonly updatedAt: FieldRef<"Conversation", 'DateTime'>
@@ -4728,6 +4892,44 @@ export namespace Prisma {
   }
 
   /**
+   * Conversation.summary
+   */
+  export type Conversation$summaryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    where?: SummaryWhereInput
+  }
+
+  /**
+   * Conversation.medicalHistory
+   */
+  export type Conversation$medicalHistoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    where?: MedicalHistoryWhereInput
+  }
+
+  /**
    * Conversation without action
    */
   export type ConversationDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -4743,6 +4945,2122 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: ConversationInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model MedicalHistory
+   */
+
+  export type AggregateMedicalHistory = {
+    _count: MedicalHistoryCountAggregateOutputType | null
+    _min: MedicalHistoryMinAggregateOutputType | null
+    _max: MedicalHistoryMaxAggregateOutputType | null
+  }
+
+  export type MedicalHistoryMinAggregateOutputType = {
+    id: string | null
+    content: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+    conversationId: string | null
+  }
+
+  export type MedicalHistoryMaxAggregateOutputType = {
+    id: string | null
+    content: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+    conversationId: string | null
+  }
+
+  export type MedicalHistoryCountAggregateOutputType = {
+    id: number
+    content: number
+    createdAt: number
+    updatedAt: number
+    conversationId: number
+    _all: number
+  }
+
+
+  export type MedicalHistoryMinAggregateInputType = {
+    id?: true
+    content?: true
+    createdAt?: true
+    updatedAt?: true
+    conversationId?: true
+  }
+
+  export type MedicalHistoryMaxAggregateInputType = {
+    id?: true
+    content?: true
+    createdAt?: true
+    updatedAt?: true
+    conversationId?: true
+  }
+
+  export type MedicalHistoryCountAggregateInputType = {
+    id?: true
+    content?: true
+    createdAt?: true
+    updatedAt?: true
+    conversationId?: true
+    _all?: true
+  }
+
+  export type MedicalHistoryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MedicalHistory to aggregate.
+     */
+    where?: MedicalHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MedicalHistories to fetch.
+     */
+    orderBy?: MedicalHistoryOrderByWithRelationInput | MedicalHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: MedicalHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MedicalHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MedicalHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned MedicalHistories
+    **/
+    _count?: true | MedicalHistoryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: MedicalHistoryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: MedicalHistoryMaxAggregateInputType
+  }
+
+  export type GetMedicalHistoryAggregateType<T extends MedicalHistoryAggregateArgs> = {
+        [P in keyof T & keyof AggregateMedicalHistory]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateMedicalHistory[P]>
+      : GetScalarType<T[P], AggregateMedicalHistory[P]>
+  }
+
+
+
+
+  export type MedicalHistoryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MedicalHistoryWhereInput
+    orderBy?: MedicalHistoryOrderByWithAggregationInput | MedicalHistoryOrderByWithAggregationInput[]
+    by: MedicalHistoryScalarFieldEnum[] | MedicalHistoryScalarFieldEnum
+    having?: MedicalHistoryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: MedicalHistoryCountAggregateInputType | true
+    _min?: MedicalHistoryMinAggregateInputType
+    _max?: MedicalHistoryMaxAggregateInputType
+  }
+
+  export type MedicalHistoryGroupByOutputType = {
+    id: string
+    content: string
+    createdAt: Date
+    updatedAt: Date
+    conversationId: string
+    _count: MedicalHistoryCountAggregateOutputType | null
+    _min: MedicalHistoryMinAggregateOutputType | null
+    _max: MedicalHistoryMaxAggregateOutputType | null
+  }
+
+  type GetMedicalHistoryGroupByPayload<T extends MedicalHistoryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<MedicalHistoryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof MedicalHistoryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], MedicalHistoryGroupByOutputType[P]>
+            : GetScalarType<T[P], MedicalHistoryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type MedicalHistorySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    content?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversationId?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["medicalHistory"]>
+
+  export type MedicalHistorySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    content?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversationId?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["medicalHistory"]>
+
+  export type MedicalHistorySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    content?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversationId?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["medicalHistory"]>
+
+  export type MedicalHistorySelectScalar = {
+    id?: boolean
+    content?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversationId?: boolean
+  }
+
+  export type MedicalHistoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "content" | "createdAt" | "updatedAt" | "conversationId", ExtArgs["result"]["medicalHistory"]>
+  export type MedicalHistoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+  export type MedicalHistoryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+  export type MedicalHistoryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+
+  export type $MedicalHistoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "MedicalHistory"
+    objects: {
+      conversation: Prisma.$ConversationPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      content: string
+      createdAt: Date
+      updatedAt: Date
+      conversationId: string
+    }, ExtArgs["result"]["medicalHistory"]>
+    composites: {}
+  }
+
+  type MedicalHistoryGetPayload<S extends boolean | null | undefined | MedicalHistoryDefaultArgs> = $Result.GetResult<Prisma.$MedicalHistoryPayload, S>
+
+  type MedicalHistoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<MedicalHistoryFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: MedicalHistoryCountAggregateInputType | true
+    }
+
+  export interface MedicalHistoryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['MedicalHistory'], meta: { name: 'MedicalHistory' } }
+    /**
+     * Find zero or one MedicalHistory that matches the filter.
+     * @param {MedicalHistoryFindUniqueArgs} args - Arguments to find a MedicalHistory
+     * @example
+     * // Get one MedicalHistory
+     * const medicalHistory = await prisma.medicalHistory.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends MedicalHistoryFindUniqueArgs>(args: SelectSubset<T, MedicalHistoryFindUniqueArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one MedicalHistory that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {MedicalHistoryFindUniqueOrThrowArgs} args - Arguments to find a MedicalHistory
+     * @example
+     * // Get one MedicalHistory
+     * const medicalHistory = await prisma.medicalHistory.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends MedicalHistoryFindUniqueOrThrowArgs>(args: SelectSubset<T, MedicalHistoryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first MedicalHistory that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MedicalHistoryFindFirstArgs} args - Arguments to find a MedicalHistory
+     * @example
+     * // Get one MedicalHistory
+     * const medicalHistory = await prisma.medicalHistory.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends MedicalHistoryFindFirstArgs>(args?: SelectSubset<T, MedicalHistoryFindFirstArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first MedicalHistory that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MedicalHistoryFindFirstOrThrowArgs} args - Arguments to find a MedicalHistory
+     * @example
+     * // Get one MedicalHistory
+     * const medicalHistory = await prisma.medicalHistory.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends MedicalHistoryFindFirstOrThrowArgs>(args?: SelectSubset<T, MedicalHistoryFindFirstOrThrowArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more MedicalHistories that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MedicalHistoryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all MedicalHistories
+     * const medicalHistories = await prisma.medicalHistory.findMany()
+     * 
+     * // Get first 10 MedicalHistories
+     * const medicalHistories = await prisma.medicalHistory.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const medicalHistoryWithIdOnly = await prisma.medicalHistory.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends MedicalHistoryFindManyArgs>(args?: SelectSubset<T, MedicalHistoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a MedicalHistory.
+     * @param {MedicalHistoryCreateArgs} args - Arguments to create a MedicalHistory.
+     * @example
+     * // Create one MedicalHistory
+     * const MedicalHistory = await prisma.medicalHistory.create({
+     *   data: {
+     *     // ... data to create a MedicalHistory
+     *   }
+     * })
+     * 
+     */
+    create<T extends MedicalHistoryCreateArgs>(args: SelectSubset<T, MedicalHistoryCreateArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many MedicalHistories.
+     * @param {MedicalHistoryCreateManyArgs} args - Arguments to create many MedicalHistories.
+     * @example
+     * // Create many MedicalHistories
+     * const medicalHistory = await prisma.medicalHistory.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends MedicalHistoryCreateManyArgs>(args?: SelectSubset<T, MedicalHistoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many MedicalHistories and returns the data saved in the database.
+     * @param {MedicalHistoryCreateManyAndReturnArgs} args - Arguments to create many MedicalHistories.
+     * @example
+     * // Create many MedicalHistories
+     * const medicalHistory = await prisma.medicalHistory.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many MedicalHistories and only return the `id`
+     * const medicalHistoryWithIdOnly = await prisma.medicalHistory.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends MedicalHistoryCreateManyAndReturnArgs>(args?: SelectSubset<T, MedicalHistoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a MedicalHistory.
+     * @param {MedicalHistoryDeleteArgs} args - Arguments to delete one MedicalHistory.
+     * @example
+     * // Delete one MedicalHistory
+     * const MedicalHistory = await prisma.medicalHistory.delete({
+     *   where: {
+     *     // ... filter to delete one MedicalHistory
+     *   }
+     * })
+     * 
+     */
+    delete<T extends MedicalHistoryDeleteArgs>(args: SelectSubset<T, MedicalHistoryDeleteArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one MedicalHistory.
+     * @param {MedicalHistoryUpdateArgs} args - Arguments to update one MedicalHistory.
+     * @example
+     * // Update one MedicalHistory
+     * const medicalHistory = await prisma.medicalHistory.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends MedicalHistoryUpdateArgs>(args: SelectSubset<T, MedicalHistoryUpdateArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more MedicalHistories.
+     * @param {MedicalHistoryDeleteManyArgs} args - Arguments to filter MedicalHistories to delete.
+     * @example
+     * // Delete a few MedicalHistories
+     * const { count } = await prisma.medicalHistory.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends MedicalHistoryDeleteManyArgs>(args?: SelectSubset<T, MedicalHistoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MedicalHistories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MedicalHistoryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many MedicalHistories
+     * const medicalHistory = await prisma.medicalHistory.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends MedicalHistoryUpdateManyArgs>(args: SelectSubset<T, MedicalHistoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MedicalHistories and returns the data updated in the database.
+     * @param {MedicalHistoryUpdateManyAndReturnArgs} args - Arguments to update many MedicalHistories.
+     * @example
+     * // Update many MedicalHistories
+     * const medicalHistory = await prisma.medicalHistory.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more MedicalHistories and only return the `id`
+     * const medicalHistoryWithIdOnly = await prisma.medicalHistory.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends MedicalHistoryUpdateManyAndReturnArgs>(args: SelectSubset<T, MedicalHistoryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one MedicalHistory.
+     * @param {MedicalHistoryUpsertArgs} args - Arguments to update or create a MedicalHistory.
+     * @example
+     * // Update or create a MedicalHistory
+     * const medicalHistory = await prisma.medicalHistory.upsert({
+     *   create: {
+     *     // ... data to create a MedicalHistory
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the MedicalHistory we want to update
+     *   }
+     * })
+     */
+    upsert<T extends MedicalHistoryUpsertArgs>(args: SelectSubset<T, MedicalHistoryUpsertArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of MedicalHistories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MedicalHistoryCountArgs} args - Arguments to filter MedicalHistories to count.
+     * @example
+     * // Count the number of MedicalHistories
+     * const count = await prisma.medicalHistory.count({
+     *   where: {
+     *     // ... the filter for the MedicalHistories we want to count
+     *   }
+     * })
+    **/
+    count<T extends MedicalHistoryCountArgs>(
+      args?: Subset<T, MedicalHistoryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], MedicalHistoryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a MedicalHistory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MedicalHistoryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends MedicalHistoryAggregateArgs>(args: Subset<T, MedicalHistoryAggregateArgs>): Prisma.PrismaPromise<GetMedicalHistoryAggregateType<T>>
+
+    /**
+     * Group by MedicalHistory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MedicalHistoryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends MedicalHistoryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: MedicalHistoryGroupByArgs['orderBy'] }
+        : { orderBy?: MedicalHistoryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, MedicalHistoryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetMedicalHistoryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the MedicalHistory model
+   */
+  readonly fields: MedicalHistoryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for MedicalHistory.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__MedicalHistoryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    conversation<T extends ConversationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ConversationDefaultArgs<ExtArgs>>): Prisma__ConversationClient<$Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the MedicalHistory model
+   */
+  interface MedicalHistoryFieldRefs {
+    readonly id: FieldRef<"MedicalHistory", 'String'>
+    readonly content: FieldRef<"MedicalHistory", 'String'>
+    readonly createdAt: FieldRef<"MedicalHistory", 'DateTime'>
+    readonly updatedAt: FieldRef<"MedicalHistory", 'DateTime'>
+    readonly conversationId: FieldRef<"MedicalHistory", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * MedicalHistory findUnique
+   */
+  export type MedicalHistoryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which MedicalHistory to fetch.
+     */
+    where: MedicalHistoryWhereUniqueInput
+  }
+
+  /**
+   * MedicalHistory findUniqueOrThrow
+   */
+  export type MedicalHistoryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which MedicalHistory to fetch.
+     */
+    where: MedicalHistoryWhereUniqueInput
+  }
+
+  /**
+   * MedicalHistory findFirst
+   */
+  export type MedicalHistoryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which MedicalHistory to fetch.
+     */
+    where?: MedicalHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MedicalHistories to fetch.
+     */
+    orderBy?: MedicalHistoryOrderByWithRelationInput | MedicalHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MedicalHistories.
+     */
+    cursor?: MedicalHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MedicalHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MedicalHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MedicalHistories.
+     */
+    distinct?: MedicalHistoryScalarFieldEnum | MedicalHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * MedicalHistory findFirstOrThrow
+   */
+  export type MedicalHistoryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which MedicalHistory to fetch.
+     */
+    where?: MedicalHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MedicalHistories to fetch.
+     */
+    orderBy?: MedicalHistoryOrderByWithRelationInput | MedicalHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MedicalHistories.
+     */
+    cursor?: MedicalHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MedicalHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MedicalHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MedicalHistories.
+     */
+    distinct?: MedicalHistoryScalarFieldEnum | MedicalHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * MedicalHistory findMany
+   */
+  export type MedicalHistoryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which MedicalHistories to fetch.
+     */
+    where?: MedicalHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MedicalHistories to fetch.
+     */
+    orderBy?: MedicalHistoryOrderByWithRelationInput | MedicalHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing MedicalHistories.
+     */
+    cursor?: MedicalHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MedicalHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MedicalHistories.
+     */
+    skip?: number
+    distinct?: MedicalHistoryScalarFieldEnum | MedicalHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * MedicalHistory create
+   */
+  export type MedicalHistoryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * The data needed to create a MedicalHistory.
+     */
+    data: XOR<MedicalHistoryCreateInput, MedicalHistoryUncheckedCreateInput>
+  }
+
+  /**
+   * MedicalHistory createMany
+   */
+  export type MedicalHistoryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many MedicalHistories.
+     */
+    data: MedicalHistoryCreateManyInput | MedicalHistoryCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * MedicalHistory createManyAndReturn
+   */
+  export type MedicalHistoryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * The data used to create many MedicalHistories.
+     */
+    data: MedicalHistoryCreateManyInput | MedicalHistoryCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * MedicalHistory update
+   */
+  export type MedicalHistoryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * The data needed to update a MedicalHistory.
+     */
+    data: XOR<MedicalHistoryUpdateInput, MedicalHistoryUncheckedUpdateInput>
+    /**
+     * Choose, which MedicalHistory to update.
+     */
+    where: MedicalHistoryWhereUniqueInput
+  }
+
+  /**
+   * MedicalHistory updateMany
+   */
+  export type MedicalHistoryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update MedicalHistories.
+     */
+    data: XOR<MedicalHistoryUpdateManyMutationInput, MedicalHistoryUncheckedUpdateManyInput>
+    /**
+     * Filter which MedicalHistories to update
+     */
+    where?: MedicalHistoryWhereInput
+    /**
+     * Limit how many MedicalHistories to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * MedicalHistory updateManyAndReturn
+   */
+  export type MedicalHistoryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * The data used to update MedicalHistories.
+     */
+    data: XOR<MedicalHistoryUpdateManyMutationInput, MedicalHistoryUncheckedUpdateManyInput>
+    /**
+     * Filter which MedicalHistories to update
+     */
+    where?: MedicalHistoryWhereInput
+    /**
+     * Limit how many MedicalHistories to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * MedicalHistory upsert
+   */
+  export type MedicalHistoryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * The filter to search for the MedicalHistory to update in case it exists.
+     */
+    where: MedicalHistoryWhereUniqueInput
+    /**
+     * In case the MedicalHistory found by the `where` argument doesn't exist, create a new MedicalHistory with this data.
+     */
+    create: XOR<MedicalHistoryCreateInput, MedicalHistoryUncheckedCreateInput>
+    /**
+     * In case the MedicalHistory was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<MedicalHistoryUpdateInput, MedicalHistoryUncheckedUpdateInput>
+  }
+
+  /**
+   * MedicalHistory delete
+   */
+  export type MedicalHistoryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+    /**
+     * Filter which MedicalHistory to delete.
+     */
+    where: MedicalHistoryWhereUniqueInput
+  }
+
+  /**
+   * MedicalHistory deleteMany
+   */
+  export type MedicalHistoryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MedicalHistories to delete
+     */
+    where?: MedicalHistoryWhereInput
+    /**
+     * Limit how many MedicalHistories to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * MedicalHistory without action
+   */
+  export type MedicalHistoryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MedicalHistory
+     */
+    select?: MedicalHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MedicalHistory
+     */
+    omit?: MedicalHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MedicalHistoryInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model Summary
+   */
+
+  export type AggregateSummary = {
+    _count: SummaryCountAggregateOutputType | null
+    _min: SummaryMinAggregateOutputType | null
+    _max: SummaryMaxAggregateOutputType | null
+  }
+
+  export type SummaryMinAggregateOutputType = {
+    id: string | null
+    content: string | null
+    conversationId: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type SummaryMaxAggregateOutputType = {
+    id: string | null
+    content: string | null
+    conversationId: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type SummaryCountAggregateOutputType = {
+    id: number
+    content: number
+    conversationId: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type SummaryMinAggregateInputType = {
+    id?: true
+    content?: true
+    conversationId?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type SummaryMaxAggregateInputType = {
+    id?: true
+    content?: true
+    conversationId?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type SummaryCountAggregateInputType = {
+    id?: true
+    content?: true
+    conversationId?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type SummaryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Summary to aggregate.
+     */
+    where?: SummaryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Summaries to fetch.
+     */
+    orderBy?: SummaryOrderByWithRelationInput | SummaryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: SummaryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Summaries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Summaries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Summaries
+    **/
+    _count?: true | SummaryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: SummaryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: SummaryMaxAggregateInputType
+  }
+
+  export type GetSummaryAggregateType<T extends SummaryAggregateArgs> = {
+        [P in keyof T & keyof AggregateSummary]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateSummary[P]>
+      : GetScalarType<T[P], AggregateSummary[P]>
+  }
+
+
+
+
+  export type SummaryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: SummaryWhereInput
+    orderBy?: SummaryOrderByWithAggregationInput | SummaryOrderByWithAggregationInput[]
+    by: SummaryScalarFieldEnum[] | SummaryScalarFieldEnum
+    having?: SummaryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: SummaryCountAggregateInputType | true
+    _min?: SummaryMinAggregateInputType
+    _max?: SummaryMaxAggregateInputType
+  }
+
+  export type SummaryGroupByOutputType = {
+    id: string
+    content: string
+    conversationId: string
+    createdAt: Date
+    updatedAt: Date
+    _count: SummaryCountAggregateOutputType | null
+    _min: SummaryMinAggregateOutputType | null
+    _max: SummaryMaxAggregateOutputType | null
+  }
+
+  type GetSummaryGroupByPayload<T extends SummaryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<SummaryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof SummaryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], SummaryGroupByOutputType[P]>
+            : GetScalarType<T[P], SummaryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type SummarySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    content?: boolean
+    conversationId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["summary"]>
+
+  export type SummarySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    content?: boolean
+    conversationId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["summary"]>
+
+  export type SummarySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    content?: boolean
+    conversationId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["summary"]>
+
+  export type SummarySelectScalar = {
+    id?: boolean
+    content?: boolean
+    conversationId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type SummaryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "content" | "conversationId" | "createdAt" | "updatedAt", ExtArgs["result"]["summary"]>
+  export type SummaryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+  export type SummaryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+  export type SummaryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+
+  export type $SummaryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Summary"
+    objects: {
+      conversation: Prisma.$ConversationPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      content: string
+      conversationId: string
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["summary"]>
+    composites: {}
+  }
+
+  type SummaryGetPayload<S extends boolean | null | undefined | SummaryDefaultArgs> = $Result.GetResult<Prisma.$SummaryPayload, S>
+
+  type SummaryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<SummaryFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: SummaryCountAggregateInputType | true
+    }
+
+  export interface SummaryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Summary'], meta: { name: 'Summary' } }
+    /**
+     * Find zero or one Summary that matches the filter.
+     * @param {SummaryFindUniqueArgs} args - Arguments to find a Summary
+     * @example
+     * // Get one Summary
+     * const summary = await prisma.summary.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends SummaryFindUniqueArgs>(args: SelectSubset<T, SummaryFindUniqueArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Summary that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {SummaryFindUniqueOrThrowArgs} args - Arguments to find a Summary
+     * @example
+     * // Get one Summary
+     * const summary = await prisma.summary.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends SummaryFindUniqueOrThrowArgs>(args: SelectSubset<T, SummaryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Summary that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SummaryFindFirstArgs} args - Arguments to find a Summary
+     * @example
+     * // Get one Summary
+     * const summary = await prisma.summary.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends SummaryFindFirstArgs>(args?: SelectSubset<T, SummaryFindFirstArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Summary that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SummaryFindFirstOrThrowArgs} args - Arguments to find a Summary
+     * @example
+     * // Get one Summary
+     * const summary = await prisma.summary.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends SummaryFindFirstOrThrowArgs>(args?: SelectSubset<T, SummaryFindFirstOrThrowArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Summaries that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SummaryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Summaries
+     * const summaries = await prisma.summary.findMany()
+     * 
+     * // Get first 10 Summaries
+     * const summaries = await prisma.summary.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const summaryWithIdOnly = await prisma.summary.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends SummaryFindManyArgs>(args?: SelectSubset<T, SummaryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Summary.
+     * @param {SummaryCreateArgs} args - Arguments to create a Summary.
+     * @example
+     * // Create one Summary
+     * const Summary = await prisma.summary.create({
+     *   data: {
+     *     // ... data to create a Summary
+     *   }
+     * })
+     * 
+     */
+    create<T extends SummaryCreateArgs>(args: SelectSubset<T, SummaryCreateArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Summaries.
+     * @param {SummaryCreateManyArgs} args - Arguments to create many Summaries.
+     * @example
+     * // Create many Summaries
+     * const summary = await prisma.summary.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends SummaryCreateManyArgs>(args?: SelectSubset<T, SummaryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Summaries and returns the data saved in the database.
+     * @param {SummaryCreateManyAndReturnArgs} args - Arguments to create many Summaries.
+     * @example
+     * // Create many Summaries
+     * const summary = await prisma.summary.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Summaries and only return the `id`
+     * const summaryWithIdOnly = await prisma.summary.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends SummaryCreateManyAndReturnArgs>(args?: SelectSubset<T, SummaryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Summary.
+     * @param {SummaryDeleteArgs} args - Arguments to delete one Summary.
+     * @example
+     * // Delete one Summary
+     * const Summary = await prisma.summary.delete({
+     *   where: {
+     *     // ... filter to delete one Summary
+     *   }
+     * })
+     * 
+     */
+    delete<T extends SummaryDeleteArgs>(args: SelectSubset<T, SummaryDeleteArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Summary.
+     * @param {SummaryUpdateArgs} args - Arguments to update one Summary.
+     * @example
+     * // Update one Summary
+     * const summary = await prisma.summary.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends SummaryUpdateArgs>(args: SelectSubset<T, SummaryUpdateArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Summaries.
+     * @param {SummaryDeleteManyArgs} args - Arguments to filter Summaries to delete.
+     * @example
+     * // Delete a few Summaries
+     * const { count } = await prisma.summary.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends SummaryDeleteManyArgs>(args?: SelectSubset<T, SummaryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Summaries.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SummaryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Summaries
+     * const summary = await prisma.summary.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends SummaryUpdateManyArgs>(args: SelectSubset<T, SummaryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Summaries and returns the data updated in the database.
+     * @param {SummaryUpdateManyAndReturnArgs} args - Arguments to update many Summaries.
+     * @example
+     * // Update many Summaries
+     * const summary = await prisma.summary.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Summaries and only return the `id`
+     * const summaryWithIdOnly = await prisma.summary.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends SummaryUpdateManyAndReturnArgs>(args: SelectSubset<T, SummaryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Summary.
+     * @param {SummaryUpsertArgs} args - Arguments to update or create a Summary.
+     * @example
+     * // Update or create a Summary
+     * const summary = await prisma.summary.upsert({
+     *   create: {
+     *     // ... data to create a Summary
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Summary we want to update
+     *   }
+     * })
+     */
+    upsert<T extends SummaryUpsertArgs>(args: SelectSubset<T, SummaryUpsertArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Summaries.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SummaryCountArgs} args - Arguments to filter Summaries to count.
+     * @example
+     * // Count the number of Summaries
+     * const count = await prisma.summary.count({
+     *   where: {
+     *     // ... the filter for the Summaries we want to count
+     *   }
+     * })
+    **/
+    count<T extends SummaryCountArgs>(
+      args?: Subset<T, SummaryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], SummaryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Summary.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SummaryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends SummaryAggregateArgs>(args: Subset<T, SummaryAggregateArgs>): Prisma.PrismaPromise<GetSummaryAggregateType<T>>
+
+    /**
+     * Group by Summary.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SummaryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends SummaryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: SummaryGroupByArgs['orderBy'] }
+        : { orderBy?: SummaryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, SummaryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetSummaryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Summary model
+   */
+  readonly fields: SummaryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Summary.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__SummaryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    conversation<T extends ConversationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ConversationDefaultArgs<ExtArgs>>): Prisma__ConversationClient<$Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Summary model
+   */
+  interface SummaryFieldRefs {
+    readonly id: FieldRef<"Summary", 'String'>
+    readonly content: FieldRef<"Summary", 'String'>
+    readonly conversationId: FieldRef<"Summary", 'String'>
+    readonly createdAt: FieldRef<"Summary", 'DateTime'>
+    readonly updatedAt: FieldRef<"Summary", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Summary findUnique
+   */
+  export type SummaryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * Filter, which Summary to fetch.
+     */
+    where: SummaryWhereUniqueInput
+  }
+
+  /**
+   * Summary findUniqueOrThrow
+   */
+  export type SummaryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * Filter, which Summary to fetch.
+     */
+    where: SummaryWhereUniqueInput
+  }
+
+  /**
+   * Summary findFirst
+   */
+  export type SummaryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * Filter, which Summary to fetch.
+     */
+    where?: SummaryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Summaries to fetch.
+     */
+    orderBy?: SummaryOrderByWithRelationInput | SummaryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Summaries.
+     */
+    cursor?: SummaryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Summaries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Summaries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Summaries.
+     */
+    distinct?: SummaryScalarFieldEnum | SummaryScalarFieldEnum[]
+  }
+
+  /**
+   * Summary findFirstOrThrow
+   */
+  export type SummaryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * Filter, which Summary to fetch.
+     */
+    where?: SummaryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Summaries to fetch.
+     */
+    orderBy?: SummaryOrderByWithRelationInput | SummaryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Summaries.
+     */
+    cursor?: SummaryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Summaries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Summaries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Summaries.
+     */
+    distinct?: SummaryScalarFieldEnum | SummaryScalarFieldEnum[]
+  }
+
+  /**
+   * Summary findMany
+   */
+  export type SummaryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * Filter, which Summaries to fetch.
+     */
+    where?: SummaryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Summaries to fetch.
+     */
+    orderBy?: SummaryOrderByWithRelationInput | SummaryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Summaries.
+     */
+    cursor?: SummaryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Summaries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Summaries.
+     */
+    skip?: number
+    distinct?: SummaryScalarFieldEnum | SummaryScalarFieldEnum[]
+  }
+
+  /**
+   * Summary create
+   */
+  export type SummaryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * The data needed to create a Summary.
+     */
+    data: XOR<SummaryCreateInput, SummaryUncheckedCreateInput>
+  }
+
+  /**
+   * Summary createMany
+   */
+  export type SummaryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Summaries.
+     */
+    data: SummaryCreateManyInput | SummaryCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Summary createManyAndReturn
+   */
+  export type SummaryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * The data used to create many Summaries.
+     */
+    data: SummaryCreateManyInput | SummaryCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Summary update
+   */
+  export type SummaryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * The data needed to update a Summary.
+     */
+    data: XOR<SummaryUpdateInput, SummaryUncheckedUpdateInput>
+    /**
+     * Choose, which Summary to update.
+     */
+    where: SummaryWhereUniqueInput
+  }
+
+  /**
+   * Summary updateMany
+   */
+  export type SummaryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Summaries.
+     */
+    data: XOR<SummaryUpdateManyMutationInput, SummaryUncheckedUpdateManyInput>
+    /**
+     * Filter which Summaries to update
+     */
+    where?: SummaryWhereInput
+    /**
+     * Limit how many Summaries to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Summary updateManyAndReturn
+   */
+  export type SummaryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * The data used to update Summaries.
+     */
+    data: XOR<SummaryUpdateManyMutationInput, SummaryUncheckedUpdateManyInput>
+    /**
+     * Filter which Summaries to update
+     */
+    where?: SummaryWhereInput
+    /**
+     * Limit how many Summaries to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Summary upsert
+   */
+  export type SummaryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * The filter to search for the Summary to update in case it exists.
+     */
+    where: SummaryWhereUniqueInput
+    /**
+     * In case the Summary found by the `where` argument doesn't exist, create a new Summary with this data.
+     */
+    create: XOR<SummaryCreateInput, SummaryUncheckedCreateInput>
+    /**
+     * In case the Summary was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<SummaryUpdateInput, SummaryUncheckedUpdateInput>
+  }
+
+  /**
+   * Summary delete
+   */
+  export type SummaryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
+    /**
+     * Filter which Summary to delete.
+     */
+    where: SummaryWhereUniqueInput
+  }
+
+  /**
+   * Summary deleteMany
+   */
+  export type SummaryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Summaries to delete
+     */
+    where?: SummaryWhereInput
+    /**
+     * Limit how many Summaries to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Summary without action
+   */
+  export type SummaryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Summary
+     */
+    select?: SummarySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Summary
+     */
+    omit?: SummaryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SummaryInclude<ExtArgs> | null
   }
 
 
@@ -7011,10 +9329,10 @@ export namespace Prisma {
     id: 'id',
     username: 'username',
     hashedPassword: 'hashedPassword',
-    refreshToken: 'refreshToken',
-    refreshTokenExpiry: 'refreshTokenExpiry',
     createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
+    updatedAt: 'updatedAt',
+    refreshToken: 'refreshToken',
+    refreshTokenExpiry: 'refreshTokenExpiry'
   };
 
   export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -7038,15 +9356,35 @@ export namespace Prisma {
     patientId: 'patientId',
     startTime: 'startTime',
     endTime: 'endTime',
-    summary: 'summary',
     status: 'status',
-    preferredLanguage: 'preferredLanguage',
     patientLanguage: 'patientLanguage',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
 
   export type ConversationScalarFieldEnum = (typeof ConversationScalarFieldEnum)[keyof typeof ConversationScalarFieldEnum]
+
+
+  export const MedicalHistoryScalarFieldEnum: {
+    id: 'id',
+    content: 'content',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    conversationId: 'conversationId'
+  };
+
+  export type MedicalHistoryScalarFieldEnum = (typeof MedicalHistoryScalarFieldEnum)[keyof typeof MedicalHistoryScalarFieldEnum]
+
+
+  export const SummaryScalarFieldEnum: {
+    id: 'id',
+    content: 'content',
+    conversationId: 'conversationId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type SummaryScalarFieldEnum = (typeof SummaryScalarFieldEnum)[keyof typeof SummaryScalarFieldEnum]
 
 
   export const MessageScalarFieldEnum: {
@@ -7196,10 +9534,10 @@ export namespace Prisma {
     id?: StringFilter<"User"> | string
     username?: StringFilter<"User"> | string
     hashedPassword?: StringFilter<"User"> | string
-    refreshToken?: StringNullableFilter<"User"> | string | null
-    refreshTokenExpiry?: DateTimeNullableFilter<"User"> | Date | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
+    refreshToken?: StringNullableFilter<"User"> | string | null
+    refreshTokenExpiry?: DateTimeNullableFilter<"User"> | Date | string | null
     conversations?: ConversationListRelationFilter
   }
 
@@ -7207,35 +9545,35 @@ export namespace Prisma {
     id?: SortOrder
     username?: SortOrder
     hashedPassword?: SortOrder
-    refreshToken?: SortOrderInput | SortOrder
-    refreshTokenExpiry?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    refreshToken?: SortOrderInput | SortOrder
+    refreshTokenExpiry?: SortOrderInput | SortOrder
     conversations?: ConversationOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     username?: string
+    refreshToken?: string
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
     NOT?: UserWhereInput | UserWhereInput[]
     hashedPassword?: StringFilter<"User"> | string
-    refreshToken?: StringNullableFilter<"User"> | string | null
-    refreshTokenExpiry?: DateTimeNullableFilter<"User"> | Date | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
+    refreshTokenExpiry?: DateTimeNullableFilter<"User"> | Date | string | null
     conversations?: ConversationListRelationFilter
-  }, "id" | "username">
+  }, "id" | "username" | "refreshToken">
 
   export type UserOrderByWithAggregationInput = {
     id?: SortOrder
     username?: SortOrder
     hashedPassword?: SortOrder
-    refreshToken?: SortOrderInput | SortOrder
-    refreshTokenExpiry?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    refreshToken?: SortOrderInput | SortOrder
+    refreshTokenExpiry?: SortOrderInput | SortOrder
     _count?: UserCountOrderByAggregateInput
     _max?: UserMaxOrderByAggregateInput
     _min?: UserMinOrderByAggregateInput
@@ -7248,10 +9586,10 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"User"> | string
     username?: StringWithAggregatesFilter<"User"> | string
     hashedPassword?: StringWithAggregatesFilter<"User"> | string
-    refreshToken?: StringNullableWithAggregatesFilter<"User"> | string | null
-    refreshTokenExpiry?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
+    refreshToken?: StringNullableWithAggregatesFilter<"User"> | string | null
+    refreshTokenExpiry?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   }
 
   export type PatientWhereInput = {
@@ -7323,9 +9661,7 @@ export namespace Prisma {
     patientId?: StringFilter<"Conversation"> | string
     startTime?: DateTimeFilter<"Conversation"> | Date | string
     endTime?: DateTimeNullableFilter<"Conversation"> | Date | string | null
-    summary?: StringNullableFilter<"Conversation"> | string | null
     status?: StringFilter<"Conversation"> | string
-    preferredLanguage?: StringNullableFilter<"Conversation"> | string | null
     patientLanguage?: StringFilter<"Conversation"> | string
     createdAt?: DateTimeFilter<"Conversation"> | Date | string
     updatedAt?: DateTimeFilter<"Conversation"> | Date | string
@@ -7333,6 +9669,8 @@ export namespace Prisma {
     patient?: XOR<PatientScalarRelationFilter, PatientWhereInput>
     messages?: MessageListRelationFilter
     actions?: ActionListRelationFilter
+    summary?: XOR<SummaryNullableScalarRelationFilter, SummaryWhereInput> | null
+    medicalHistory?: XOR<MedicalHistoryNullableScalarRelationFilter, MedicalHistoryWhereInput> | null
   }
 
   export type ConversationOrderByWithRelationInput = {
@@ -7341,9 +9679,7 @@ export namespace Prisma {
     patientId?: SortOrder
     startTime?: SortOrder
     endTime?: SortOrderInput | SortOrder
-    summary?: SortOrderInput | SortOrder
     status?: SortOrder
-    preferredLanguage?: SortOrderInput | SortOrder
     patientLanguage?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -7351,6 +9687,8 @@ export namespace Prisma {
     patient?: PatientOrderByWithRelationInput
     messages?: MessageOrderByRelationAggregateInput
     actions?: ActionOrderByRelationAggregateInput
+    summary?: SummaryOrderByWithRelationInput
+    medicalHistory?: MedicalHistoryOrderByWithRelationInput
   }
 
   export type ConversationWhereUniqueInput = Prisma.AtLeast<{
@@ -7362,9 +9700,7 @@ export namespace Prisma {
     patientId?: StringFilter<"Conversation"> | string
     startTime?: DateTimeFilter<"Conversation"> | Date | string
     endTime?: DateTimeNullableFilter<"Conversation"> | Date | string | null
-    summary?: StringNullableFilter<"Conversation"> | string | null
     status?: StringFilter<"Conversation"> | string
-    preferredLanguage?: StringNullableFilter<"Conversation"> | string | null
     patientLanguage?: StringFilter<"Conversation"> | string
     createdAt?: DateTimeFilter<"Conversation"> | Date | string
     updatedAt?: DateTimeFilter<"Conversation"> | Date | string
@@ -7372,6 +9708,8 @@ export namespace Prisma {
     patient?: XOR<PatientScalarRelationFilter, PatientWhereInput>
     messages?: MessageListRelationFilter
     actions?: ActionListRelationFilter
+    summary?: XOR<SummaryNullableScalarRelationFilter, SummaryWhereInput> | null
+    medicalHistory?: XOR<MedicalHistoryNullableScalarRelationFilter, MedicalHistoryWhereInput> | null
   }, "id">
 
   export type ConversationOrderByWithAggregationInput = {
@@ -7380,9 +9718,7 @@ export namespace Prisma {
     patientId?: SortOrder
     startTime?: SortOrder
     endTime?: SortOrderInput | SortOrder
-    summary?: SortOrderInput | SortOrder
     status?: SortOrder
-    preferredLanguage?: SortOrderInput | SortOrder
     patientLanguage?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -7400,12 +9736,120 @@ export namespace Prisma {
     patientId?: StringWithAggregatesFilter<"Conversation"> | string
     startTime?: DateTimeWithAggregatesFilter<"Conversation"> | Date | string
     endTime?: DateTimeNullableWithAggregatesFilter<"Conversation"> | Date | string | null
-    summary?: StringNullableWithAggregatesFilter<"Conversation"> | string | null
     status?: StringWithAggregatesFilter<"Conversation"> | string
-    preferredLanguage?: StringNullableWithAggregatesFilter<"Conversation"> | string | null
     patientLanguage?: StringWithAggregatesFilter<"Conversation"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Conversation"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Conversation"> | Date | string
+  }
+
+  export type MedicalHistoryWhereInput = {
+    AND?: MedicalHistoryWhereInput | MedicalHistoryWhereInput[]
+    OR?: MedicalHistoryWhereInput[]
+    NOT?: MedicalHistoryWhereInput | MedicalHistoryWhereInput[]
+    id?: StringFilter<"MedicalHistory"> | string
+    content?: StringFilter<"MedicalHistory"> | string
+    createdAt?: DateTimeFilter<"MedicalHistory"> | Date | string
+    updatedAt?: DateTimeFilter<"MedicalHistory"> | Date | string
+    conversationId?: StringFilter<"MedicalHistory"> | string
+    conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+  }
+
+  export type MedicalHistoryOrderByWithRelationInput = {
+    id?: SortOrder
+    content?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    conversationId?: SortOrder
+    conversation?: ConversationOrderByWithRelationInput
+  }
+
+  export type MedicalHistoryWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    conversationId?: string
+    AND?: MedicalHistoryWhereInput | MedicalHistoryWhereInput[]
+    OR?: MedicalHistoryWhereInput[]
+    NOT?: MedicalHistoryWhereInput | MedicalHistoryWhereInput[]
+    content?: StringFilter<"MedicalHistory"> | string
+    createdAt?: DateTimeFilter<"MedicalHistory"> | Date | string
+    updatedAt?: DateTimeFilter<"MedicalHistory"> | Date | string
+    conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+  }, "id" | "conversationId">
+
+  export type MedicalHistoryOrderByWithAggregationInput = {
+    id?: SortOrder
+    content?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    conversationId?: SortOrder
+    _count?: MedicalHistoryCountOrderByAggregateInput
+    _max?: MedicalHistoryMaxOrderByAggregateInput
+    _min?: MedicalHistoryMinOrderByAggregateInput
+  }
+
+  export type MedicalHistoryScalarWhereWithAggregatesInput = {
+    AND?: MedicalHistoryScalarWhereWithAggregatesInput | MedicalHistoryScalarWhereWithAggregatesInput[]
+    OR?: MedicalHistoryScalarWhereWithAggregatesInput[]
+    NOT?: MedicalHistoryScalarWhereWithAggregatesInput | MedicalHistoryScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"MedicalHistory"> | string
+    content?: StringWithAggregatesFilter<"MedicalHistory"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"MedicalHistory"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"MedicalHistory"> | Date | string
+    conversationId?: StringWithAggregatesFilter<"MedicalHistory"> | string
+  }
+
+  export type SummaryWhereInput = {
+    AND?: SummaryWhereInput | SummaryWhereInput[]
+    OR?: SummaryWhereInput[]
+    NOT?: SummaryWhereInput | SummaryWhereInput[]
+    id?: StringFilter<"Summary"> | string
+    content?: StringFilter<"Summary"> | string
+    conversationId?: StringFilter<"Summary"> | string
+    createdAt?: DateTimeFilter<"Summary"> | Date | string
+    updatedAt?: DateTimeFilter<"Summary"> | Date | string
+    conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+  }
+
+  export type SummaryOrderByWithRelationInput = {
+    id?: SortOrder
+    content?: SortOrder
+    conversationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    conversation?: ConversationOrderByWithRelationInput
+  }
+
+  export type SummaryWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    conversationId?: string
+    AND?: SummaryWhereInput | SummaryWhereInput[]
+    OR?: SummaryWhereInput[]
+    NOT?: SummaryWhereInput | SummaryWhereInput[]
+    content?: StringFilter<"Summary"> | string
+    createdAt?: DateTimeFilter<"Summary"> | Date | string
+    updatedAt?: DateTimeFilter<"Summary"> | Date | string
+    conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+  }, "id" | "conversationId">
+
+  export type SummaryOrderByWithAggregationInput = {
+    id?: SortOrder
+    content?: SortOrder
+    conversationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: SummaryCountOrderByAggregateInput
+    _max?: SummaryMaxOrderByAggregateInput
+    _min?: SummaryMinOrderByAggregateInput
+  }
+
+  export type SummaryScalarWhereWithAggregatesInput = {
+    AND?: SummaryScalarWhereWithAggregatesInput | SummaryScalarWhereWithAggregatesInput[]
+    OR?: SummaryScalarWhereWithAggregatesInput[]
+    NOT?: SummaryScalarWhereWithAggregatesInput | SummaryScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Summary"> | string
+    content?: StringWithAggregatesFilter<"Summary"> | string
+    conversationId?: StringWithAggregatesFilter<"Summary"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"Summary"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"Summary"> | Date | string
   }
 
   export type MessageWhereInput = {
@@ -7558,10 +10002,10 @@ export namespace Prisma {
     id?: string
     username: string
     hashedPassword: string
-    refreshToken?: string | null
-    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    refreshToken?: string | null
+    refreshTokenExpiry?: Date | string | null
     conversations?: ConversationCreateNestedManyWithoutUserInput
   }
 
@@ -7569,10 +10013,10 @@ export namespace Prisma {
     id?: string
     username: string
     hashedPassword: string
-    refreshToken?: string | null
-    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    refreshToken?: string | null
+    refreshTokenExpiry?: Date | string | null
     conversations?: ConversationUncheckedCreateNestedManyWithoutUserInput
   }
 
@@ -7580,10 +10024,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
-    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     conversations?: ConversationUpdateManyWithoutUserNestedInput
   }
 
@@ -7591,10 +10035,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
-    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     conversations?: ConversationUncheckedUpdateManyWithoutUserNestedInput
   }
 
@@ -7602,30 +10046,30 @@ export namespace Prisma {
     id?: string
     username: string
     hashedPassword: string
-    refreshToken?: string | null
-    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    refreshToken?: string | null
+    refreshTokenExpiry?: Date | string | null
   }
 
   export type UserUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
-    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type UserUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
-    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type PatientCreateInput = {
@@ -7699,9 +10143,7 @@ export namespace Prisma {
     id?: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -7709,6 +10151,8 @@ export namespace Prisma {
     patient: PatientCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
     actions?: ActionCreateNestedManyWithoutConversationInput
+    summary?: SummaryCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationUncheckedCreateInput = {
@@ -7717,23 +10161,21 @@ export namespace Prisma {
     patientId: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
     actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7741,6 +10183,8 @@ export namespace Prisma {
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
     actions?: ActionUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationUncheckedUpdateInput = {
@@ -7749,14 +10193,14 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
     actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationCreateManyInput = {
@@ -7765,9 +10209,7 @@ export namespace Prisma {
     patientId: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -7777,9 +10219,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7791,10 +10231,118 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MedicalHistoryCreateInput = {
+    id?: string
+    content: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    conversation: ConversationCreateNestedOneWithoutMedicalHistoryInput
+  }
+
+  export type MedicalHistoryUncheckedCreateInput = {
+    id?: string
+    content: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    conversationId: string
+  }
+
+  export type MedicalHistoryUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    conversation?: ConversationUpdateOneRequiredWithoutMedicalHistoryNestedInput
+  }
+
+  export type MedicalHistoryUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type MedicalHistoryCreateManyInput = {
+    id?: string
+    content: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    conversationId: string
+  }
+
+  export type MedicalHistoryUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MedicalHistoryUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type SummaryCreateInput = {
+    id?: string
+    content: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    conversation: ConversationCreateNestedOneWithoutSummaryInput
+  }
+
+  export type SummaryUncheckedCreateInput = {
+    id?: string
+    content: string
+    conversationId: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type SummaryUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    conversation?: ConversationUpdateOneRequiredWithoutSummaryNestedInput
+  }
+
+  export type SummaryUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SummaryCreateManyInput = {
+    id?: string
+    content: string
+    conversationId: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type SummaryUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SummaryUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7969,6 +10517,17 @@ export namespace Prisma {
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
+  export type DateTimeFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeFilter<$PrismaModel> | Date | string
+  }
+
   export type StringNullableFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
     in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
@@ -7995,17 +10554,6 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
-  export type DateTimeFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeFilter<$PrismaModel> | Date | string
-  }
-
   export type ConversationListRelationFilter = {
     every?: ConversationWhereInput
     some?: ConversationWhereInput
@@ -8025,30 +10573,30 @@ export namespace Prisma {
     id?: SortOrder
     username?: SortOrder
     hashedPassword?: SortOrder
-    refreshToken?: SortOrder
-    refreshTokenExpiry?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    refreshToken?: SortOrder
+    refreshTokenExpiry?: SortOrder
   }
 
   export type UserMaxOrderByAggregateInput = {
     id?: SortOrder
     username?: SortOrder
     hashedPassword?: SortOrder
-    refreshToken?: SortOrder
-    refreshTokenExpiry?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    refreshToken?: SortOrder
+    refreshTokenExpiry?: SortOrder
   }
 
   export type UserMinOrderByAggregateInput = {
     id?: SortOrder
     username?: SortOrder
     hashedPassword?: SortOrder
-    refreshToken?: SortOrder
-    refreshTokenExpiry?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    refreshToken?: SortOrder
+    refreshTokenExpiry?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -8067,6 +10615,20 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
+  }
+
+  export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedDateTimeFilter<$PrismaModel>
+    _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
   export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -8099,20 +10661,6 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
-  }
-
-  export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedDateTimeFilter<$PrismaModel>
-    _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
   export type PatientCountOrderByAggregateInput = {
@@ -8164,6 +10712,16 @@ export namespace Prisma {
     none?: ActionWhereInput
   }
 
+  export type SummaryNullableScalarRelationFilter = {
+    is?: SummaryWhereInput | null
+    isNot?: SummaryWhereInput | null
+  }
+
+  export type MedicalHistoryNullableScalarRelationFilter = {
+    is?: MedicalHistoryWhereInput | null
+    isNot?: MedicalHistoryWhereInput | null
+  }
+
   export type MessageOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
@@ -8178,9 +10736,7 @@ export namespace Prisma {
     patientId?: SortOrder
     startTime?: SortOrder
     endTime?: SortOrder
-    summary?: SortOrder
     status?: SortOrder
-    preferredLanguage?: SortOrder
     patientLanguage?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -8192,9 +10748,7 @@ export namespace Prisma {
     patientId?: SortOrder
     startTime?: SortOrder
     endTime?: SortOrder
-    summary?: SortOrder
     status?: SortOrder
-    preferredLanguage?: SortOrder
     patientLanguage?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -8206,10 +10760,61 @@ export namespace Prisma {
     patientId?: SortOrder
     startTime?: SortOrder
     endTime?: SortOrder
-    summary?: SortOrder
     status?: SortOrder
-    preferredLanguage?: SortOrder
     patientLanguage?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ConversationScalarRelationFilter = {
+    is?: ConversationWhereInput
+    isNot?: ConversationWhereInput
+  }
+
+  export type MedicalHistoryCountOrderByAggregateInput = {
+    id?: SortOrder
+    content?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    conversationId?: SortOrder
+  }
+
+  export type MedicalHistoryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    content?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    conversationId?: SortOrder
+  }
+
+  export type MedicalHistoryMinOrderByAggregateInput = {
+    id?: SortOrder
+    content?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    conversationId?: SortOrder
+  }
+
+  export type SummaryCountOrderByAggregateInput = {
+    id?: SortOrder
+    content?: SortOrder
+    conversationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type SummaryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    content?: SortOrder
+    conversationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type SummaryMinOrderByAggregateInput = {
+    id?: SortOrder
+    content?: SortOrder
+    conversationId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8217,11 +10822,6 @@ export namespace Prisma {
   export type BoolFilter<$PrismaModel = never> = {
     equals?: boolean | BooleanFieldRefInput<$PrismaModel>
     not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
-  export type ConversationScalarRelationFilter = {
-    is?: ConversationWhereInput
-    isNot?: ConversationWhereInput
   }
 
   export type MessageNullableScalarRelationFilter = {
@@ -8368,16 +10968,16 @@ export namespace Prisma {
     set?: string
   }
 
+  export type DateTimeFieldUpdateOperationsInput = {
+    set?: Date | string
+  }
+
   export type NullableStringFieldUpdateOperationsInput = {
     set?: string | null
   }
 
   export type NullableDateTimeFieldUpdateOperationsInput = {
     set?: Date | string | null
-  }
-
-  export type DateTimeFieldUpdateOperationsInput = {
-    set?: Date | string
   }
 
   export type ConversationUpdateManyWithoutUserNestedInput = {
@@ -8476,6 +11076,18 @@ export namespace Prisma {
     connect?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
   }
 
+  export type SummaryCreateNestedOneWithoutConversationInput = {
+    create?: XOR<SummaryCreateWithoutConversationInput, SummaryUncheckedCreateWithoutConversationInput>
+    connectOrCreate?: SummaryCreateOrConnectWithoutConversationInput
+    connect?: SummaryWhereUniqueInput
+  }
+
+  export type MedicalHistoryCreateNestedOneWithoutConversationInput = {
+    create?: XOR<MedicalHistoryCreateWithoutConversationInput, MedicalHistoryUncheckedCreateWithoutConversationInput>
+    connectOrCreate?: MedicalHistoryCreateOrConnectWithoutConversationInput
+    connect?: MedicalHistoryWhereUniqueInput
+  }
+
   export type MessageUncheckedCreateNestedManyWithoutConversationInput = {
     create?: XOR<MessageCreateWithoutConversationInput, MessageUncheckedCreateWithoutConversationInput> | MessageCreateWithoutConversationInput[] | MessageUncheckedCreateWithoutConversationInput[]
     connectOrCreate?: MessageCreateOrConnectWithoutConversationInput | MessageCreateOrConnectWithoutConversationInput[]
@@ -8488,6 +11100,18 @@ export namespace Prisma {
     connectOrCreate?: ActionCreateOrConnectWithoutConversationInput | ActionCreateOrConnectWithoutConversationInput[]
     createMany?: ActionCreateManyConversationInputEnvelope
     connect?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
+  }
+
+  export type SummaryUncheckedCreateNestedOneWithoutConversationInput = {
+    create?: XOR<SummaryCreateWithoutConversationInput, SummaryUncheckedCreateWithoutConversationInput>
+    connectOrCreate?: SummaryCreateOrConnectWithoutConversationInput
+    connect?: SummaryWhereUniqueInput
+  }
+
+  export type MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput = {
+    create?: XOR<MedicalHistoryCreateWithoutConversationInput, MedicalHistoryUncheckedCreateWithoutConversationInput>
+    connectOrCreate?: MedicalHistoryCreateOrConnectWithoutConversationInput
+    connect?: MedicalHistoryWhereUniqueInput
   }
 
   export type UserUpdateOneRequiredWithoutConversationsNestedInput = {
@@ -8534,6 +11158,26 @@ export namespace Prisma {
     deleteMany?: ActionScalarWhereInput | ActionScalarWhereInput[]
   }
 
+  export type SummaryUpdateOneWithoutConversationNestedInput = {
+    create?: XOR<SummaryCreateWithoutConversationInput, SummaryUncheckedCreateWithoutConversationInput>
+    connectOrCreate?: SummaryCreateOrConnectWithoutConversationInput
+    upsert?: SummaryUpsertWithoutConversationInput
+    disconnect?: SummaryWhereInput | boolean
+    delete?: SummaryWhereInput | boolean
+    connect?: SummaryWhereUniqueInput
+    update?: XOR<XOR<SummaryUpdateToOneWithWhereWithoutConversationInput, SummaryUpdateWithoutConversationInput>, SummaryUncheckedUpdateWithoutConversationInput>
+  }
+
+  export type MedicalHistoryUpdateOneWithoutConversationNestedInput = {
+    create?: XOR<MedicalHistoryCreateWithoutConversationInput, MedicalHistoryUncheckedCreateWithoutConversationInput>
+    connectOrCreate?: MedicalHistoryCreateOrConnectWithoutConversationInput
+    upsert?: MedicalHistoryUpsertWithoutConversationInput
+    disconnect?: MedicalHistoryWhereInput | boolean
+    delete?: MedicalHistoryWhereInput | boolean
+    connect?: MedicalHistoryWhereUniqueInput
+    update?: XOR<XOR<MedicalHistoryUpdateToOneWithWhereWithoutConversationInput, MedicalHistoryUpdateWithoutConversationInput>, MedicalHistoryUncheckedUpdateWithoutConversationInput>
+  }
+
   export type MessageUncheckedUpdateManyWithoutConversationNestedInput = {
     create?: XOR<MessageCreateWithoutConversationInput, MessageUncheckedCreateWithoutConversationInput> | MessageCreateWithoutConversationInput[] | MessageUncheckedCreateWithoutConversationInput[]
     connectOrCreate?: MessageCreateOrConnectWithoutConversationInput | MessageCreateOrConnectWithoutConversationInput[]
@@ -8560,6 +11204,54 @@ export namespace Prisma {
     update?: ActionUpdateWithWhereUniqueWithoutConversationInput | ActionUpdateWithWhereUniqueWithoutConversationInput[]
     updateMany?: ActionUpdateManyWithWhereWithoutConversationInput | ActionUpdateManyWithWhereWithoutConversationInput[]
     deleteMany?: ActionScalarWhereInput | ActionScalarWhereInput[]
+  }
+
+  export type SummaryUncheckedUpdateOneWithoutConversationNestedInput = {
+    create?: XOR<SummaryCreateWithoutConversationInput, SummaryUncheckedCreateWithoutConversationInput>
+    connectOrCreate?: SummaryCreateOrConnectWithoutConversationInput
+    upsert?: SummaryUpsertWithoutConversationInput
+    disconnect?: SummaryWhereInput | boolean
+    delete?: SummaryWhereInput | boolean
+    connect?: SummaryWhereUniqueInput
+    update?: XOR<XOR<SummaryUpdateToOneWithWhereWithoutConversationInput, SummaryUpdateWithoutConversationInput>, SummaryUncheckedUpdateWithoutConversationInput>
+  }
+
+  export type MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput = {
+    create?: XOR<MedicalHistoryCreateWithoutConversationInput, MedicalHistoryUncheckedCreateWithoutConversationInput>
+    connectOrCreate?: MedicalHistoryCreateOrConnectWithoutConversationInput
+    upsert?: MedicalHistoryUpsertWithoutConversationInput
+    disconnect?: MedicalHistoryWhereInput | boolean
+    delete?: MedicalHistoryWhereInput | boolean
+    connect?: MedicalHistoryWhereUniqueInput
+    update?: XOR<XOR<MedicalHistoryUpdateToOneWithWhereWithoutConversationInput, MedicalHistoryUpdateWithoutConversationInput>, MedicalHistoryUncheckedUpdateWithoutConversationInput>
+  }
+
+  export type ConversationCreateNestedOneWithoutMedicalHistoryInput = {
+    create?: XOR<ConversationCreateWithoutMedicalHistoryInput, ConversationUncheckedCreateWithoutMedicalHistoryInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutMedicalHistoryInput
+    connect?: ConversationWhereUniqueInput
+  }
+
+  export type ConversationUpdateOneRequiredWithoutMedicalHistoryNestedInput = {
+    create?: XOR<ConversationCreateWithoutMedicalHistoryInput, ConversationUncheckedCreateWithoutMedicalHistoryInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutMedicalHistoryInput
+    upsert?: ConversationUpsertWithoutMedicalHistoryInput
+    connect?: ConversationWhereUniqueInput
+    update?: XOR<XOR<ConversationUpdateToOneWithWhereWithoutMedicalHistoryInput, ConversationUpdateWithoutMedicalHistoryInput>, ConversationUncheckedUpdateWithoutMedicalHistoryInput>
+  }
+
+  export type ConversationCreateNestedOneWithoutSummaryInput = {
+    create?: XOR<ConversationCreateWithoutSummaryInput, ConversationUncheckedCreateWithoutSummaryInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutSummaryInput
+    connect?: ConversationWhereUniqueInput
+  }
+
+  export type ConversationUpdateOneRequiredWithoutSummaryNestedInput = {
+    create?: XOR<ConversationCreateWithoutSummaryInput, ConversationUncheckedCreateWithoutSummaryInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutSummaryInput
+    upsert?: ConversationUpsertWithoutSummaryInput
+    connect?: ConversationWhereUniqueInput
+    update?: XOR<XOR<ConversationUpdateToOneWithWhereWithoutSummaryInput, ConversationUpdateWithoutSummaryInput>, ConversationUncheckedUpdateWithoutSummaryInput>
   }
 
   export type ConversationCreateNestedOneWithoutMessagesInput = {
@@ -8666,6 +11358,17 @@ export namespace Prisma {
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
+  export type NestedDateTimeFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeFilter<$PrismaModel> | Date | string
+  }
+
   export type NestedStringNullableFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
     in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
@@ -8689,17 +11392,6 @@ export namespace Prisma {
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
-  }
-
-  export type NestedDateTimeFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeFilter<$PrismaModel> | Date | string
   }
 
   export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
@@ -8728,6 +11420,20 @@ export namespace Prisma {
     gt?: number | IntFieldRefInput<$PrismaModel>
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntFilter<$PrismaModel> | number
+  }
+
+  export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedDateTimeFilter<$PrismaModel>
+    _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
   export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -8772,20 +11478,6 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
-  export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedDateTimeFilter<$PrismaModel>
-    _max?: NestedDateTimeFilter<$PrismaModel>
-  }
-
   export type NestedBoolFilter<$PrismaModel = never> = {
     equals?: boolean | BooleanFieldRefInput<$PrismaModel>
     not?: NestedBoolFilter<$PrismaModel> | boolean
@@ -8826,15 +11518,15 @@ export namespace Prisma {
     id?: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     patient: PatientCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
     actions?: ActionCreateNestedManyWithoutConversationInput
+    summary?: SummaryCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationUncheckedCreateWithoutUserInput = {
@@ -8842,14 +11534,14 @@ export namespace Prisma {
     patientId: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
     actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationCreateOrConnectWithoutUserInput = {
@@ -8887,9 +11579,7 @@ export namespace Prisma {
     patientId?: StringFilter<"Conversation"> | string
     startTime?: DateTimeFilter<"Conversation"> | Date | string
     endTime?: DateTimeNullableFilter<"Conversation"> | Date | string | null
-    summary?: StringNullableFilter<"Conversation"> | string | null
     status?: StringFilter<"Conversation"> | string
-    preferredLanguage?: StringNullableFilter<"Conversation"> | string | null
     patientLanguage?: StringFilter<"Conversation"> | string
     createdAt?: DateTimeFilter<"Conversation"> | Date | string
     updatedAt?: DateTimeFilter<"Conversation"> | Date | string
@@ -8899,15 +11589,15 @@ export namespace Prisma {
     id?: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
     actions?: ActionCreateNestedManyWithoutConversationInput
+    summary?: SummaryCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationUncheckedCreateWithoutPatientInput = {
@@ -8915,14 +11605,14 @@ export namespace Prisma {
     userId: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
     actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationCreateOrConnectWithoutPatientInput = {
@@ -8955,20 +11645,20 @@ export namespace Prisma {
     id?: string
     username: string
     hashedPassword: string
-    refreshToken?: string | null
-    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    refreshToken?: string | null
+    refreshTokenExpiry?: Date | string | null
   }
 
   export type UserUncheckedCreateWithoutConversationsInput = {
     id?: string
     username: string
     hashedPassword: string
-    refreshToken?: string | null
-    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    refreshToken?: string | null
+    refreshTokenExpiry?: Date | string | null
   }
 
   export type UserCreateOrConnectWithoutConversationsInput = {
@@ -9061,6 +11751,44 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type SummaryCreateWithoutConversationInput = {
+    id?: string
+    content: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type SummaryUncheckedCreateWithoutConversationInput = {
+    id?: string
+    content: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type SummaryCreateOrConnectWithoutConversationInput = {
+    where: SummaryWhereUniqueInput
+    create: XOR<SummaryCreateWithoutConversationInput, SummaryUncheckedCreateWithoutConversationInput>
+  }
+
+  export type MedicalHistoryCreateWithoutConversationInput = {
+    id?: string
+    content: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MedicalHistoryUncheckedCreateWithoutConversationInput = {
+    id?: string
+    content: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MedicalHistoryCreateOrConnectWithoutConversationInput = {
+    where: MedicalHistoryWhereUniqueInput
+    create: XOR<MedicalHistoryCreateWithoutConversationInput, MedicalHistoryUncheckedCreateWithoutConversationInput>
+  }
+
   export type UserUpsertWithoutConversationsInput = {
     update: XOR<UserUpdateWithoutConversationsInput, UserUncheckedUpdateWithoutConversationsInput>
     create: XOR<UserCreateWithoutConversationsInput, UserUncheckedCreateWithoutConversationsInput>
@@ -9076,20 +11804,20 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
-    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type UserUncheckedUpdateWithoutConversationsInput = {
     id?: StringFieldUpdateOperationsInput | string
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
-    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type PatientUpsertWithoutConversationsInput = {
@@ -9181,19 +11909,221 @@ export namespace Prisma {
     executedAt?: DateTimeNullableFilter<"Action"> | Date | string | null
   }
 
+  export type SummaryUpsertWithoutConversationInput = {
+    update: XOR<SummaryUpdateWithoutConversationInput, SummaryUncheckedUpdateWithoutConversationInput>
+    create: XOR<SummaryCreateWithoutConversationInput, SummaryUncheckedCreateWithoutConversationInput>
+    where?: SummaryWhereInput
+  }
+
+  export type SummaryUpdateToOneWithWhereWithoutConversationInput = {
+    where?: SummaryWhereInput
+    data: XOR<SummaryUpdateWithoutConversationInput, SummaryUncheckedUpdateWithoutConversationInput>
+  }
+
+  export type SummaryUpdateWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SummaryUncheckedUpdateWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MedicalHistoryUpsertWithoutConversationInput = {
+    update: XOR<MedicalHistoryUpdateWithoutConversationInput, MedicalHistoryUncheckedUpdateWithoutConversationInput>
+    create: XOR<MedicalHistoryCreateWithoutConversationInput, MedicalHistoryUncheckedCreateWithoutConversationInput>
+    where?: MedicalHistoryWhereInput
+  }
+
+  export type MedicalHistoryUpdateToOneWithWhereWithoutConversationInput = {
+    where?: MedicalHistoryWhereInput
+    data: XOR<MedicalHistoryUpdateWithoutConversationInput, MedicalHistoryUncheckedUpdateWithoutConversationInput>
+  }
+
+  export type MedicalHistoryUpdateWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MedicalHistoryUncheckedUpdateWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ConversationCreateWithoutMedicalHistoryInput = {
+    id?: string
+    startTime?: Date | string
+    endTime?: Date | string | null
+    status: string
+    patientLanguage?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutConversationsInput
+    patient: PatientCreateNestedOneWithoutConversationsInput
+    messages?: MessageCreateNestedManyWithoutConversationInput
+    actions?: ActionCreateNestedManyWithoutConversationInput
+    summary?: SummaryCreateNestedOneWithoutConversationInput
+  }
+
+  export type ConversationUncheckedCreateWithoutMedicalHistoryInput = {
+    id?: string
+    userId: string
+    patientId: string
+    startTime?: Date | string
+    endTime?: Date | string | null
+    status: string
+    patientLanguage?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
+    actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
+  }
+
+  export type ConversationCreateOrConnectWithoutMedicalHistoryInput = {
+    where: ConversationWhereUniqueInput
+    create: XOR<ConversationCreateWithoutMedicalHistoryInput, ConversationUncheckedCreateWithoutMedicalHistoryInput>
+  }
+
+  export type ConversationUpsertWithoutMedicalHistoryInput = {
+    update: XOR<ConversationUpdateWithoutMedicalHistoryInput, ConversationUncheckedUpdateWithoutMedicalHistoryInput>
+    create: XOR<ConversationCreateWithoutMedicalHistoryInput, ConversationUncheckedCreateWithoutMedicalHistoryInput>
+    where?: ConversationWhereInput
+  }
+
+  export type ConversationUpdateToOneWithWhereWithoutMedicalHistoryInput = {
+    where?: ConversationWhereInput
+    data: XOR<ConversationUpdateWithoutMedicalHistoryInput, ConversationUncheckedUpdateWithoutMedicalHistoryInput>
+  }
+
+  export type ConversationUpdateWithoutMedicalHistoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    startTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutConversationsNestedInput
+    patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
+    messages?: MessageUpdateManyWithoutConversationNestedInput
+    actions?: ActionUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUpdateOneWithoutConversationNestedInput
+  }
+
+  export type ConversationUncheckedUpdateWithoutMedicalHistoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    patientId?: StringFieldUpdateOperationsInput | string
+    startTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
+    actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
+  }
+
+  export type ConversationCreateWithoutSummaryInput = {
+    id?: string
+    startTime?: Date | string
+    endTime?: Date | string | null
+    status: string
+    patientLanguage?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutConversationsInput
+    patient: PatientCreateNestedOneWithoutConversationsInput
+    messages?: MessageCreateNestedManyWithoutConversationInput
+    actions?: ActionCreateNestedManyWithoutConversationInput
+    medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
+  }
+
+  export type ConversationUncheckedCreateWithoutSummaryInput = {
+    id?: string
+    userId: string
+    patientId: string
+    startTime?: Date | string
+    endTime?: Date | string | null
+    status: string
+    patientLanguage?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
+    actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
+  }
+
+  export type ConversationCreateOrConnectWithoutSummaryInput = {
+    where: ConversationWhereUniqueInput
+    create: XOR<ConversationCreateWithoutSummaryInput, ConversationUncheckedCreateWithoutSummaryInput>
+  }
+
+  export type ConversationUpsertWithoutSummaryInput = {
+    update: XOR<ConversationUpdateWithoutSummaryInput, ConversationUncheckedUpdateWithoutSummaryInput>
+    create: XOR<ConversationCreateWithoutSummaryInput, ConversationUncheckedCreateWithoutSummaryInput>
+    where?: ConversationWhereInput
+  }
+
+  export type ConversationUpdateToOneWithWhereWithoutSummaryInput = {
+    where?: ConversationWhereInput
+    data: XOR<ConversationUpdateWithoutSummaryInput, ConversationUncheckedUpdateWithoutSummaryInput>
+  }
+
+  export type ConversationUpdateWithoutSummaryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    startTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutConversationsNestedInput
+    patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
+    messages?: MessageUpdateManyWithoutConversationNestedInput
+    actions?: ActionUpdateManyWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
+  }
+
+  export type ConversationUncheckedUpdateWithoutSummaryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    patientId?: StringFieldUpdateOperationsInput | string
+    startTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
+    actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
+  }
+
   export type ConversationCreateWithoutMessagesInput = {
     id?: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutConversationsInput
     patient: PatientCreateNestedOneWithoutConversationsInput
     actions?: ActionCreateNestedManyWithoutConversationInput
+    summary?: SummaryCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationUncheckedCreateWithoutMessagesInput = {
@@ -9202,13 +12132,13 @@ export namespace Prisma {
     patientId: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationCreateOrConnectWithoutMessagesInput = {
@@ -9294,15 +12224,15 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     actions?: ActionUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationUncheckedUpdateWithoutMessagesInput = {
@@ -9311,13 +12241,13 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
 
   export type MessageUpsertWithoutDerivedMessagesInput = {
@@ -9375,15 +12305,15 @@ export namespace Prisma {
     id?: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutConversationsInput
     patient: PatientCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
+    summary?: SummaryCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationUncheckedCreateWithoutActionsInput = {
@@ -9392,13 +12322,13 @@ export namespace Prisma {
     patientId: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
+    summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
 
   export type ConversationCreateOrConnectWithoutActionsInput = {
@@ -9421,15 +12351,15 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationUncheckedUpdateWithoutActionsInput = {
@@ -9438,13 +12368,13 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationCreateManyUserInput = {
@@ -9452,9 +12382,7 @@ export namespace Prisma {
     patientId: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -9464,15 +12392,15 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
     actions?: ActionUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationUncheckedUpdateWithoutUserInput = {
@@ -9480,14 +12408,14 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
     actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationUncheckedUpdateManyWithoutUserInput = {
@@ -9495,9 +12423,7 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -9508,9 +12434,7 @@ export namespace Prisma {
     userId: string
     startTime?: Date | string
     endTime?: Date | string | null
-    summary?: string | null
-    status?: string
-    preferredLanguage?: string | null
+    status: string
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -9520,15 +12444,15 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
     actions?: ActionUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationUncheckedUpdateWithoutPatientInput = {
@@ -9536,14 +12460,14 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
     actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
 
   export type ConversationUncheckedUpdateManyWithoutPatientInput = {
@@ -9551,9 +12475,7 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    summary?: NullableStringFieldUpdateOperationsInput | string | null
     status?: StringFieldUpdateOperationsInput | string
-    preferredLanguage?: NullableStringFieldUpdateOperationsInput | string | null
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
