@@ -52,3 +52,7 @@ write.sh
 docker-compose.yml
 squash.sh
 git-dates.py
+
+# Configuration files containing potentially sensitive info
+deploy.sh
+docker-compose.yml
