@@ -1,17 +1,20 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-// Get the host-accessible backend URL (e.g., http://localhost:8080) from build-time env var
-const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+// Restore VITE_APP_BACKEND_URL
+const RAW_BACKEND_URL = import.meta.env.VITE_APP_BACKEND_URL;
 
-if (!API_BASE_URL) {
+if (!RAW_BACKEND_URL) {
   throw new Error("Configuration Error: VITE_APP_BACKEND_URL environment variable is not set.");
 }
+
+// Construct the final API base URL including the /api/v1 prefix
+const API_BASE_URL = RAW_BACKEND_URL.replace(/\/$/, "") + '/api/v1';
 
 console.log(`[API Config] Using API Base URL: ${API_BASE_URL}`);
 
 // Create Axios instance
 const api = axios.create({
-    baseURL: API_BASE_URL.replace(/\/$/, ""), // Remove trailing slash if present
+    baseURL: API_BASE_URL, // Use the constructed URL with the prefix
 });
 
 let isRefreshing = false;
@@ -122,7 +125,7 @@ api.interceptors.response.use(
 
 export const getMedicalHistory = async (conversationId: string): Promise<{ content: string }> => {
     try {
-        const response = await api.get(`/conversations/${conversationId}/medical-history`);
+        const response = await api.get(`/conversations/${conversationId}/medical-history`); // Keep relative path
         return response.data;
     } catch (error) {
         console.error(`[API] Error fetching medical history for conversation ${conversationId}:`, error);

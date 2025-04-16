@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { AuthContextType } from '../context/AuthContext';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:8080',
+  baseURL: (import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:8080').replace(/\/$/, "") + '/api/v1',
 });
 
 let authContext: AuthContextType | null = null;

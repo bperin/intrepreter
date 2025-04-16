@@ -74,6 +74,7 @@ interface ConversationState {
     openaiConnectionCooldownUntil: number;
     openaiReconnectionAttempts: number;
     ffmpegStdinEnded: boolean;
+    isPaused: boolean;
     // Add any other state that needs to be per-conversation
 }
 // ---------------------------------------------
@@ -127,6 +128,7 @@ export class TranscriptionService {
             openaiConnectionCooldownUntil: 0,
             openaiReconnectionAttempts: 0,
             ffmpegStdinEnded: false,
+            isPaused: false,
         });
     }
     const conversationState = this.conversationStates.get(conversationId)!; // Assert non-null as we just set it
@@ -207,6 +209,16 @@ export class TranscriptionService {
             console.error(`[TranscriptionService][${conversationId}] Error ending FFmpeg stdin stream:`, finalizeError);
             this.broadcastToClients(conversationId, { type: 'error', message: 'Backend failed to finalize stream.' });
           }
+        } else if (data.type === 'input_audio_buffer.pause') {
+             console.log(`[TranscriptionService][${conversationId}] Pause message received. Setting isPaused flag.`);
+             if (convState) {
+                 convState.isPaused = true;
+             }
+        } else if (data.type === 'input_audio_buffer.resume') {
+             console.log(`[TranscriptionService][${conversationId}] Resume message received. Clearing isPaused flag.`);
+             if (convState) {
+                 convState.isPaused = false;
+             }
         }
       } catch (err) {
         console.error(`[TranscriptionService][${conversationId}] Error handling client message:`, err);
@@ -242,6 +254,7 @@ export class TranscriptionService {
       this.conversationStates.set(conversationId, {
           openaiConnection: null, ffmpegProcess: null, isOpenAIConnected: false, isConnecting: false,
           openaiConnectionCooldownUntil: 0, openaiReconnectionAttempts: 0, ffmpegStdinEnded: false,
+          isPaused: false,
        });
        // Proceed to connect after initializing state
        this._connectOpenAIForConversation(conversationId);
@@ -732,16 +745,21 @@ export class TranscriptionService {
         // Handle PCM data coming out of FFmpeg
         ffmpegProcess.stdout.on('data', (chunk: Buffer) => {
              const currentState = this.conversationStates.get(conversationId);
+             // +++ Add Check for Paused State +++
+             if (currentState?.isPaused) {
+                 // console.log(`[TranscriptionService][${conversationId}] Dropping FFmpeg output chunk due to paused state.`);
+                 return; // Don't process or send if paused
+             }
+             // ++++++++++++++++++++++++++++++++++
             if (currentState && currentState.isOpenAIConnected) {
                 try {
                     const pcmBase64 = chunk.toString('base64');
                     this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.append", audio: pcmBase64 }));
                 } catch (err) {
                     console.error(`[TranscriptionService][${conversationId}] Error sending PCM chunk to OpenAI:`, err);
-                    // Maybe close this conversation? this._cleanupConversationResources(conversationId);
                 }
             } else {
-                console.warn(`[TranscriptionService][${conversationId}] Received FFmpeg stdout data, but OpenAI not connected. Discarding.`);
+                console.warn(`[TranscriptionService][${conversationId}] Received FFmpeg stdout data, but OpenAI not connected or state missing. Discarding.`);
             }
         });
 

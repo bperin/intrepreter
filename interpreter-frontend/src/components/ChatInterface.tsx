@@ -134,6 +134,7 @@ const SttStatusDisplay = styled.div<ThemedProps & { $status: string }>`
         switch ($status) {
             case 'connected': return theme.colors.status.success + '20';
             case 'connecting': return theme.colors.status.warning + '20';
+            case 'paused': return theme.colors.status.warning + '20';
             case 'error':
             case 'failed': return theme.colors.status.error + '20';
             default: return theme.colors.background.hover + '50'; // idle, closed, disconnected
@@ -143,6 +144,7 @@ const SttStatusDisplay = styled.div<ThemedProps & { $status: string }>`
         switch ($status) {
             case 'connected': return theme.colors.status.success;
             case 'connecting': return theme.colors.status.warning;
+            case 'paused': return theme.colors.status.warning;
             case 'error':
             case 'failed': return theme.colors.status.error;
             default: return theme.colors.text.secondary;
@@ -606,45 +608,49 @@ const ChatInterface: React.FC = () => {
     }, [selectedConversationId, isSessionActive, sttStatus, startRecording, stopRecording, hookIsPaused, summaryContent]);
 
     useEffect(() => {
-        if (selectedConversationId) {
-            console.log(`🚀 [ChatInterface] useEffect[selectedConversationId] - RUNNING for ID: ${selectedConversationId}.`);
-            console.log('🧹 [ChatInterface] Clearing previous state.');
-            setMessages([]); 
-            setSummaryContent(null);
-            setMedicalHistoryContent(null);
-            setActions([]);
-            
-            console.log('📤 [ChatInterface] Sending initial WS requests (messages, actions, history trigger).');
-            sendMessage(JSON.stringify({
-                type: 'get_messages',
-                payload: { conversationId: selectedConversationId }
-            }));
-            sendMessage(JSON.stringify({ 
-                type: 'get_actions',
-                payload: { conversationId: selectedConversationId }
-            }));
-            const fetchAndTriggerHistory = async () => {
-                 try {
-                    const historyData = await getMedicalHistory(selectedConversationId);
-                    console.log("[ChatInterface] Initial REST fetch medical history successful:", historyData);
-                    setMedicalHistoryContent(historyData.content); 
-                } catch (error) {
-                    console.error("[ChatInterface] Initial error fetching medical history via REST:", error);
-                } finally {
-                     sendMessage(JSON.stringify({ type: "get_medical_history", payload: { conversationId: selectedConversationId } }));
-                }
-            };
-            fetchAndTriggerHistory();
-
-            setActiveTab('chat');
-        } else {
-            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - RUNNING for null ID. Clearing state.');
+        // GUARD CLAUSE: Only proceed if we have a valid ID
+        if (!selectedConversationId) {
+            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - ID is null. Clearing state and returning.');
             setMessages([]); 
             setSummaryContent(null);
             setMedicalHistoryContent(null);
             setActions([]);
             setActiveTab('chat');
+            return; // Exit early
         }
+
+        // --- Proceed with fetching data now that we know ID is valid ---
+        console.log(`🚀 [ChatInterface] useEffect[selectedConversationId] - RUNNING for ID: ${selectedConversationId}.`);
+        console.log('🧹 [ChatInterface] Clearing previous state (before fetching new).');
+        setMessages([]); 
+        setSummaryContent(null);
+        setMedicalHistoryContent(null);
+        setActions([]);
+        
+        console.log('📤 [ChatInterface] Sending initial WS requests (messages, actions, history trigger).');
+        sendMessage(JSON.stringify({
+            type: 'get_messages',
+            payload: { conversationId: selectedConversationId }
+        }));
+        sendMessage(JSON.stringify({ 
+            type: 'get_actions',
+            payload: { conversationId: selectedConversationId }
+        }));
+        const fetchAndTriggerHistory = async () => {
+             try {
+                const historyData = await getMedicalHistory(selectedConversationId);
+                console.log("[ChatInterface] Initial REST fetch medical history successful:", historyData);
+                setMedicalHistoryContent(historyData.content); 
+            } catch (error) {
+                console.error("[ChatInterface] Initial error fetching medical history via REST:", error);
+                 // Still send WS request even if REST fails initially
+                 sendMessage(JSON.stringify({ type: "get_medical_history", payload: { conversationId: selectedConversationId } }));
+            }
+             // No finally block needed if we always send the WS message
+        };
+        fetchAndTriggerHistory();
+
+        setActiveTab('chat'); // Reset to chat tab for new conversation
     }, [selectedConversationId, sendMessage]);
 
     useEffect(() => {
@@ -818,19 +824,26 @@ const ChatInterface: React.FC = () => {
             <ControlsArea>
                 {selectedConversationId && isSessionActive && (
                     <>
-                        {sttStatus === 'connected' ? (
-                            <MicControlButton onClick={pauseRecording}>
-                                Pause Mic
-                            </MicControlButton>
-                        ) : hookIsPaused ? (
-                            <MicControlButton onClick={resumeRecording}>
-                                Resume Mic
-                            </MicControlButton>
-                        ) : sttStatus !== 'connecting' && (
+                        {/* Updated Logic: Check paused state *within* connected state */}
+                        {sttStatus === 'connected' && (
+                            hookIsPaused ? (
+                                <MicControlButton onClick={resumeRecording}>
+                                    Resume Mic
+                                </MicControlButton>
+                            ) : (
+                                <MicControlButton onClick={() => { console.log('Pause Mic button clicked'); pauseRecording(); }}>
+                                    Pause Mic
+                                </MicControlButton>
+                            )
+                        )}
+                        
+                        {/* Show Start Mic only if not connected/connecting and not paused (implicitly not paused if not connected) */}
+                        {sttStatus !== 'connected' && sttStatus !== 'connecting' && (
                             <MicControlButton onClick={startRecording}>
                                 Start Mic
                             </MicControlButton>
                         )}
+
                         <EndSessionButton onClick={handleEndSession} disabled={!isSessionActive}>
                             End Session
                         </EndSessionButton>
@@ -843,12 +856,15 @@ const ChatInterface: React.FC = () => {
 
             <TopStatusContainer>
                 {selectedConversationId && (
-                    <SttStatusDisplay $status={sttStatus}>
-                        {sttStatus === 'connected' ? 'Recording' : 
+                    <SttStatusDisplay 
+                        $status={sttStatus === 'connected' && hookIsPaused ? 'paused' : sttStatus}
+                    >
+                        {sttStatus === 'connected' ? 
+                            (hookIsPaused ? 'Paused' : 'Recording') : 
                          sttStatus === 'connecting' ? 'Connecting...' : 
                          sttStatus === 'error' || sttStatus === 'failed' ? 'Error' : 
-                         hookIsPaused ? 'Paused' :
-                         'Not Recording'}
+                         'Not Recording'
+                        }
                     </SttStatusDisplay>
                 )}
                 <SttStatusDisplay $status={isConnected ? 'connected' : 'disconnected'}>

@@ -35,23 +35,25 @@ BACKEND_SERVICE_NAME="${BACKEND_SERVICE_NAME:-interpreter-backend-service}"
 FRONTEND_SERVICE_NAME="${FRONTEND_SERVICE_NAME:-interpreter-frontend-service}"
 BACKEND_IMAGE_NAME="${BACKEND_IMAGE_NAME:-interpreter-backend}"
 FRONTEND_IMAGE_NAME="${FRONTEND_IMAGE_NAME:-interpreter-frontend}"
-IMAGE_TAG="${IMAGE_TAG:-latest}"
 
-# --- Derived Variables ---
+# --- Generate Unique Tag --- 
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+IMAGE_TAG="prod-${TIMESTAMP}"
+echo "Generated unique image tag: ${IMAGE_TAG}"
+
+# --- Derived Variables --- 
 ARTIFACT_REGISTRY_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}"
-BACKEND_IMAGE_URI="${ARTIFACT_REGISTRY_BASE}/${BACKEND_IMAGE_NAME}:${IMAGE_TAG}"
-FRONTEND_IMAGE_URI="${ARTIFACT_REGISTRY_BASE}/${FRONTEND_IMAGE_NAME}:${IMAGE_TAG}"
+BACKEND_IMAGE_URI="${ARTIFACT_REGISTRY_BASE}/${BACKEND_IMAGE_NAME}:${IMAGE_TAG}" # Use unique tag
+FRONTEND_IMAGE_URI="${ARTIFACT_REGISTRY_BASE}/${FRONTEND_IMAGE_NAME}:${IMAGE_TAG}" # Use unique tag
 
-# --- Configuration ---
+# --- Artifact Registry Config (Keep specific variables if needed elsewhere) ---
 GCP_PROJECT_ID="brian-test-454620"
-REGION="us-central1"
 ARTIFACT_REGISTRY_HOST="us-central1-docker.pkg.dev"
-REPO_NAME="interpreter-app" # Your Artifact Registry repo name
+REPO_NAME="interpreter-app"
 
-# --- Define Full Image URIs --- 
-# Construct the full image paths used for push/deploy
-IMAGE_REPO_BACKEND="${ARTIFACT_REGISTRY_HOST}/${GCP_PROJECT_ID}/${REPO_NAME}/${BACKEND_IMAGE_NAME}:latest"
-IMAGE_REPO_FRONTEND="${ARTIFACT_REGISTRY_HOST}/${GCP_PROJECT_ID}/${REPO_NAME}/${FRONTEND_IMAGE_NAME}:latest"
+# --- Use Derived Variables for Image URIs ---
+IMAGE_REPO_BACKEND="${BACKEND_IMAGE_URI}" # Use variable derived with unique tag
+IMAGE_REPO_FRONTEND="${FRONTEND_IMAGE_URI}" # Use variable derived with unique tag
 
 # --- Prerequisites Check --- 
 echo "Checking prerequisites..."
@@ -66,32 +68,30 @@ fi
 echo "Verifying gcloud authentication..."
 gcloud auth list
 echo "Verifying gcloud project..."
-gcloud config set project "$PROJECT_ID" # Ensure gcloud context matches
+gcloud config set project "$PROJECT_ID"
 gcloud config list project
 echo "Ensure Docker is configured for Artifact Registry: gcloud auth configure-docker ${REGION}-docker.pkg.dev"
 echo "Ensure APIs are enabled: Cloud Run, Artifact Registry, Cloud Build, Secret Manager"
 echo "-------------------------------------"
-# Removed confirmation prompt for production script
 
 # --- Build Backend --- 
-echo "[Backend] Building Docker image for linux/amd64..."
-# Comment out the build step - we assume a successful manual build exists
-# docker buildx build --platform linux/amd64 -t $IMAGE_REPO_BACKEND ./interpreter-backend --push
-echo "[Backend] Build step skipped (assuming manual build)."
+echo "[Backend] Building Docker image (${IMAGE_TAG}) for linux/amd64..."
+docker buildx build --platform linux/amd64 -t "${IMAGE_REPO_BACKEND}" ./interpreter-backend # Build and tag with unique tag
+echo "[Backend] Build complete."
 
 # --- Push Backend --- 
-echo "[Backend] Pushing image to Artifact Registry..."
+echo "[Backend] Pushing image (${IMAGE_TAG}) to Artifact Registry..."
 docker push "${IMAGE_REPO_BACKEND}"
 echo "[Backend] Push complete."
 
 # --- Deploy Backend --- 
-echo "[Backend] Deploying to Cloud Run service: $BACKEND_SERVICE_NAME..."
-gcloud run deploy $BACKEND_SERVICE_NAME \
+echo "[Backend] Deploying image (${IMAGE_TAG}) to Cloud Run service: $BACKEND_SERVICE_NAME..."
+gcloud run deploy "$BACKEND_SERVICE_NAME" \
     --image "${IMAGE_REPO_BACKEND}" \
     --platform managed \
-    --region $REGION \
+    --region "$REGION" \
     --allow-unauthenticated \
-    --project $GCP_PROJECT_ID \
+    --project "$GCP_PROJECT_ID" \
     --set-env-vars="DATABASE_URL=$DATABASE_URL,JWT_SECRET=$JWT_SECRET,OPENAI_API_KEY=$OPENAI_API_KEY" \
     --quiet
 
@@ -105,35 +105,35 @@ fi
 echo "[Backend] Deployed URL: ${BACKEND_URL}"
 
 # --- Build Frontend --- 
-echo "[Frontend] Building Docker image for linux/amd64 with backend URL: ${BACKEND_URL}..."
+echo "[Frontend] Building Docker image (${IMAGE_TAG}) for linux/amd64 with backend URL: ${BACKEND_URL}..."
 FRONTEND_BACKEND_ARG_URL="${BACKEND_URL}" 
-echo "[Frontend] Using build argument VITE_APP_BACKEND_URL=${FRONTEND_BACKEND_ARG_URL}"
+echo "[Frontend] Using build argument VITE_APP_BACKEND_URL=${FRONTEND_BACKEND_ARG_URL}" # Restore VITE_APP_ prefix
 docker build \
   --platform linux/amd64 \
   --build-arg VITE_APP_BACKEND_URL="${FRONTEND_BACKEND_ARG_URL}" \
-  -t "${FRONTEND_IMAGE_URI}" \
+  -t "${IMAGE_REPO_FRONTEND}" \
   ./interpreter-frontend
 echo "[Frontend] Build complete."
 
 # --- Push Frontend --- 
-echo "[Frontend] Pushing image to Artifact Registry..."
-docker push "${FRONTEND_IMAGE_URI}"
+echo "[Frontend] Pushing image (${IMAGE_TAG}) to Artifact Registry..."
+docker push "${IMAGE_REPO_FRONTEND}"
 echo "[Frontend] Push complete."
 
 # --- Deploy Frontend --- 
-echo "[Frontend] Deploying to Cloud Run service: $FRONTEND_SERVICE_NAME..."
-gcloud run deploy $FRONTEND_SERVICE_NAME \
+echo "[Frontend] Deploying image (${IMAGE_TAG}) to Cloud Run service: $FRONTEND_SERVICE_NAME..."
+gcloud run deploy "$FRONTEND_SERVICE_NAME" \
     --image "${IMAGE_REPO_FRONTEND}" \
     --platform managed \
-    --region $REGION \
+    --region "$REGION" \
     --allow-unauthenticated \
-    --project $GCP_PROJECT_ID \
+    --project "$GCP_PROJECT_ID" \
     --set-env-vars="VITE_APP_BACKEND_URL=$BACKEND_URL" \
     --quiet
 
 echo "[Frontend] Deployment submitted."
 
-# --- Get Frontend URL ---
+# --- Get Frontend URL --- 
 echo "[Frontend] Fetching deployed service URL..."
 FRONTEND_URL=$(gcloud run services describe "${FRONTEND_SERVICE_NAME}" --platform managed --region "${REGION}" --format='value(status.url)')
 if [[ -z "$FRONTEND_URL" ]]; then
@@ -142,20 +142,21 @@ if [[ -z "$FRONTEND_URL" ]]; then
 fi
 echo "[Frontend] Deployed URL: ${FRONTEND_URL}"
 
-# --- Redeploy Backend with FRONTEND_URL injected ---
-echo "[Backend] Redeploying to inject FRONTEND_URL into backend..."
-gcloud run deploy $BACKEND_SERVICE_NAME \
+# --- Redeploy Backend with FRONTEND_URL injected --- 
+echo "[Backend] Redeploying image (${IMAGE_TAG}) to inject FRONTEND_URL into backend..."
+gcloud run deploy "$BACKEND_SERVICE_NAME" \
     --image "${IMAGE_REPO_BACKEND}" \
     --platform managed \
-    --region $REGION \
+    --region "$REGION" \
     --allow-unauthenticated \
-    --project $GCP_PROJECT_ID \
+    --project "$GCP_PROJECT_ID" \
     --set-env-vars="DATABASE_URL=$DATABASE_URL,JWT_SECRET=$JWT_SECRET,OPENAI_API_KEY=$OPENAI_API_KEY,FRONTEND_URL=${FRONTEND_URL}" \
     --quiet
 
 # --- Final URLs --- 
 echo "--- Deployment Summary ---"
-echo "Backend Service (${BACKEND_SERVICE_NAME}) URL: $(gcloud run services describe "${BACKEND_SERVICE_NAME}" --platform managed --region "${REGION}" --format='value(status.url)')"
+echo "Backend Service (${BACKEND_SERVICE_NAME}) URL: $(gcloud run services describe "${BACKEND_SERVICE_NAME}" --platform managed --region "${REGION}" --format='value(status.url)')" # Fetch again to be sure
 echo "Frontend Service (${FRONTEND_SERVICE_NAME}) URL: $(gcloud run services describe "${FRONTEND_SERVICE_NAME}" --platform managed --region "${REGION}" --format='value(status.url)')"
+echo "Image Tag Used: ${IMAGE_TAG}"
 echo "---------------------------"
 echo "PRODUCTION deployment script finished." 

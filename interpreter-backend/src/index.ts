@@ -88,15 +88,15 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- Public / Unauthenticated Routes ---
-app.get('/health', (req, res) => {
+app.get('/api/v1/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-app.get("/", (req: Request, res: Response) => {
+app.get("/api/v1/", (req: Request, res: Response) => {
     res.send("Interpreter Backend is running!");
 });
 
-app.post("/auth/register", (req: Request, res: Response, next: NextFunction) => {
+app.post("/api/v1/auth/register", (req: Request, res: Response, next: NextFunction) => {
     (async () => {
         try {
             const command: RegisterUserCommand = req.body;
@@ -121,7 +121,7 @@ app.post("/auth/register", (req: Request, res: Response, next: NextFunction) => 
     })();
 });
 
-app.post("/auth/login", (req: Request, res: Response, next: NextFunction) => {
+app.post("/api/v1/auth/login", (req: Request, res: Response, next: NextFunction) => {
     (async () => {
         try {
             const command: LoginUserCommand = req.body;
@@ -153,7 +153,7 @@ app.post("/auth/login", (req: Request, res: Response, next: NextFunction) => {
     })();
 });
 
-app.post("/auth/refresh", (req: Request, res: Response, next: NextFunction) => {
+app.post("/api/v1/auth/refresh", (req: Request, res: Response, next: NextFunction) => {
     (async () => {
         try {
             const { refreshToken } = req.body;
@@ -181,12 +181,12 @@ app.post("/auth/refresh", (req: Request, res: Response, next: NextFunction) => {
 });
 
 // --- Authentication Middleware (applied to all routes below) ---
-app.use(authMiddleware);
+app.use('/api/v1', authMiddleware);
 
 // --- Protected / Authenticated Routes ---
 
 // Get authenticated user profile
-app.get("/auth/me", async (req, res, next) => {
+app.get("/api/v1/auth/me", async (req, res, next) => {
     try {
         // authMiddleware has already verified the token and attached the user payload
         const userPayload = req.user; 
@@ -210,7 +210,7 @@ app.get("/auth/me", async (req, res, next) => {
 });
 
 // Get actions for a specific conversation
-app.get("/conversations/:conversationId/actions", async (req, res, next): Promise<void> => {
+app.get("/api/v1/conversations/:conversationId/actions", async (req, res, next): Promise<void> => {
     try {
         const userId = req.user!.id; 
         const { conversationId } = req.params;
@@ -243,8 +243,22 @@ app.get("/conversations/:conversationId/actions", async (req, res, next): Promis
     }
 });
 
+// Add back GET /conversations route
+app.get("/api/v1/conversations", async (req, res, next) => {
+    try {
+        const userId = req.user!.id;
+        console.log(`[REST API] Fetching conversations for user ${userId}`);
+        const conversations = await conversationRepository.findByUserId(userId);
+        res.status(200).json(conversations);
+        // No return needed here, response is sent
+    } catch (error) {
+        console.error("[REST API] Error fetching conversations:", error);
+        next(error); // Pass error to default handler
+    }
+});
+
 // Create a new conversation
-app.post("/conversations", async (req, res, next) => {
+app.post("/api/v1/conversations", async (req, res, next) => {
     console.log(`[${new Date().toISOString()}] POST /conversations request received`);
     try {
         const userId = req.user!.id;
@@ -274,7 +288,7 @@ app.post("/conversations", async (req, res, next) => {
 });
 
 // Get medical history for a specific conversation
-app.get("/conversations/:id/medical-history", async (req, res, next) => {
+app.get("/api/v1/conversations/:id/medical-history", async (req, res, next) => {
     console.log(`[${new Date().toISOString()}] GET /conversations/:id/medical-history request for ID: ${req.params.id}`);
     try {
         const userId = req.user!.id;
@@ -302,6 +316,39 @@ app.get("/conversations/:id/medical-history", async (req, res, next) => {
         next(error);
     }
 });
+
+// --- Add back POST /conversations/:id/end route ---
+app.post("/api/v1/conversations/:id/end", async (req, res, next) => {
+    console.log(`[${new Date().toISOString()}] POST /api/v1/conversations/:id/end request for ID: ${req.params.id}`);
+    try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id;
+        
+        console.log(`[REST API] Ending conversation ${conversationId} for user ${userId}`);
+        
+        // Verify ownership first (important!)
+        const conversation = await conversationRepository.findById(conversationId);
+        if (!conversation) {
+            res.status(404).json({ message: "Conversation not found" });
+            return;
+        }
+        if (conversation.userId !== userId) {
+            res.status(403).json({ message: "Forbidden: You don't have access to this conversation" });
+            return;
+        }
+        
+        // End and summarize the conversation using the service
+        // Assuming conversationService has an appropriate method like endAndSummarizeConversation
+        const updatedConversation = await conversationService.endAndSummarizeConversation(conversationId);
+        
+        res.status(200).json(updatedConversation); // Send back the updated conversation with summary
+        // No return needed
+    } catch (error) {
+        console.error(`[REST API] Error ending conversation ${req.params.id}:`, error);
+        next(error); // Pass error to default handler
+    }
+});
+// --- End Add back ---
 
 // --- Create HTTP Server (needed for WebSocket upgrade) ---
 const server = http.createServer(app);
