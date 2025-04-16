@@ -10,7 +10,11 @@ const DashboardPage: React.FC = () => {
     return (
         <ConversationProvider>
             <ActionProvider>
-                <DashboardLayout leftColumnContent={<ConversationList />} middleColumnContent={<ChatInterface />} rightColumnContent={<ActionStream />} />
+                <DashboardLayout 
+                    leftColumnContent={<ConversationList />} 
+                    middleColumnContent={<ChatInterface />} 
+                    rightColumnContent={<ActionStream />}
+                />
             </ActionProvider>
         </ConversationProvider>
     );

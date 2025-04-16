@@ -172,16 +172,6 @@ app.post("/auth/refresh", (req: Request, res: Response, next: NextFunction) => {
     })();
 });
 
-app.get("/conversations", authMiddleware, async (req, res, next) => {
-    try {
-        const userId = req.user!.id;
-        const conversations = await conversationRepository.findByUserId(userId);
-        res.status(200).json(conversations);
-    } catch (error) {
-        console.error("Error fetching conversations:", error);
-        next(error);
-    }
-});
 
 // New route to get actions for a specific conversation
 app.get("/conversations/:conversationId/actions", authMiddleware, async (req, res, next): Promise<void> => {
@@ -368,57 +358,6 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
 
             // --- Start of switch statement for control channel messages ---
             switch (request.type) {
-                case "start_new_session":
-                    try {
-                        const payload = request.payload;
-                        if (!payload || !payload.firstName || !payload.lastName || !payload.dob) {
-                            throw new Error("Missing required patient details (firstName, lastName, dob) in payload.");
-                        }
-
-                        const dobDate = new Date(payload.dob);
-                        if (isNaN(dobDate.getTime())) {
-                            throw new Error("Invalid Date of Birth format.");
-                        }
-
-                        const input: StartSessionInput = {
-                            userId: ws.userId,
-                            patientFirstName: payload.firstName,
-                            patientLastName: payload.lastName,
-                            patientDob: dobDate,
-                        };
-
-                        console.log(`[WebSocket Router] Control Channel: Starting new session for user ${ws.userId}...`);
-                        const startSessionResult = await conversationService.startNewSession(input);
-                        
-                        console.log(`[WebSocket Router] Control Channel: New session started with Conversation ID: ${startSessionResult.conversation.id}`);
-                        ws.currentConversationId = startSessionResult.conversation.id;
-
-                        // REMOVE OpenAI Key logic here - The backend shouldn't send it anymore
-                        console.log(`[WebSocket Router] Control Channel: Session started, sending confirmation (without key).`);
-                        ws.send(JSON.stringify({
-                            type: 'session_started',
-                            payload: {
-                                conversationId: startSessionResult.conversation.id,
-                                patientId: startSessionResult.conversation.patientId,
-                                startTime: startSessionResult.conversation.startTime,
-                                // openaiKey: startSessionResult.conversation.openaiSessionKey || startSessionResult.openaiKey // REMOVED
-                            }
-                        }));
-
-                        console.log(`[WebSocket Router] Control Channel: Fetching updated conversation list for ${ws.username}...`);
-                        const updatedConversations = await conversationRepository.findByUserId(ws.userId!); // userId is guaranteed here
-                        ws.send(JSON.stringify({ 
-                            type: 'conversation_list', 
-                            payload: updatedConversations 
-                        }));
-                        console.log(`[WebSocket Router] Control Channel: Sent updated conversation list (${updatedConversations.length} items) to ${ws.username}`);
-
-                    } catch (error: any) {
-                        console.error(`[WebSocket Router] Control Channel: Error processing start_new_session for ${ws.username}:`, error);
-                        ws.send(JSON.stringify({ type: 'error', text: error.message || 'Failed to start new session' }));
-                    }
-                    break;
-
                 case "select_conversation":
                     const conversationIdToSelect = request.payload?.conversationId;
                     if (conversationIdToSelect && typeof conversationIdToSelect === "string") {
@@ -485,23 +424,6 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                     } else {
                         console.warn(`[WebSocket Router] Control Channel: Invalid get_messages payload from ${wsIdentifier}:`, request.payload);
                         ws.send(JSON.stringify({ type: "error", text: "Invalid payload for get_messages" }));
-                    }
-                    break;
-
-                case "get_conversations":
-                    // ... (existing get_conversations logic - no key involved)
-                     try {
-                        console.log(`[WebSocket Router] Control Channel: Received get_conversations request from ${wsIdentifier}`);
-                        const conversations = await conversationRepository.findByUserId(ws.userId!); // userId is guaranteed here
-                        ws.send(
-                            JSON.stringify({
-                                type: "conversation_list",
-                                payload: conversations,
-                            })
-                        );
-                    } catch (error: any) {
-                        console.error(`[WebSocket Router] Control Channel: Error fetching conversations for ${wsIdentifier}:`, error);
-                        ws.send(JSON.stringify({ type: "error", text: error.message || "Failed to fetch conversations" }));
                     }
                     break;
 
@@ -783,3 +705,105 @@ process.on('unhandledRejection', (reason, promise) => {
   // process.exit(1);
 });
 // ---------------------------------------------------------
+
+
+// Get all conversations for current user
+app.get("/api/conversations", authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user!.id;
+        console.log(`[REST API] Fetching conversations for user ${userId}`);
+        const conversations = await conversationRepository.findByUserId(userId);
+        res.status(200).json(conversations);
+        return;
+    } catch (error) {
+        console.error("[REST API] Error fetching conversations:", error);
+        next(error);
+    }
+});
+
+// Get a specific conversation by ID
+app.get("/api/conversations/:id", authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id;
+        
+        console.log(`[REST API] Fetching conversation ${conversationId} for user ${userId}`);
+        const conversation = await conversationRepository.findById(conversationId);
+        
+        if (!conversation) {
+            res.status(404).json({ message: "Conversation not found" });
+            return;
+        }
+        
+        if (conversation.userId !== userId) {
+            res.status(403).json({ message: "Forbidden: You don't have access to this conversation" });
+            return;
+        }
+        
+        res.status(200).json(conversation);
+        return;
+    } catch (error) {
+        console.error(`[REST API] Error fetching conversation ${req.params.id}:`, error);
+        next(error);
+    }
+});
+
+// Create a new conversation
+app.post("/api/conversations", authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user!.id;
+        const { firstName, lastName, dob, patientLanguage = "es" } = req.body;
+        
+        if (!firstName || !lastName || !dob) {
+            res.status(400).json({ message: "Missing required patient information" });
+            return;
+        }
+        
+        console.log(`[REST API] Creating new conversation for user ${userId} with patient ${firstName} ${lastName}`);
+        
+        const startSessionResult = await conversationService.startNewSession({
+            userId,
+            patientFirstName: firstName,
+            patientLastName: lastName,
+            patientDob: new Date(dob),
+            clinicianPreferredLanguage: patientLanguage
+        });
+        
+        res.status(201).json(startSessionResult.conversation);
+        return;
+    } catch (error) {
+        console.error("[REST API] Error creating conversation:", error);
+        next(error);
+    }
+});
+
+// End a conversation
+app.post("/api/conversations/:id/end", authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id;
+        
+        console.log(`[REST API] Ending conversation ${conversationId} for user ${userId}`);
+        
+        // Verify ownership
+        const conversation = await conversationRepository.findById(conversationId);
+        if (!conversation) {
+            res.status(404).json({ message: "Conversation not found" });
+            return;
+        }
+        
+        if (conversation.userId !== userId) {
+            res.status(403).json({ message: "Forbidden: You don't have access to this conversation" });
+            return;
+        }
+        
+        // End and summarize the conversation
+        const updatedConversation = await conversationService.endAndSummarizeConversation(conversationId);
+        
+        res.status(200).json(updatedConversation);
+        return;
+    } catch (error) {
+        console.error(`[REST API] Error ending conversation ${req.params.id}:`, error);
+        next(error);
+    }
+});

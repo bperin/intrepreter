@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { Theme } from "../theme";
+import { useConversation } from "../context/ConversationContext";
+import api from "../lib/api";
 
 type ThemedProps = { theme: Theme };
 
@@ -10,10 +12,11 @@ interface PatientData {
     dob: string;
 }
 
-interface NewSessionModalProps {
+// Export the props interface
+export interface NewSessionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onStartSession: (patientData: PatientData) => void;
+    onSessionCreated: () => void;
 }
 
 const ModalOverlay = styled.div<{ $isOpen: boolean }>`
@@ -117,23 +120,56 @@ const Button = styled.button<{ $primary?: boolean } & ThemedProps>`
     }
 `;
 
-const NewSessionModal: React.FC<NewSessionModalProps> = ({ isOpen, onClose, onStartSession }) => {
+const NewSessionModal: React.FC<NewSessionModalProps> = ({ isOpen, onClose, onSessionCreated }) => {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
-    const [dob, setDob] = useState(""); // Date of Birth
+    const [dob, setDob] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Add effect to log prop changes
+    useEffect(() => {
+        console.log(`[NewSessionModal] isOpen prop changed to: ${isOpen}`);
+    }, [isOpen]);
+    
+    console.log(`[NewSessionModal] Rendering with isOpen=${isOpen}, isSubmitting=${isSubmitting}`);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+        
         if (!firstName || !lastName || !dob) {
-            // Basic validation - enhance as needed
-            alert("Please fill in all patient details.");
+            setError("Please fill in all required fields");
             return;
         }
-        onStartSession({ firstName, lastName, dob });
-        // Clear form? Optional
-        // setFirstName('');
-        // setLastName('');
-        // setDob('');
+        
+        try {
+            setIsSubmitting(true);
+            
+            // Use the configured api instance instead of direct axios
+            const response = await api.post('/api/conversations', {
+                firstName,
+                lastName,
+                dob,
+                patientLanguage: "es" // Default to Spanish for now
+            });
+            
+            console.log("[NewSessionModal] Created new session:", response.data);
+            
+            // Reset form
+            setFirstName("");
+            setLastName("");
+            setDob("");
+            
+            // Notify parent component that session is created
+            onSessionCreated();
+            
+        } catch (error) {
+            console.error("[NewSessionModal] Error creating session:", error);
+            setError("Failed to create session. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Prevent clicks inside the modal from closing it

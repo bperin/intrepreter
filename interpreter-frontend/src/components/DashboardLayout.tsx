@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import styled, { useTheme } from "styled-components";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { Theme } from "../theme";
 import { useAuth } from "../context/AuthContext"; // Import useAuth
 import { useWebSocket } from "../hooks/useWebSocket"; // Import the WebSocket hook
 import CommandHelpModal from "./CommandHelpModal"; // Import the modal component
+import NewSessionModal from "./NewSessionModal"; // Import NewSessionModal
+import { useConversation } from "../context/ConversationContext"; // Needed for selectConversation
 
 type ThemedProps = { theme: Theme };
 
@@ -47,6 +49,28 @@ const ColumnHeader = styled.div<ThemedProps>`
     display: flex; // Added for alignment
     align-items: center; // Added for vertical alignment
     justify-content: space-between; // Added for spacing title and button
+`;
+
+// Button for starting a new session, styled similarly to HeaderHelpButton
+const NewSessionButton = styled.button<ThemedProps>`
+    // Adopt styles similar to LogoutButton but fit sidebar context
+    background-color: transparent;
+    color: ${({ theme }) => theme.colors.text.secondary}; // Use secondary text color for sidebar
+    border: 1px solid ${({ theme }) => theme.colors.text.secondary}80; // Lighter border to match muted header text
+    border-radius: ${({ theme }) => theme.borderRadius.md};
+    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm}; // Smaller padding
+    font-size: ${({ theme }) => theme.typography.sizes.xs}; // Smaller font size
+    font-weight: ${({ theme }) => theme.typography.weights.medium};
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    margin-left: ${({ theme }) => theme.spacing.sm}; // Keep margin from title
+
+    &:hover {
+        background-color: ${({ theme }) => theme.colors.text.secondary}; // Use secondary color for hover background
+        color: ${({ theme }) => theme.colors.background.sidebar}; // Use sidebar background for text on hover
+        border-color: ${({ theme }) => theme.colors.text.secondary};
+    }
 `;
 
 // New Help Button specific for this layout
@@ -154,30 +178,11 @@ const RightColumnContent = styled.div<ThemedProps>`
     }
 `;
 
-// Component to render the combined status
-const CombinedStatus: React.FC = () => {
-    const { isConnected: isWsConnected, error: wsError } = useWebSocket();
-    const theme = useTheme(); // Get theme from context
-    
-    let statusText = "Connecting...";
-    let isConnected = false;
-
-    if (wsError) {
-        statusText = `WebSocket Error: ${wsError.message.substring(0, 30)}...`;
-        isConnected = false;
-    } else if (isWsConnected) {
-        statusText = "System Connected";
-        isConnected = true;
-    } 
-    // Removed RTC logic
-
-    return (
-        <>
-            <StatusIndicator $isConnected={isConnected} theme={theme} />
-            <span>{statusText}</span>
-        </>
-    );
-};
+interface PatientData {
+    firstName: string;
+    lastName: string;
+    dob: string;
+}
 
 interface DashboardLayoutProps {
     leftColumnContent: React.ReactNode;
@@ -185,19 +190,43 @@ interface DashboardLayoutProps {
     rightColumnContent: React.ReactNode;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ leftColumnContent, middleColumnContent, rightColumnContent }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
+    leftColumnContent, 
+    middleColumnContent, 
+    rightColumnContent
+}) => {
     const { logout } = useAuth(); // Get logout function
     const navigate = useNavigate(); // Get navigate function
-    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false); // For modal
-
+    const { fetchConversations } = useConversation();
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+    const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false);
+    
+    const handleOpenNewSessionModal = useCallback(() => {
+        console.log("[DashboardLayout] Opening new session modal");
+        setIsNewSessionModalOpen(true);
+    }, []);
+    
+    const handleCloseNewSessionModal = useCallback(() => {
+        console.log("[DashboardLayout] Closing new session modal");
+        setIsNewSessionModalOpen(false);
+    }, []);
+    
+    const handleSessionCreated = useCallback(() => {
+        console.log("[DashboardLayout] New session created, refreshing conversations");
+        fetchConversations();
+        handleCloseNewSessionModal();
+    }, [fetchConversations, handleCloseNewSessionModal]);
+    
     return (
         <LayoutContainer>
             {/* Topbar is now handled by AppLayout in App.tsx */}
             <MainContentArea>
                 <LeftColumn>
                     <ColumnHeader>
-                        Conversations
+                        Sessions
+                        <NewSessionButton onClick={handleOpenNewSessionModal}>+ New</NewSessionButton>
                     </ColumnHeader>
+                    
                     <LeftColumnContent>{leftColumnContent}</LeftColumnContent>
                     <StatusFooter>
                        <CombinedStatus />
@@ -219,7 +248,37 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ leftColumnContent, mi
             </MainContentArea>
             {/* Command Help Modal */}
             <CommandHelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
+            {/* New Session Modal */}
+            <NewSessionModal 
+                isOpen={isNewSessionModalOpen} 
+                onClose={handleCloseNewSessionModal} 
+                onSessionCreated={handleSessionCreated}
+            />
         </LayoutContainer>
+    );
+};
+
+// Keep the original CombinedStatus component
+const CombinedStatus: React.FC = () => {
+    const { isConnected: isWsConnected, error: wsError } = useWebSocket();
+    const theme = useTheme();
+    
+    let statusText = "Connecting...";
+    let isConnected = false;
+
+    if (wsError) {
+        statusText = `WebSocket Error: ${wsError.message.substring(0, 30)}...`;
+        isConnected = false;
+    } else if (isWsConnected) {
+        statusText = "System Connected";
+        isConnected = true;
+    }
+
+    return (
+        <>
+            <StatusIndicator $isConnected={isConnected} theme={theme} />
+            <span>{statusText}</span>
+        </>
     );
 };
 

@@ -42,6 +42,17 @@ ARTIFACT_REGISTRY_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}"
 BACKEND_IMAGE_URI="${ARTIFACT_REGISTRY_BASE}/${BACKEND_IMAGE_NAME}:${IMAGE_TAG}"
 FRONTEND_IMAGE_URI="${ARTIFACT_REGISTRY_BASE}/${FRONTEND_IMAGE_NAME}:${IMAGE_TAG}"
 
+# --- Configuration ---
+GCP_PROJECT_ID="brian-test-454620"
+REGION="us-central1"
+ARTIFACT_REGISTRY_HOST="us-central1-docker.pkg.dev"
+REPO_NAME="interpreter-app" # Your Artifact Registry repo name
+
+# --- Define Full Image URIs --- 
+# Construct the full image paths used for push/deploy
+IMAGE_REPO_BACKEND="${ARTIFACT_REGISTRY_HOST}/${GCP_PROJECT_ID}/${REPO_NAME}/${BACKEND_IMAGE_NAME}:latest"
+IMAGE_REPO_FRONTEND="${ARTIFACT_REGISTRY_HOST}/${GCP_PROJECT_ID}/${REPO_NAME}/${FRONTEND_IMAGE_NAME}:latest"
+
 # --- Prerequisites Check --- 
 echo "Checking prerequisites..."
 if ! command -v gcloud &> /dev/null; then
@@ -64,29 +75,25 @@ echo "-------------------------------------"
 
 # --- Build Backend --- 
 echo "[Backend] Building Docker image for linux/amd64..."
-docker build --platform linux/amd64 -t "${BACKEND_IMAGE_URI}" ./interpreter-backend
-echo "[Backend] Build complete."
+# Comment out the build step - we assume a successful manual build exists
+# docker buildx build --platform linux/amd64 -t $IMAGE_REPO_BACKEND ./interpreter-backend --push
+echo "[Backend] Build step skipped (assuming manual build)."
 
 # --- Push Backend --- 
 echo "[Backend] Pushing image to Artifact Registry..."
-docker push "${BACKEND_IMAGE_URI}"
+docker push "${IMAGE_REPO_BACKEND}"
 echo "[Backend] Push complete."
 
 # --- Deploy Backend --- 
-echo "[Backend] Deploying to Cloud Run service: ${BACKEND_SERVICE_NAME}..."
-# Secrets are loaded from the sourced file
-gcloud run deploy "${BACKEND_SERVICE_NAME}" \
-  --image "${BACKEND_IMAGE_URI}" \
-  --platform managed \
-  --region "${REGION}" \
-  --allow-unauthenticated \
-  --memory=1Gi \
-  --cpu=2 \
-  --port=8080 \
-  --set-env-vars="DATABASE_URL=${DATABASE_URL},JWT_SECRET=${JWT_SECRET},JWT_ISSUER=${JWT_ISSUER},OPENAI_API_KEY=${OPENAI_API_KEY}" \
-  --command=sh \
-  --args="-c,npx prisma generate && npx prisma db push --accept-data-loss && node dist/index.js" \
-  --quiet
+echo "[Backend] Deploying to Cloud Run service: $BACKEND_SERVICE_NAME..."
+gcloud run deploy $BACKEND_SERVICE_NAME \
+    --image "${IMAGE_REPO_BACKEND}" \
+    --platform managed \
+    --region $REGION \
+    --allow-unauthenticated \
+    --project $GCP_PROJECT_ID \
+    --set-env-vars="DATABASE_URL=$DATABASE_URL,JWT_SECRET=$JWT_SECRET,OPENAI_API_KEY=$OPENAI_API_KEY" \
+    --quiet
 
 # --- Get Backend URL --- 
 echo "[Backend] Fetching deployed service URL..."

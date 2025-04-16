@@ -8,6 +8,7 @@ import axios from 'axios'; // Assuming axios is installed
 import { IMessageService, IMessageService as IMessageServiceToken } from '../../domain/services/IMessageService';
 import { MedicalHistoryService } from './MedicalHistoryService';
 import { IAudioProcessingService } from "../../domain/services/IAudioProcessingService";
+import { INotificationService } from "../../domain/services/INotificationService";
 
 // Interface for the expected OpenAI Chat Completion response structure (can be shared)
 interface OpenAIChatCompletionResponse {
@@ -31,7 +32,8 @@ export class ConversationService implements IConversationService {
         @inject("IOpenAIClient") private openAIClient: IOpenAIClient,
         @inject(IMessageServiceToken) private messageService: IMessageService,
         @inject(MedicalHistoryService) private medicalHistoryService: MedicalHistoryService,
-        @inject("IAudioProcessingService") private audioProcessingService: IAudioProcessingService
+        @inject("IAudioProcessingService") private audioProcessingService: IAudioProcessingService,
+        @inject("INotificationService") private notificationService: INotificationService
     ) {
         this.openaiApiKey = process.env.OPENAI_API_KEY || '';
         if (!this.openaiApiKey) {
@@ -311,6 +313,24 @@ export class ConversationService implements IConversationService {
                 return conv;
             });
             console.log(`[ConversationService] Transaction successful for conversation ${conversationId}.`);
+            
+            // Broadcast the summary update via WebSocket to ensure frontend clients receive it
+            // This is crucial for REST API endpoints that won't automatically receive WebSocket updates
+            try {
+                // Get notification service from dependency injection container if needed
+                // Get the actual summary content from the updated conversation
+                const summaryContent = updatedConversation.summary?.content || null;
+                
+                // Use WebSocketNotificationService to broadcast the summary
+                // This ensures the frontend receives the summary even if the session was ended via REST API
+                this.broadcastSummaryUpdate(conversationId, summaryContent);
+                
+                console.log(`[ConversationService] Summary broadcast attempted for ${conversationId}`);
+            } catch (broadcastError) {
+                console.error(`[ConversationService] Error broadcasting summary update for ${conversationId}:`, broadcastError);
+                // Don't throw here - the summary was saved successfully, broadcasting is secondary
+            }
+            
             return updatedConversation as ConversationWithRelations;
 
         } catch (error) {
@@ -326,6 +346,31 @@ export class ConversationService implements IConversationService {
                  console.error(`[ConversationService] CRITICAL: Failed transaction AND failed to mark ${conversationId} as ended_error:`, finalUpdateError);
             }
             throw new Error(`Failed to save summary and update conversation ${conversationId} status.`);
+        }
+    }
+
+    // Add a helper method to broadcast summary updates
+    private broadcastSummaryUpdate(conversationId: string, summaryContent: string | null): void {
+        try {
+            // Since the WebSocketNotificationService class is what actually implements 
+            // the INotificationService interface, we can expect it to have the broadcastToConversation method
+            // even though it's not in the interface definition.
+            const wsService = this.notificationService as any;
+            
+            if (wsService && typeof wsService.broadcastToConversation === 'function') {
+                wsService.broadcastToConversation(conversationId, {
+                    type: 'summary_data',
+                    payload: {
+                        conversationId: conversationId,
+                        summary: summaryContent
+                    }
+                });
+                console.log(`[ConversationService] Successfully broadcast summary via WebSocket`);
+            } else {
+                console.error(`[ConversationService] notificationService does not have broadcastToConversation method`);
+            }
+        } catch (error) {
+            console.error(`[ConversationService] Failed to broadcast summary update for ${conversationId}:`, error);
         }
     }
 
@@ -466,6 +511,14 @@ export class ConversationService implements IConversationService {
          if (!updatedConv) {
              throw new Error(`Conversation ${conversationId} not found after summary update.`);
          }
+        
+        // After updating the summary, broadcast it via WebSocket
+        try {
+            this.broadcastSummaryUpdate(conversationId, content);
+        } catch (broadcastError) {
+            console.error(`[ConversationService] Error broadcasting updated summary for ${conversationId}:`, broadcastError);
+        }
+        
         return updatedConv;
     }
 

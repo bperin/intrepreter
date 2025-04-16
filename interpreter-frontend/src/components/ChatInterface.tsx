@@ -376,13 +376,23 @@ const ContentArea = styled.div`
 `;
 
 const SummaryArea = styled.div<ThemedProps>`
-    flex: 1;
+    padding: ${({ theme }) => theme.spacing.md};
     overflow-y: auto;
-    padding: ${({ theme }) => theme.spacing.xl};
-    white-space: pre-wrap; // Preserve formatting
-    line-height: 1.6;
-    color: ${({ theme }) => theme.colors.text.primary};
-    font-family: ${({ theme }) => theme.typography.fontFamily};
+    flex: 1;
+    background-color: ${({ theme }) => theme.colors.background.secondary};
+    border-radius: ${({ theme }) => theme.borderRadius.md};
+    line-height: 1.5;
+    white-space: pre-wrap; // Preserve whitespace and newlines in summary
+    
+    /* Add animation for refreshing state to help with auto-updates */
+    &.refreshing {
+        animation: refresh-fade 0.5s ease;
+    }
+    
+    @keyframes refresh-fade {
+        0% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
 `;
 
 const MedicalHistoryArea = styled(SummaryArea)``; // Reuse SummaryArea styling for now
@@ -406,6 +416,7 @@ const ChatInterface: React.FC = () => {
     const [currentSummary, setCurrentSummary] = useState<string | null>(null);
     const [currentMedicalHistory, setCurrentMedicalHistory] = useState<string | null>(null);
     const [processingStatus, setProcessingStatus] = useState<'idle' | 'transcribing' | 'translating'>('idle');
+    const [renderedSummary, setRenderedSummary] = useState<string | null>(null);
 
     // Extract patientName and clinicianUsername once
     const patientName = useMemo(() => currentConversation?.patient?.firstName || 'Patient', [currentConversation]);
@@ -549,6 +560,7 @@ const ChatInterface: React.FC = () => {
         }
     }, [error, showError]);
 
+    // Effect to react to STT status changes
     useEffect(() => {
         console.log("[ChatInterface] STT Status:", status);
         if (status === 'failed' || status === 'error') {
@@ -556,6 +568,28 @@ const ChatInterface: React.FC = () => {
             // No local state to set anymore
         }
     }, [status]);
+
+    // Effect to update renderedSummary when currentSummary changes
+    useEffect(() => {
+        console.log('[Effect currentSummary] Summary changed:', currentSummary);
+        setRenderedSummary(currentSummary);
+        
+        // If the summary changes while we're on the summary tab, ensure the UI updates
+        if (activeTab === 'summary') {
+            console.log('[Effect currentSummary] Currently on summary tab, ensuring UI refresh');
+            // Using setTimeout to ensure this runs after the state update is processed
+            setTimeout(() => {
+                const summaryElement = document.querySelector('.summary-area');
+                if (summaryElement) {
+                    // Force a DOM refresh by toggling a class
+                    summaryElement.classList.remove('refreshing');
+                    requestAnimationFrame(() => {
+                        summaryElement.classList.add('refreshing');
+                    });
+                }
+            }, 50);
+        }
+    }, [currentSummary, activeTab]);
 
     // Effect to automatically start/stop recording on session change
     useEffect(() => {
@@ -642,336 +676,4 @@ const ChatInterface: React.FC = () => {
                         .filter((msg): msg is DisplayMessage => msg !== null);
                     console.log(`[ChatInterface] Converted historical messages:`, newDisplayMessages); 
                     setDisplayMessages(newDisplayMessages); 
-                    console.log(`[ChatInterface] Called setDisplayMessages with ${newDisplayMessages.length} historical messages.`);
-                } else {
-                     console.log('[ChatInterface] message_list received, but ConvID mismatch or no messages array.');
-                }
-            }
-
-            // --- Update conversation_selected handler --- 
-            else if (message.type === 'conversation_selected') {
-                console.log('[WS Effect] Handling conversation_selected:', message.payload);
-                const { summary, patientLanguage: lang } = message.payload || {}; 
-                console.log(`[WS Effect] Received Summary data type: ${typeof summary}, value:`, summary); // Log summary details
-                console.log(`[WS Effect] Received Patient Language: ${lang}`);
-                setCurrentSummary(summary || null);
-                setActiveTab('chat');
-            }
-            // --- End updated handler ---
-
-            // --- Update session_ended_and_summarized handler ---
-            else if (message.type === 'session_ended_and_summarized') {
-                console.log('[WS Effect] Handling session_ended_and_summarized:', message.payload);
-                const { summary } = message.payload || {};
-                console.log(`[WS Effect] Received Summary data type: ${typeof summary}, value:`, summary); // Log summary details
-                setCurrentSummary(summary || null);
-                if (summary) {
-                     setActiveTab('summary');
-                }
-            }
-            // --- End updated handler ---
-
-            // +++ Add handler for summary_data +++
-            else if (message.type === 'summary_data') {
-                console.log('[WS Effect] Handling summary_data:', message.payload);
-                const { summary, conversationId } = message.payload || {};
-                // Update summary only if it pertains to the currently selected conversation
-                if (conversationId && conversationId === selectedConversationId) {
-                    console.log(`[WS Effect] Updating summary state for ${conversationId}`);
-                    setCurrentSummary(summary || null);
-                } else {
-                     console.log(`[WS Effect] Received summary_data for non-selected conversation (${conversationId}). Ignoring.`);
-                }
-            }
-            // +++ End handler +++
-
-            // +++ Add handler for medical_history_data +++
-            else if (message.type === 'medical_history_data') {
-                console.log('[WS Effect] Handling medical_history_data:', message.payload);
-                const { history, conversationId } = message.payload || {};
-                // Update history only if it pertains to the currently selected conversation
-                if (conversationId && conversationId === selectedConversationId) {
-                    console.log(`[WS Effect] Updating medical history state for ${conversationId}`);
-                    setCurrentMedicalHistory(history || null); // Update with content or null
-                } else {
-                     console.log(`[WS Effect] Received medical_history_data for non-selected conversation (${conversationId}). Ignoring.`);
-                }
-            }
-            // +++ End handler +++
-
-            else if (message.type === 'new_message') {
-                // ... (existing new_message handling)
-            }
-
-            // +++ Add handlers for processing status +++
-            else if (message.type === 'transcription_started') {
-                console.log('[WS Effect] Handling transcription_started');
-                setProcessingStatus('transcribing');
-            } else if (message.type === 'translation_started') {
-                console.log('[WS Effect] Handling translation_started');
-                setProcessingStatus('translating');
-            } else if (message.type === 'processing_completed') {
-                console.log('[WS Effect] Handling processing_completed');
-                setProcessingStatus('idle');
-            }
-            // +++ End processing status handlers +++
-
-            // ... (rest of message handlers: tts_audio, error, etc.)
-
-        } else {
-            // console.log('[WS Effect] lastMessage is null or not a BackendMessage.');
-        }
-    }, [lastMessage, selectedConversationId, showError, endCurrentSession, sendMessage]);
-
-    // Effect to reset summary/status when conversation changes
-    useEffect(() => {
-        console.log('[Effect selectedConversationId] Resetting summary and language for new/no selection.');
-        setCurrentSummary(null);
-        setCurrentMedicalHistory(null);
-        setActiveTab('chat');
-        
-        if (selectedConversationId) {
-            console.log(`🚀 [ChatInterface] useEffect[selectedConversationId] - Fetching messages for ID: ${selectedConversationId}`);
-            setDisplayMessages([]); 
-            sendMessage({
-                type: 'get_messages',
-                payload: { conversationId: selectedConversationId }
-            });
-        } else {
-            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - Clearing messages.');
-            setDisplayMessages([]); 
-        }
-        // Update dependency array if needed
-    }, [selectedConversationId, sendMessage]);
-
-    // Effect to scroll message area
-    useEffect(() => {
-        scrollToBottom();
-    }, [displayMessages, scrollToBottom]);
-
-    // Effect to log transcript changes (Debug)
-    useEffect(() => {
-        if (transcript !== null) {
-            console.log('📝 [ChatInterface] Transcript updated:', transcript);
-        }
-    }, [transcript]);
-
-    // Effect to react to STT status changes
-    useEffect(() => {
-        console.log("[ChatInterface] STT Status:", status);
-        if (status === 'failed' || status === 'error') {
-            // Optionally add a system message or indicator
-        } else if (status === 'closed' || status === 'disconnected') {
-            // No local state to reset here
-        }
-    }, [status]);
-
-    const handleEndSession = () => {
-        if (selectedConversationId) {
-            console.log(`[ChatInterface] User initiated end session for ${selectedConversationId}`);
-            // Stop the microphone recording immediately
-            stopRecording();
-            // Send the end_session message to the backend
-            sendMessage({ type: 'end_session', payload: { conversationId: selectedConversationId } });
-        }
-        // No else needed, button should be disabled if no selectedConversationId or session inactive
-    };
-
-    // Function to handle clicking the summary tab
-    const handleSelectSummaryTab = useCallback(() => {
-        console.log('[handleSelectSummaryTab] Clicked. Current summary:', currentSummary);
-        setActiveTab('summary');
-        // If summary isn't loaded yet and a conversation is selected, request it
-        if (currentSummary === null && selectedConversationId) {
-             console.log(`[handleSelectSummaryTab] Summary not loaded. Requesting for ${selectedConversationId}...`);
-             sendMessage({ 
-                 type: 'get_summary', 
-                 payload: { conversationId: selectedConversationId } 
-             });
-        }
-    }, [currentSummary, selectedConversationId, sendMessage]); // Dependencies
-
-    // Function to handle clicking the history tab
-    const handleSelectHistoryTab = useCallback(() => {
-        console.log('[handleSelectHistoryTab] Clicked. Current history:', currentMedicalHistory);
-        setActiveTab('history');
-        // If history isn't loaded yet and a conversation is selected, request it
-        if (currentMedicalHistory === null && selectedConversationId) {
-             console.log(`[handleSelectHistoryTab] History not loaded. Requesting for ${selectedConversationId}...`);
-             sendMessage({ 
-                 type: 'get_medical_history', 
-                 payload: { conversationId: selectedConversationId } 
-             });
-        }
-    }, [currentMedicalHistory, selectedConversationId, sendMessage]); // Dependencies
-
-    // Remove showTabs calculation
-    // const showTabs = currentConvStatus === 'summarized' || currentConvStatus === 'ended_error';
-    // console.log(`[Render] currentConvStatus: ${currentConvStatus}, showTabs: ${showTabs}`);
-    console.log(`[Render] SelectedID: ${selectedConversationId}, ActiveTab: ${activeTab}, currentSummary:`, currentSummary); // Simplified log
-
-    return (
-            <ChatContainer>
-            <TopStatusContainer>
-                {isSessionActive && (
-                    <SttStatusDisplay $status={status}>
-                         {/* Optional: Add an icon based on status */} 
-                        Mic: {status} {hookIsPaused && '⏸️'} {isProcessing && '...'}
-                    </SttStatusDisplay>
-                )}
-            </TopStatusContainer>
-
-            {/* Always render Tabs if a conversation is selected */} 
-            {selectedConversationId && (
-                <TabContainer>
-                    <TabButton $isActive={activeTab === 'chat'} onClick={() => setActiveTab('chat')}>Chat</TabButton>
-                    <TabButton $isActive={activeTab === 'summary'} onClick={handleSelectSummaryTab}>Summary</TabButton>
-                    <TabButton $isActive={activeTab === 'history'} onClick={handleSelectHistoryTab}>Medical History</TabButton>
-                </TabContainer>
-            )}
-            
-            {/* Content Area: Switches between Chat, Summary, and History */} 
-            <ContentArea>
-                {/* Show MessageArea if no conversation selected OR chat tab is active */} 
-                {(!selectedConversationId || activeTab === 'chat') && (
-                     <MessageArea ref={messageAreaRef}>
-                        {displayMessages.length === 0 && !selectedConversationId && (
-                            <NoSessionText>Select or start a new conversation to begin.</NoSessionText>
-                        )}
-                         {displayMessages.length === 0 && selectedConversationId && (
-                            <NoSessionText>Session selected. Messages loading or none exist yet.</NoSessionText>
-                        )}
-                         {(() => { // Wrap log in an IIFE or similar structure
-                            console.log('[ChatInterface] About to map messages. Count:', displayMessages.length, 'Value:', JSON.stringify(displayMessages)); // Stringify for better logging
-                            return null; // Return null so nothing renders here
-                        })()}
-                        {displayMessages.map((msg, index) => {
-                            console.log(`[ChatInterface] Rendering message ${index + 1}/${displayMessages.length}:`, msg);
-                            
-                            // --- Determine Sender Label --- 
-                            let senderLabel: string | null = null;
-                            const isTranslated = !!msg.originalMessageId; // Check if this message is a translation
-                            const messageLanguage = msg.language?.toLowerCase() || 'unknown'; // Get message language
-
-                            if (isTranslated) {
-                                // If it's a translation, always label it as System
-                                senderLabel = 'System';
-                            } else {
-                                // If it's NOT a translation, apply original logic
-                                if (messageLanguage === 'en') {
-                                    // Original English message -> Use clinician's name
-                                    senderLabel = clinicianUsername;
-                                } else if (messageLanguage !== 'unknown' && msg.sender !== 'system' && msg.sender !== 'error') {
-                                    // Original Non-English message (and not system/error) -> Use the static label "Patient"
-                                    senderLabel = 'Patient';
-                                }
-                                // Original System/Error messages will have senderLabel = null and won't render the SenderLabel component
-                            }
-                            // --- End Determine Sender Label --- 
-                            
-                            // --- Time Formatting --- 
-                            let formattedTime = '';
-                            try {
-                                formattedTime = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            } catch (e) {
-                                console.error("Error formatting timestamp:", msg.timestamp, e);
-                                formattedTime = msg.timestamp; // Fallback
-                            }
-                            // --- End Time Formatting ---
-
-                            // --- Determine Alignment ---
-                            // Align right ('user') if the message is English, otherwise left ('other')
-                            const alignmentSender: DisplayMessage["sender"] = (messageLanguage === 'en') ? "user" : "other";
-                            // Override for system/error messages to always be left-aligned
-                            const finalAlignmentSender = (msg.sender === 'system' || msg.sender === 'error') ? 'other' : alignmentSender;
-                            // --- End Determine Alignment ---
-
-                            return (
-                                <MessageGroup key={msg.id || index} $isSender={finalAlignmentSender === "user"}>
-                                    {/* Render Sender Label (if determined) */}
-                                    {senderLabel && (
-                                        <SenderLabel $isSender={finalAlignmentSender === "user"}>
-                                            {senderLabel}
-                                        </SenderLabel>
-                                    )}
-                            
-                                    <Bubble $isSender={finalAlignmentSender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
-                                {msg.text}
-                            </Bubble>
-                                    
-                                    {/* Message Meta: Show language, translation status, and timestamp */}
-                                    <MessageMeta>
-                                        {`[${messageLanguage}]`}{isTranslated ? ' (Translated)' : ''} {formattedTime}
-                                    </MessageMeta>
-                        </MessageGroup>
-                            );
-                        })}
-                         {/* +++ Add Processing Status Indicator +++ */} 
-                        {processingStatus !== 'idle' && (
-                            <MessageGroup key="processing-status" $isSender={false}> {/* Align left */} 
-                                <Bubble $type="system"> 
-                                    <i>
-                                        {processingStatus === 'transcribing' && 'Transcribing...'}
-                                        {processingStatus === 'translating' && 'Translating...'}
-                                        {/* Add more states here if needed */} 
-                                    </i>
-                            </Bubble>
-                        </MessageGroup>
-                        )}
-                        {/* +++ End Indicator +++ */} 
-                </MessageArea>
-                )}
-                
-                {/* Show SummaryArea only if conversation selected AND summary tab is active */} 
-                {(selectedConversationId && activeTab === 'summary') && (
-                    <SummaryArea>
-                        {(() => {
-                            console.log(`[Render SummaryArea] Rendering summary. currentSummary:`, currentSummary);
-                            return currentSummary || 'Summary not available.';
-                        })()}
-                    </SummaryArea>
-                )}
-
-                {/* Show MedicalHistoryArea only if conversation selected AND history tab is active */} 
-                {(selectedConversationId && activeTab === 'history') && (
-                    <MedicalHistoryArea>
-                        {currentMedicalHistory !== null 
-                            ? (currentMedicalHistory || 'No medical history available.') // Show history or placeholder
-                            : 'Loading medical history...' // Show loading state
-                        }
-                    </MedicalHistoryArea>
-                )}
-            </ContentArea>
-
-                <ControlsArea>
-                {!isSessionActive ? (
-                    <NoSessionText>No active session.</NoSessionText>
-                ) : (
-                    <>
-                        {/* Conditionally render Pause/Resume buttons */} 
-                        {(status === 'connected' && !hookIsPaused) ? (
-                            <MicControlButton onClick={pauseRecording}>
-                                Pause Mic ⏸️
-                            </MicControlButton>
-                        ) : null}
-                        {(status === 'connected' && hookIsPaused) ? (
-                            <MicControlButton onClick={resumeRecording}>
-                                Resume Mic ▶️
-                            </MicControlButton>
-                        ) : null}
-
-                        {/* End Session Button */}
-                            <EndSessionButton 
-                                onClick={handleEndSession} 
-                            disabled={!isSessionActive}
-                            >
-                                End Session
-                            </EndSessionButton>
-                        </>
-                    )}
-                </ControlsArea>
-            </ChatContainer>
-    );
-};
-
-export default ChatInterface;
+                    console.log(`

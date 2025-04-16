@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import styled, { css } from "styled-components";
 import { Theme } from "../theme";
-import NewSessionModal from "./NewSessionModal";
-import { useWebSocket } from "../hooks/useWebSocket";
-import { useError } from "../context/ErrorContext";
 import { useConversation } from "../context/ConversationContext";
 
 // Define the Patient type based on Prisma schema
@@ -83,35 +80,6 @@ const ConversationDate = styled.div<ThemedProps>`
     font-size: ${({ theme }) => theme.typography.sizes.xs};
 `;
 
-const StartSessionButton = styled.button<ThemedProps>`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: ${({ theme }) => theme.spacing.sm};
-    width: 100%;
-    padding: ${({ theme }) => theme.spacing.md};
-    margin-top: ${({ theme }) => theme.spacing.lg};
-    background-color: transparent;
-    color: ${({ theme }) => theme.colors.text.primary};
-    border: 1px solid ${({ theme }) => theme.colors.text.primary};
-    border-radius: ${({ theme }) => theme.borderRadius.lg};
-    cursor: pointer;
-    font-size: ${({ theme }) => theme.typography.sizes.sm};
-    font-weight: ${({ theme }) => theme.typography.weights.medium};
-    transition: all 0.2s ease;
-
-    &:hover {
-        background-color: ${({ theme }) => theme.colors.text.primary};
-        color: ${({ theme }) => theme.colors.background.primary};
-        transform: translateY(-1px);
-    }
-
-    &:active {
-        transform: translateY(0);
-        opacity: 0.8;
-    }
-`;
-
 const EmptyState = styled.div<ThemedProps>`
     text-align: center;
     padding: ${({ theme }) => theme.spacing.xl};
@@ -119,107 +87,52 @@ const EmptyState = styled.div<ThemedProps>`
     font-size: ${({ theme }) => theme.typography.sizes.sm};
 `;
 
-interface PatientData {
-    firstName: string;
-    lastName: string;
-    dob: string;
-}
+const RefreshButton = styled.button<ThemedProps>`
+    margin-top: ${({ theme }) => theme.spacing.md};
+    padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+    background-color: ${({ theme }) => theme.colors.background.secondary};
+    color: ${({ theme }) => theme.colors.text.primary};
+    border: none;
+    border-radius: ${({ theme }) => theme.borderRadius.md};
+    cursor: pointer;
+    font-size: ${({ theme }) => theme.typography.sizes.xs};
+    transition: all 0.2s ease;
+
+    &:hover {
+        background-color: ${({ theme }) => theme.colors.background.hover};
+    }
+`;
+
+const LoadingIndicator = styled.div<ThemedProps>`
+    text-align: center;
+    padding: ${({ theme }) => theme.spacing.md};
+    color: ${({ theme }) => theme.colors.text.muted};
+    font-size: ${({ theme }) => theme.typography.sizes.sm};
+`;
 
 const ConversationList: React.FC = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const { sendMessage, isConnected, lastMessage } = useWebSocket();
-    const { showError } = useError();
-    const { selectedConversationId, selectConversation } = useConversation();
-    const [conversations, setConversations] = useState<Conversation[]>([]);
-    const [hasRequestedConversations, setHasRequestedConversations] = useState(false);
+    // Get conversations and related functions from the context
+    const { 
+        conversations, 
+        selectedConversationId, 
+        selectConversation,
+        fetchConversations,
+        isLoading
+    } = useConversation(); 
 
-    // Effect to request conversations when connected
+    // Debug logging for conversations
     useEffect(() => {
-        if (isConnected && !hasRequestedConversations) {
-            console.log("WebSocket connected, requesting conversations...");
-            sendMessage({ type: "get_conversations" });
-            setHasRequestedConversations(true);
-        }
-        if (!isConnected) {
-            setHasRequestedConversations(false);
-            setConversations([]);
-        }
-    }, [isConnected, hasRequestedConversations, sendMessage]);
+        console.log("[ConversationList] Updated conversations:", conversations);
+    }, [conversations]);
 
-    // Effect to handle incoming messages
+    // Log render count to track component updates
     useEffect(() => {
-        if (lastMessage && typeof lastMessage === 'object') { 
-            const message = lastMessage; // Use directly
-            console.log("Received WebSocket message object:", message.type, message.payload);
+        console.log("[ConversationList] Component rendered");
+    });
 
-            if (message.type === "conversation_list" && Array.isArray(message.payload)) {
-                console.log("Updating conversation list state.");
-                setConversations(message.payload as Conversation[]);
-            } else if (message.type === "session_started" && message.payload) {
-                const { conversationId } = message.payload;
-                // Assuming payload IS the conversation object for simplicity, adjust if needed
-                const newConversationObject: Conversation = message.payload; 
-                
-                console.log(`New session started successfully! ConvID: ${conversationId}`);
-                
-                // Request updated list after starting a new one
-                sendMessage({ type: "get_conversations" }); 
-                
-                // Attempt to auto-select
-                if (newConversationObject && newConversationObject.id === conversationId) {
-                    console.log("Auto-selecting newly started conversation:", newConversationObject);
-                    selectConversation(newConversationObject);
-                } else {
-                    console.warn("session_started payload might not be the full Conversation object required for selection.");
-                    // Maybe just select by ID if the object isn't complete?
-                    // selectConversation({ id: conversationId }); // Or however selectConversation works
-                }
-                
-            } else if (message.type === "conversation_selected" && message.payload) {
-                const { conversationId, isActive } = message.payload;
-                console.log(`Conversation selected confirmation received: ID=${conversationId}, Active=${isActive}`);
-                // No state update needed here usually, just confirming backend processed selection
-            } else if (message.type === 'error') { // Handle error messages from the hook
-                console.error("Received error message object:", message.payload);
-                showError(message.payload?.message || 'Received error from server', 'error');
-            } else {
-                // console.log("Ignoring message type:", message.type);
-            }
-        } else if (lastMessage) {
-            console.warn("Received WebSocket message, but it wasn't an object:", lastMessage);
-        }
-    }, [lastMessage, sendMessage, selectConversation, showError]); // Added showError dependency
-
-    const handleOpenModal = () => {
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-    };
-
-    const handleStartSession = async (patientData: PatientData) => {
-        if (!isConnected) {
-            showError("Cannot start session: Not connected to server.", "warning");
-            handleCloseModal();
-            return;
-        }
-
-        console.log("Starting new session for:", patientData);
-        const messageToSend = {
-            type: "start_new_session",
-            payload: patientData,
-        };
-        sendMessage(messageToSend);
-
-        handleCloseModal();
-    };
-
-    // Helper to format date/time
     const formatDateTime = (isoString: string | Date, options: Intl.DateTimeFormatOptions = {}) => {
         try {
             const date = typeof isoString === "string" ? new Date(isoString) : isoString;
-            // Add default options if none provided
             const defaultOptions: Intl.DateTimeFormatOptions = {
                 year: "numeric",
                 month: "short",
@@ -230,24 +143,29 @@ const ConversationList: React.FC = () => {
             };
             return date.toLocaleString(undefined, { ...defaultOptions, ...options });
         } catch (e) {
-            return String(isoString); // Fallback
+            return String(isoString);
         }
     };
 
+    const handleRefresh = () => {
+        console.log("[ConversationList] Manual refresh requested");
+        fetchConversations();
+    };
+
     return (
-        <>
-         
-            <ListContainer>
-                {conversations.length > 0 ? (
-                    conversations
-                        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()) // Sort newest first
-                        .map((conv) => (
+        <div>
+            {isLoading ? (
+                <LoadingIndicator>Loading conversations...</LoadingIndicator>
+            ) : (
+                <ListContainer>
+                    {conversations.length > 0 ? (
+                        conversations.map((conv) => (
                             <ListItem
                                 key={conv.id}
                                 $isSelected={selectedConversationId === conv.id}
                                 onClick={() => {
-                                    console.log("Clicked conversation:", conv);
-                                    selectConversation(conv); // Pass the full conversation object
+                                    console.log("[ConversationList] Clicked conversation:", conv);
+                                    selectConversation(conv);
                                 }}
                             >
                                 <ConversationName>
@@ -256,21 +174,18 @@ const ConversationList: React.FC = () => {
                                 <ConversationDate>{formatDateTime(conv.startTime)}</ConversationDate>
                             </ListItem>
                         ))
-                ) : (
-                    <EmptyState>No previous sessions found.</EmptyState>
-                )}
-            </ListContainer>
-
-            <StartSessionButton onClick={handleOpenModal}>
-                <span>+</span> New Session
-            </StartSessionButton>
-
-            <NewSessionModal
-                isOpen={isModalOpen}
-                onClose={handleCloseModal}
-                onStartSession={handleStartSession}
-            />
-        </>
+                    ) : (
+                        <EmptyState>
+                            No previous sessions found.
+                            <RefreshButton onClick={handleRefresh}>Refresh</RefreshButton>
+                        </EmptyState>
+                    )}
+                    {conversations.length > 0 && (
+                        <RefreshButton onClick={handleRefresh}>Refresh Conversations</RefreshButton>
+                    )}
+                </ListContainer>
+            )}
+        </div>
     );
 };
 

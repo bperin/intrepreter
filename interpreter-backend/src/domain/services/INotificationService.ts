@@ -1,5 +1,4 @@
 import WebSocket from "ws";
-// import { ActionPayload } from "../models/Action"; // Remove old import
 import { AggregatedAction } from "../models/AggregatedAction"; // Import new aggregated type
 
 interface AuthenticatedWebSocket extends WebSocket {
