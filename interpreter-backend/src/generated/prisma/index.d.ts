@@ -1380,7 +1380,7 @@ export namespace Prisma {
     username: string | null
     hashedPassword: string | null
     refreshToken: string | null
-    refreshTokenExpiresAt: Date | null
+    refreshTokenExpiry: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -1390,7 +1390,7 @@ export namespace Prisma {
     username: string | null
     hashedPassword: string | null
     refreshToken: string | null
-    refreshTokenExpiresAt: Date | null
+    refreshTokenExpiry: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -1400,7 +1400,7 @@ export namespace Prisma {
     username: number
     hashedPassword: number
     refreshToken: number
-    refreshTokenExpiresAt: number
+    refreshTokenExpiry: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -1412,7 +1412,7 @@ export namespace Prisma {
     username?: true
     hashedPassword?: true
     refreshToken?: true
-    refreshTokenExpiresAt?: true
+    refreshTokenExpiry?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -1422,7 +1422,7 @@ export namespace Prisma {
     username?: true
     hashedPassword?: true
     refreshToken?: true
-    refreshTokenExpiresAt?: true
+    refreshTokenExpiry?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -1432,7 +1432,7 @@ export namespace Prisma {
     username?: true
     hashedPassword?: true
     refreshToken?: true
-    refreshTokenExpiresAt?: true
+    refreshTokenExpiry?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -1515,7 +1515,7 @@ export namespace Prisma {
     username: string
     hashedPassword: string
     refreshToken: string | null
-    refreshTokenExpiresAt: Date | null
+    refreshTokenExpiry: Date | null
     createdAt: Date
     updatedAt: Date
     _count: UserCountAggregateOutputType | null
@@ -1542,7 +1542,7 @@ export namespace Prisma {
     username?: boolean
     hashedPassword?: boolean
     refreshToken?: boolean
-    refreshTokenExpiresAt?: boolean
+    refreshTokenExpiry?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     conversations?: boolean | User$conversationsArgs<ExtArgs>
@@ -1554,7 +1554,7 @@ export namespace Prisma {
     username?: boolean
     hashedPassword?: boolean
     refreshToken?: boolean
-    refreshTokenExpiresAt?: boolean
+    refreshTokenExpiry?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["user"]>
@@ -1564,7 +1564,7 @@ export namespace Prisma {
     username?: boolean
     hashedPassword?: boolean
     refreshToken?: boolean
-    refreshTokenExpiresAt?: boolean
+    refreshTokenExpiry?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["user"]>
@@ -1574,12 +1574,12 @@ export namespace Prisma {
     username?: boolean
     hashedPassword?: boolean
     refreshToken?: boolean
-    refreshTokenExpiresAt?: boolean
+    refreshTokenExpiry?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "username" | "hashedPassword" | "refreshToken" | "refreshTokenExpiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "username" | "hashedPassword" | "refreshToken" | "refreshTokenExpiry" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     conversations?: boolean | User$conversationsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1597,7 +1597,7 @@ export namespace Prisma {
       username: string
       hashedPassword: string
       refreshToken: string | null
-      refreshTokenExpiresAt: Date | null
+      refreshTokenExpiry: Date | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["user"]>
@@ -2028,7 +2028,7 @@ export namespace Prisma {
     readonly username: FieldRef<"User", 'String'>
     readonly hashedPassword: FieldRef<"User", 'String'>
     readonly refreshToken: FieldRef<"User", 'String'>
-    readonly refreshTokenExpiresAt: FieldRef<"User", 'DateTime'>
+    readonly refreshTokenExpiry: FieldRef<"User", 'DateTime'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
   }
@@ -7012,7 +7012,7 @@ export namespace Prisma {
     username: 'username',
     hashedPassword: 'hashedPassword',
     refreshToken: 'refreshToken',
-    refreshTokenExpiresAt: 'refreshTokenExpiresAt',
+    refreshTokenExpiry: 'refreshTokenExpiry',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -7197,7 +7197,7 @@ export namespace Prisma {
     username?: StringFilter<"User"> | string
     hashedPassword?: StringFilter<"User"> | string
     refreshToken?: StringNullableFilter<"User"> | string | null
-    refreshTokenExpiresAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    refreshTokenExpiry?: DateTimeNullableFilter<"User"> | Date | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     conversations?: ConversationListRelationFilter
@@ -7208,7 +7208,7 @@ export namespace Prisma {
     username?: SortOrder
     hashedPassword?: SortOrder
     refreshToken?: SortOrderInput | SortOrder
-    refreshTokenExpiresAt?: SortOrderInput | SortOrder
+    refreshTokenExpiry?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     conversations?: ConversationOrderByRelationAggregateInput
@@ -7217,23 +7217,23 @@ export namespace Prisma {
   export type UserWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     username?: string
-    refreshToken?: string
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
     NOT?: UserWhereInput | UserWhereInput[]
     hashedPassword?: StringFilter<"User"> | string
-    refreshTokenExpiresAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    refreshToken?: StringNullableFilter<"User"> | string | null
+    refreshTokenExpiry?: DateTimeNullableFilter<"User"> | Date | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     conversations?: ConversationListRelationFilter
-  }, "id" | "username" | "refreshToken">
+  }, "id" | "username">
 
   export type UserOrderByWithAggregationInput = {
     id?: SortOrder
     username?: SortOrder
     hashedPassword?: SortOrder
     refreshToken?: SortOrderInput | SortOrder
-    refreshTokenExpiresAt?: SortOrderInput | SortOrder
+    refreshTokenExpiry?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: UserCountOrderByAggregateInput
@@ -7249,7 +7249,7 @@ export namespace Prisma {
     username?: StringWithAggregatesFilter<"User"> | string
     hashedPassword?: StringWithAggregatesFilter<"User"> | string
     refreshToken?: StringNullableWithAggregatesFilter<"User"> | string | null
-    refreshTokenExpiresAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    refreshTokenExpiry?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
   }
@@ -7559,7 +7559,7 @@ export namespace Prisma {
     username: string
     hashedPassword: string
     refreshToken?: string | null
-    refreshTokenExpiresAt?: Date | string | null
+    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     conversations?: ConversationCreateNestedManyWithoutUserInput
@@ -7570,7 +7570,7 @@ export namespace Prisma {
     username: string
     hashedPassword: string
     refreshToken?: string | null
-    refreshTokenExpiresAt?: Date | string | null
+    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     conversations?: ConversationUncheckedCreateNestedManyWithoutUserInput
@@ -7581,7 +7581,7 @@ export namespace Prisma {
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
     refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     conversations?: ConversationUpdateManyWithoutUserNestedInput
@@ -7592,7 +7592,7 @@ export namespace Prisma {
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
     refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     conversations?: ConversationUncheckedUpdateManyWithoutUserNestedInput
@@ -7603,7 +7603,7 @@ export namespace Prisma {
     username: string
     hashedPassword: string
     refreshToken?: string | null
-    refreshTokenExpiresAt?: Date | string | null
+    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7613,7 +7613,7 @@ export namespace Prisma {
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
     refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7623,7 +7623,7 @@ export namespace Prisma {
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
     refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -8026,7 +8026,7 @@ export namespace Prisma {
     username?: SortOrder
     hashedPassword?: SortOrder
     refreshToken?: SortOrder
-    refreshTokenExpiresAt?: SortOrder
+    refreshTokenExpiry?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8036,7 +8036,7 @@ export namespace Prisma {
     username?: SortOrder
     hashedPassword?: SortOrder
     refreshToken?: SortOrder
-    refreshTokenExpiresAt?: SortOrder
+    refreshTokenExpiry?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8046,7 +8046,7 @@ export namespace Prisma {
     username?: SortOrder
     hashedPassword?: SortOrder
     refreshToken?: SortOrder
-    refreshTokenExpiresAt?: SortOrder
+    refreshTokenExpiry?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8956,7 +8956,7 @@ export namespace Prisma {
     username: string
     hashedPassword: string
     refreshToken?: string | null
-    refreshTokenExpiresAt?: Date | string | null
+    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -8966,7 +8966,7 @@ export namespace Prisma {
     username: string
     hashedPassword: string
     refreshToken?: string | null
-    refreshTokenExpiresAt?: Date | string | null
+    refreshTokenExpiry?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9077,7 +9077,7 @@ export namespace Prisma {
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
     refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9087,7 +9087,7 @@ export namespace Prisma {
     username?: StringFieldUpdateOperationsInput | string
     hashedPassword?: StringFieldUpdateOperationsInput | string
     refreshToken?: NullableStringFieldUpdateOperationsInput | string | null
-    refreshTokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    refreshTokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

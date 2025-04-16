@@ -95,8 +95,14 @@ export class TranscriptionService {
       @inject(VoiceCommandService) private voiceCommandService: VoiceCommandService
   ) {
       this.openaiApiKey = process.env.OPENAI_API_KEY || '';
+      // --- DEBUG LOG ---
+      console.log(`[TranscriptionService DEBUG] Constructor: Read OPENAI_API_KEY from process.env. Value: '${this.openaiApiKey ? this.openaiApiKey.substring(0, 5) + '...' + this.openaiApiKey.substring(this.openaiApiKey.length - 4) : 'NOT SET'}'`);
+      // -----------------
       if (!this.openaiApiKey) {
           console.error('[TranscriptionService] OPENAI_API_KEY is not set! Language detection and other features may fail.');
+      }
+      else{
+        console.log('[TranscriptionService] OPENAI_API_KEY is set to: ' + this.openaiApiKey);
       }
   }
 
