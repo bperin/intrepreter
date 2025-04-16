@@ -6,7 +6,6 @@ import { useAuth } from "../context/AuthContext"; // Import useAuth
 import { useWebSocket } from "../hooks/useWebSocket"; // Import the WebSocket hook
 import CommandHelpModal from "./CommandHelpModal"; // Import the modal component
 
-
 type ThemedProps = { theme: Theme };
 
 const LayoutContainer = styled.div<ThemedProps>`
@@ -15,43 +14,6 @@ const LayoutContainer = styled.div<ThemedProps>`
     height: 100vh;
     background-color: ${({ theme }) => theme.colors.background.primary};
     color: ${({ theme }) => theme.colors.text.primary};
-`;
-
-// --- Topbar ---
-const Topbar = styled.header<ThemedProps>`
-    width: 100%;
-    height: 60px;
-    background-color: ${({ theme }) => theme.colors.background.primary};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 ${({ theme }) => theme.spacing.xl};
-    flex-shrink: 0; // Prevent shrinking
-`;
-
-const Logo = styled.div<ThemedProps>`
-    font-size: ${({ theme }) => theme.typography.sizes.lg};
-    font-weight: ${({ theme }) => theme.typography.weights.bold};
-    color: ${({ theme }) => theme.colors.text.primary};
-    letter-spacing: -0.03em;
-`;
-
-const LogoutButton = styled.button<ThemedProps>`
-    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md};
-    background-color: transparent;
-    color: ${({ theme }) => theme.colors.text.primary};
-    border: 1px solid ${({ theme }) => theme.colors.text.primary};
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: ${({ theme }) => theme.typography.sizes.sm};
-    font-weight: ${({ theme }) => theme.typography.weights.medium};
-    transition: all 0.15s ease;
-
-    &:hover {
-        background-color: ${({ theme }) => theme.colors.text.primary};
-        color: ${({ theme }) => theme.colors.background.primary};
-    }
 `;
 
 // --- Main Content Area (Wrapper for Columns) ---
@@ -73,7 +35,7 @@ const LeftColumn = styled.aside<ThemedProps>`
 
 // Renamed from LeftColumnHeader to ColumnHeader (more generic)
 const ColumnHeader = styled.div<ThemedProps>`
-    min-height: 64px; // Ensure consistent height for headers
+    height: 64px; // Ensure consistent height for headers
     padding: ${({ theme }) => theme.spacing.lg};
     border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
     color: ${({ theme }) => theme.colors.text.muted};
@@ -197,67 +159,23 @@ const CombinedStatus: React.FC = () => {
     const { isConnected: isWsConnected, error: wsError } = useWebSocket();
     const theme = useTheme(); // Get theme from context
     
-    // Removed RTC status state
-    // const [rtcStatus, setRtcStatus] = useState<RtcStatus>('idle');
-    // const [rtcError, setRtcError] = useState<Error | null>(null);
+    let statusText = "Connecting...";
+    let isConnected = false;
 
-    // Removed effect for RTC status updates via window object
-    // useEffect(() => {
-    //     // Define the global function that ChatInterface will call
-    //     // @ts-ignore - We will handle the type error safely
-    //     window.updateRtcStatus = (status: RtcStatus, error: Error | null) => {
-    //         console.log(`[Dashboard] RTC status update received: ${status}`);
-    //         setRtcStatus(status);
-    //         setRtcError(error);
-    //     };
-    //     
-    //     return () => {
-    //         // Clean up when component unmounts
-    //         // @ts-ignore
-    //         window.updateRtcStatus = undefined;
-    //     };
-    // }, []);
-
-    // --- WebSocket Status ---
-    let wsStatusText = "Backend: Connecting...";
-    let wsConnected = false;
     if (wsError) {
-        wsStatusText = "Backend: Error";
+        statusText = `WebSocket Error: ${wsError.message.substring(0, 30)}...`;
+        isConnected = false;
     } else if (isWsConnected) {
-        wsStatusText = "Backend: Connected";
-        wsConnected = true;
-    }
-
-    // Removed RTC Status Text Logic
-    // // --- RTC Status ---
-    // let rtcStatusText = "Model: Idle";
-    // if (rtcError) {
-    //     rtcStatusText = `Model: Error`;
-    // } else {
-    //     switch (rtcStatus) {
-    //         case 'connecting': rtcStatusText = "Model: Connecting..."; break;
-    //         case 'connected': rtcStatusText = "Model: Connected"; break;
-    //         case 'failed': rtcStatusText = "Model: Failed"; break;
-    //         case 'disconnected': rtcStatusText = "Model: Disconnected"; break;
-    //         case 'closed': rtcStatusText = "Model: Closed"; break;
-    //         default: rtcStatusText = "Model: Idle";
-    //     }
-    // }
+        statusText = "System Connected";
+        isConnected = true;
+    } 
+    // Removed RTC logic
 
     return (
-        <StatusFooter>
-            {/* WebSocket Status */}
-            <StatusIndicator $isConnected={wsConnected} theme={theme} />
-            <span>{wsStatusText}</span>
-
-            {/* Removed RTC Status Display */}
-            {/* // Separator */}
-            {/* <span style={{ margin: '0 4px' }}>|</span> */}
-
-            {/* // RTC Status */}
-            {/* <RtcStatusIndicatorDot $status={rtcStatus} /> */}
-            {/* <span>{rtcStatusText}</span> */}
-        </StatusFooter>
+        <>
+            <StatusIndicator $isConnected={isConnected} theme={theme} />
+            <span>{statusText}</span>
+        </>
     );
 };
 
@@ -268,39 +186,38 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ leftColumnContent, middleColumnContent, rightColumnContent }) => {
-    const { logout } = useAuth();
-    const navigate = useNavigate();
-    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false); // State for modal
-
-    const handleLogout = () => {
-        logout();
-        navigate("/");
-    };
+    const { logout } = useAuth(); // Get logout function
+    const navigate = useNavigate(); // Get navigate function
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false); // For modal
 
     return (
         <LayoutContainer>
-            <Topbar>
-                <Logo>Clara.ai</Logo>
-                <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
-            </Topbar>
+            {/* Topbar is now handled by AppLayout in App.tsx */}
             <MainContentArea>
                 <LeftColumn>
                     <ColumnHeader>
-                        PREVIOUS SESSIONS
-                        {/* No help button needed here */}
+                        Conversations
                     </ColumnHeader>
                     <LeftColumnContent>{leftColumnContent}</LeftColumnContent>
-                    <CombinedStatus />
+                    <StatusFooter>
+                       <CombinedStatus />
+                    </StatusFooter>
                 </LeftColumn>
-                <MiddleColumn>{middleColumnContent}</MiddleColumn>
+                <MiddleColumn>
+                    <ColumnHeader>
+                        Interaction
+                        <HeaderHelpButton onClick={() => setIsHelpModalOpen(true)}>?</HeaderHelpButton>
+                    </ColumnHeader>
+                    {middleColumnContent} 
+                </MiddleColumn>
                 <RightColumn>
                     <ColumnHeader>
-                        ACTIONS
-                        <HeaderHelpButton onClick={() => setIsHelpModalOpen(true)}>?</HeaderHelpButton>
+                        Actions & Notes
                     </ColumnHeader>
                     <RightColumnContent>{rightColumnContent}</RightColumnContent>
                 </RightColumn>
             </MainContentArea>
+            {/* Command Help Modal */}
             <CommandHelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
         </LayoutContainer>
     );

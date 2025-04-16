@@ -44,7 +44,7 @@ const app = express();
 const port = process.env.PORT || 8080;
 
 // Allow all origins for Cloud Run deployment (restrict later for security)
-const allowedOrigin = "*"; 
+const allowedOrigin = "http://localhost"; 
 console.log(`[CORS] Allowing requests from origin: ${allowedOrigin}`);
 
 app.use(

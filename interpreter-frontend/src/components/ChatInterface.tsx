@@ -315,7 +315,7 @@ const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
                 sender = "user"; // English -> Right align
             } else {
                 sender = "other"; // Other language -> Left align
-            }
+    }
             // Use translated text if sender was TRANSLATION, otherwise original
             textContent = (msgSenderType === "TRANSLATION" && msg.translatedText) ? msg.translatedText : msg.originalText;
             break;
@@ -606,7 +606,7 @@ const ChatInterface: React.FC = () => {
                 type: 'get_messages',
                 payload: { conversationId: selectedConversationId }
             });
-        } else {
+                        } else {
             console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - RUNNING for null ID. Clearing messages.');
             setDisplayMessages([]); // Clear messages if no conversation is selected
         }
@@ -894,14 +894,14 @@ const ChatInterface: React.FC = () => {
                                     )}
                             
                                     <Bubble $isSender={finalAlignmentSender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
-                                        {msg.text}
-                                    </Bubble>
+                                {msg.text}
+                            </Bubble>
                                     
                                     {/* Message Meta: Show language, translation status, and timestamp */}
                                     <MessageMeta>
                                         {`[${messageLanguage}]`}{isTranslated ? ' (Translated)' : ''} {formattedTime}
                                     </MessageMeta>
-                                </MessageGroup>
+                        </MessageGroup>
                             );
                         })}
                          {/* +++ Add Processing Status Indicator +++ */} 

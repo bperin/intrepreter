@@ -97,7 +97,7 @@ export const useSpeechToTextBackend = (
   
   // Get addAction from context
   const { addAction } = useActions();
-
+  
   // Accumulated transcript ref
   const accumulatedTranscriptRef = useRef<string>('');
   // Flag to track if pause was triggered by visibility change
@@ -218,7 +218,7 @@ export const useSpeechToTextBackend = (
             // setStatus('error'); 
             return;
           }
-          
+
           // --- Handle NEW Transcription Event Types --- 
           if (data.type === 'conversation.item.input_audio_transcription.delta') {
             const deltaText = data.delta || '';
@@ -241,8 +241,8 @@ export const useSpeechToTextBackend = (
              // Set language if provided and different from current
              if (data.language && data.language !== language) { 
                  logDebug(`Detected language (completed): ${data.language}`);
-                 setLanguage(data.language);
-             }
+              setLanguage(data.language);
+            }
              
              // Clear the live transcript preview after a short delay, 
              // assuming a new_message event will arrive soon with the saved version.
@@ -406,13 +406,13 @@ export const useSpeechToTextBackend = (
     // Clear previous state
     setError(null);
     setTranscript(null);
-    accumulatedTranscriptRef.current = '';
-    audioChunksRef.current = [];
+      accumulatedTranscriptRef.current = '';
+      audioChunksRef.current = [];
     setIsPaused(false);
-
+      
     // Ensure WebSocket is ready before getting media
-    initializeWebSocket();
-
+      initializeWebSocket();
+      
     try {
       logDebug('Requesting microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -494,7 +494,7 @@ export const useSpeechToTextBackend = (
         setError(new Error('MediaRecorder encountered an error.'));
         setStatus('failed');
       };
-
+      
       const timeslice = 500; // Send data approx every 500ms
       // --- Delay MediaRecorder start slightly --- 
       const startDelay = 200; // Delay in milliseconds (adjust if needed)
@@ -515,8 +515,8 @@ export const useSpeechToTextBackend = (
       setStatus('failed');
       // Clean up stream tracks if acquired before error
       audioStreamRef.current?.getTracks().forEach(track => track.stop());
-       audioStreamRef.current = null;
-    }
+        audioStreamRef.current = null;
+      }
   }, [status, initializeWebSocket, isPaused, sendAudioChunk]); // Dependencies adjusted
 
   /**
@@ -538,7 +538,7 @@ export const useSpeechToTextBackend = (
     } else { 
         logDebug('--> MediaRecorder already inactive or null.');
     }
-
+    
     // Clean up audio stream tracks (releases microphone hardware)
     logDebug(`Checking audio stream... Ref exists: ${!!audioStreamRef.current}`);
     if (audioStreamRef.current) {
@@ -552,8 +552,8 @@ export const useSpeechToTextBackend = (
     } else { 
         logDebug('--> Audio stream already null.');
     }
-
-    // Close WebSocket connection 
+    
+    // Close WebSocket connection
     // Note: Finalize message is usually sent in mediaRecorder.onstop
     logDebug(`Checking WebSocket... Ref exists: ${!!wsRef.current}, State: ${wsRef.current?.readyState}`);
     if (wsRef.current) {
@@ -567,14 +567,14 @@ export const useSpeechToTextBackend = (
                 logError("Error sending fallback finalize message", sendErr);
            }
       }
-      wsRef.current.close(); 
+      wsRef.current.close();
       wsRef.current = null;
       isWsOpenRef.current = false;
       logDebug('--> WebSocket closed and refs cleared.');
     } else { 
         logDebug('--> WebSocket already null.');
     }
-
+    
     // Reset component state
     logDebug('--> Resetting component state (paused, status, processing).');
     setIsPaused(false);
