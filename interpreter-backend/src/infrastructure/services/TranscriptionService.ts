@@ -298,9 +298,11 @@ export class TranscriptionService {
                    if (completedText) { 
                        const detectedLanguage = await this.detectLanguage(completedText); 
                        
-                       // --- ADDED: Determine sender based on language --- 
+                       // --- Restore Original Sender Logic --- 
+                       // If language is NOT English, assume patient 
+                       // If language IS English (or unknown), assume user/clinician
                        const sender = (detectedLanguage !== 'en' && detectedLanguage !== 'unknown') ? 'patient' : 'user';
-                       // -------------------------------------------------
+                       // -----------------------------------
                        
                        try {
                            console.log(`[TranscriptionService] Calling messageService.createMessage for ${targetConversationId}. Sender: ${sender}, Lang: ${detectedLanguage}...`);
