@@ -126,7 +126,7 @@ export class TranscriptionService {
       this.clientConnections.set(conversationId, new Set());
     }
     this.clientConnections.get(conversationId)?.add(clientWs);
-    
+
     // --- Ensure OpenAI Connection & FFmpeg are initiated for this conversation ---
     this._ensureConversationResources(conversationId);
     // ----------------------------------------------------------------------------
@@ -203,7 +203,7 @@ export class TranscriptionService {
     });
 
     // Send confirmation to this specific client, reflecting the conversation's state
-    clientWs.send(JSON.stringify({
+    clientWs.send(JSON.stringify({ 
       type: 'backend_connected',
       message: 'Connected to backend service.',
       status: conversationState.isOpenAIConnected ? 'openai_connected' : (conversationState.isConnecting ? 'openai_connecting' : 'openai_disconnected')
@@ -310,14 +310,14 @@ export class TranscriptionService {
         const updateConfig = {
           type: "transcription_session.update",
           session: {
-            input_audio_transcription: {
+          input_audio_transcription: {
               model: "whisper-1",
               prompt: "Transcribe the input audio to text"
-            },
-            turn_detection: {
-              type: "server_vad",
+          },
+          turn_detection: {
+            type: "server_vad",
               silence_duration_ms: 500,
-              prefix_padding_ms: 300,
+            prefix_padding_ms: 300,
               threshold: 0.5
             },
             include: ["item.input_audio_transcription.logprobs"]
@@ -628,7 +628,7 @@ export class TranscriptionService {
                 console.log(`[TranscriptionService][${conversationId}] Received unhandled OpenAI message type: ${message.type}`);
                 // Optionally forward other types if needed
                 // this.broadcastToClients(conversationId, message);
-            }
+          }
         } catch (err) {
             console.error(`[TranscriptionService][${conversationId}] Error handling OpenAI message:`, err, `Raw Data: ${rawMessage.substring(0, 100)}...`);
         }
@@ -682,7 +682,7 @@ export class TranscriptionService {
     }
     if (conversationState.ffmpegProcess) {
         console.warn(`[TranscriptionService][${conversationId}] Attempted to start FFmpeg process, but one already exists.`);
-        return;
+      return;
     }
     console.log(`[TranscriptionService][${conversationId}] Starting FFmpeg process...`);
     conversationState.ffmpegStdinEnded = false; // Reset flag
@@ -839,8 +839,8 @@ export class TranscriptionService {
       const messageStr = JSON.stringify(message);
       this.clientConnections.forEach((clientSet, conversationId) => {
           console.log(`[Broadcasting All] Sending to clients of conversation ${conversationId}`);
-          clientSet.forEach(client => {
-               if (client.readyState === WebSocket.OPEN) {
+    clientSet.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
                    try { client.send(messageStr); } catch (e) { console.error(`Error broadcasting to client in ${conversationId}:`, e); }
                }
           });
@@ -1019,4 +1019,4 @@ export class TranscriptionService {
         return null; 
     }
   }
-}
+} 
