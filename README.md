@@ -44,7 +44,11 @@ The core goal is to provide seamless, real-time interpretation during medical co
 
 ## Technical Details / Architecture
 
-This application follows best practices for structure and employs modern technologies.
+This application follows best practices for structure and employs modern technologies. For more detailed information, please refer to:
+
+- **[Backend Implementation Details](./interpreter-backend/BACKEND_IMPLEMENTATION.md)**
+- **[Frontend Implementation Details](./interpreter-frontend/FRONTEND_IMPLEMENTATION.md)**
+- **[Development Plan & Architecture](./IMPLEMENTATION_PLAN.md)**
 
 **Architecture & Design:**
 

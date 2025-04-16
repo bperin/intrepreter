@@ -1,121 +1,101 @@
 # Frontend Implementation Overview
 
-This document provides an overview of the frontend implementation, focusing on how the application handles audio recording, speech-to-text transcription, and real-time communication with the backend.
+This document provides an overview of the frontend implementation, focusing on how the application handles audio recording, communication with the backend pipeline, and displaying results.
 
 ## Core Technologies
 
 - [x] **React & TypeScript**: The application is built using React with TypeScript for type safety.
-- [x] **WebSocket**: Used for real-time bidirectional communication with the backend.
+- [x] **WebSocket**: Used for real-time bidirectional communication with the backend for control messages, sending audio, and receiving processed results.
 - [x] **Web Audio API**: Used for capturing and processing audio from the user's microphone.
-- [x] **OpenAI API**: The application connects to OpenAI's API (via the backend proxy) for speech-to-text transcription.
+- [x] **Axios**: Used for making HTTP requests to the backend REST API (e.g., for auth, fetching initial data).
 
 ## Project Structure
 
 - [x] **`/src/components/`**: Contains React components for the UI.
-- [x] **`/src/context/`**: Contains React context providers for state management.
-- [x] **`/src/hooks/`**: Contains custom hooks for managing audio recording, WebSocket communication, and other functionality.
-- [x] **`/src/pages/`**: Contains page components for different routes.
-- [x] **`/src/utils/`**: Contains utility functions and helpers.
-- [x] **`/src/types/`**: Contains TypeScript type definitions.
+- [x] **`/src/context/`**: Contains React context providers for state management (e.g., `AuthContext`, `ConversationContext`).
+- [x] **`/src/hooks/`**: Contains custom hooks for managing audio recording (`useAudioRecorder`), WebSocket communication (`useWebSocket`), and other functionality.
+- [x] **`/src/lib/`**: Contains library code, including the API client setup (`api.ts`).
+- [x] **`/src/types/`**: Contains shared TypeScript type definitions.
 
 ## Key Components
 
 - [x] **`App.tsx`**: The main application component that sets up routing and global context providers.
-- [x] **`LoginPage.tsx`**: Handles user authentication and registration.
-- [x] **`ChatInterface.tsx`**: The main interface for audio conversations, displaying transcriptions and handling audio recording.
-- [x] **`ConversationList.tsx`**: Displays a list of conversations and handles conversation selection.
-- [x] **`MessageList.tsx`**: Displays messages within a conversation.
-- [x] **`PatientModal.tsx`**: Allows the user to select or create a patient for a new conversation.
+- [x] **`LoginPage.tsx`**: Handles user authentication and registration via API calls.
+- [x] **`ChatInterface.tsx`**: The main interface for audio conversations, displaying messages, handling audio recording via `useAudioRecorder`, and interacting with the WebSocket via `useWebSocket`.
+- [x] **`ConversationList.tsx`**: Displays a list of conversations (fetched via API) and handles conversation selection (sending `select_conversation` WebSocket message).
+- [x] **`MessageList.tsx`**: Displays messages received via WebSocket within a conversation.
+- [x] **`NewSessionModal.tsx`**: Allows the user to create a patient and start a new conversation via API call.
 
-## Audio & Transcription Implementation
+## Audio & Backend Communication Implementation
 
 ### Core Hooks
 
-- [x] **`useAudioRecorder.ts`**: A custom hook that manages audio recording using the Web Audio API. Handles starting, stopping, and pausing recording, as well as processing audio data for transmission.
-- [x] **`useSpeechToText.ts`**: Connects to the backend WebSocket server for streaming audio data and receiving transcriptions.
-- [x] **`useWebSocket.ts`**: Manages WebSocket connections to the backend for control messages (session management, transcription broadcasting, etc.).
+- [x] **`useAudioRecorder.ts`**: Manages audio recording using the Web Audio API. Handles starting, stopping, pausing, processing audio into chunks, and encoding them as Base64. It sends these chunks via the WebSocket connection managed by `useWebSocket`.
+- [x] **`useWebSocket.ts`**: Manages the primary WebSocket connection to the backend. Handles connection/disconnection, authentication (sending token), sending audio chunks from `useAudioRecorder` (to the `/transcription` endpoint connection logic on backend), sending control messages (e.g., `select_conversation`), and receiving/processing broadcast messages from the backend (`new_message`, `tts_audio`, `command_executed`, `error`, etc.), updating relevant application state (usually via Context setters).
 
-### Audio Processing Flow
+### Audio Processing & Communication Flow
 
-- [x]   1. **Permission Request**: The application requests microphone permission when the user initiates a recording session.
-- [x]   2. **Audio Capture**: Once permission is granted, the application begins capturing audio data from the user's microphone using the Web Audio API.
-- [x]   3. **Audio Format Conversion**: The frontend converts the raw audio to mono PCM16 at 24kHz format using Web Audio API:
-    - Creates an `AudioContext` with `sampleRate: 24000`
-    - Uses a `ScriptProcessorNode` to access raw audio data
-    - Converts Float32Array [-1,1] to Int16Array [-32768,32767] for PCM16 format
-    - Base64 encodes the PCM16 data for WebSocket transmission
-- [x]   4. **WebSocket Connection**: The frontend establishes a WebSocket connection to the backend's audio endpoint.
-- [x]   5. **Audio Streaming**: The frontend streams the converted PCM16 audio data to the backend over the WebSocket connection.
-- [x]   6. **Transcription Reception**: The frontend receives transcription results from the backend via the control WebSocket channel.
-- [x]   7. **UI Update**: The application updates the UI to display the transcription results in real-time.
+1. **Permission Request**: Requests microphone permission when recording starts.
+2. **Audio Capture**: Captures audio using the Web Audio API.
+3. **Chunking & Encoding**: `useAudioRecorder` processes audio into chunks and encodes them as Base64 strings.
+4. **WebSocket Connection**: `useWebSocket` establishes and maintains a persistent WebSocket connection to the backend (authenticating with JWT).
+5. **Audio Streaming**: `useAudioRecorder` passes Base64 audio chunks to `useWebSocket`, which sends them as JSON messages (`{ type: 'input_audio_buffer.append', audio: 'base64...' }`) over the WebSocket connection directed towards the backend's `/transcription` path handling.
+6. **Receiving Results**: `useWebSocket` listens for messages broadcast from the backend (e.g., `new_message` with transcriptions/translations, `tts_audio` with synthesized speech).
+7. **State Update**: Received messages trigger updates to the relevant context (`ConversationContext`), causing the UI to re-render.
+8. **TTS Playback**: When a `tts_audio` message is received, the Base64 audio is decoded, converted to a playable format (e.g., Blob URL), and played using the browser's audio capabilities.
 
 ### WebSocket Communication
 
-- [x] **Dual WebSocket Approach**:
-
-    - **Control Channel**: Used for sending control messages (start/stop session) and receiving transcription results.
-    - **Audio Channel**: Dedicated to streaming audio data to the backend.
-
-- [x] **Message Types**:
-    - `start_new_session`: Request to start a new conversation session.
-    - `session_started`: Response indicating a session has started (includes conversation ID and OpenAI key).
-    - `transcription`: Contains transcription results for a segment of audio.
-    - `message_created`: Indicates a new message has been created in the conversation.
-    - `error`: Contains error information if something goes wrong.
+- **Single WebSocket Connection**: Managed by `useWebSocket`, handling different message types for control, audio streaming (forwarded to backend `/transcription`), and receiving results.
+- **Key Message Types (Simplified)**:
+    - **Client -> Server**: `auth`, `select_conversation`, `input_audio_buffer.append`, `input_audio_buffer.finalize`, `input_audio_buffer.pause`, `input_audio_buffer.resume`, `get_messages`, `get_actions`, `get_summary`, `get_medical_history`.
+    - **Server -> Client**: `connection_ack`, `openai_connected`, `openai_disconnected`, `backend_connected`, `new_message`, `tts_audio`, `message_list`, `action_list`, `summary_data`, `medical_history_data`, `command_executed`, `error`.
 
 ## Voice Command Integration
 
-- [ ] **Command Display**: Voice commands are displayed in the UI as special message types or with distinctive styling.
-- [ ] **Command Feedback**: The UI provides visual feedback when a voice command is detected and executed.
-- [ ] **Command State Management**: The application maintains state to track the status of voice commands (pending, executed, failed).
+- **Display**: Detected commands and their execution results (`command_executed` message) are typically displayed as system messages or updates within the chat interface.
+- **Feedback**: No specific UI feedback implemented beyond displaying the results broadcast by the backend.
 
 ## Error Handling
 
-- [x] **Connection Errors**: The application handles WebSocket connection errors and attempts to reconnect when possible.
-- [x] **Permission Errors**: The application gracefully handles cases where microphone permission is denied.
-- [x] **Transcription Errors**: Errors in the transcription process are captured and displayed to the user.
+- Handles WebSocket connection errors and attempts reconnection.
+- Handles microphone permission errors.
+- Displays error messages received from the backend via the WebSocket.
 
 ## Performance Considerations
 
-- [x] **Audio Buffering**: The application buffers audio data to ensure smooth transmission and processing.
-- [x] **Throttling**: Transcription requests are throttled to manage API usage and ensure responsiveness.
-- [x] **Memoization**: React components and hooks use memoization to prevent unnecessary re-renders.
-- [x] **Resource Management**: Audio resources are properly cleaned up when no longer needed to prevent memory leaks.
+- Audio buffering in `useAudioRecorder` ensures smooth transmission.
+- React Context and component memoization help manage re-renders.
+- WebSocket connection is managed efficiently.
 
 ## State Management
 
-- [x] **React Context**: The application uses React Context for global state management.
-- [x] **Conversation Context**: Manages the state of conversations, messages, and the active conversation.
-- [x] **Authentication Context**: Manages the user's authentication state and tokens.
-- [x] **Local Storage**: Used for persisting authentication tokens and user preferences.
+- **React Context**: Used for global and conversation-specific state (`AuthContext`, `ConversationContext`).
+- **Context Providers**: Wrap relevant parts of the application.
+- **Local Storage**: Used for persisting authentication tokens.
 
 ## UI/UX Design
 
-- [x] **Responsive Design**: The application is designed to work on various screen sizes.
-- [x] **Audio Feedback**: Visual indicators for audio recording status (e.g., microphone icon, waveform visualization).
-- [x] **Loading States**: The application displays loading indicators during async operations.
-- [x] **Error Messages**: User-friendly error messages are displayed when issues occur.
-- [x] **Accessibility**: The application includes accessibility features such as keyboard navigation and screen reader support.
+- Responsive design for various screen sizes.
+- Visual indicators for audio recording status.
+- Loading indicators for asynchronous operations (e.g., fetching conversations).
+- User-friendly error messages.
 
 ## Security Considerations
 
-- [x] **Authentication**: The application uses JWT for user authentication.
-- [x] **Secure WebSocket**: WebSocket connections are secured and include authentication headers.
-- [x] **API Key Management**: OpenAI API keys are managed securely, using ephemeral (short-lived) keys for each session.
-- [x] **Data Encryption**: Sensitive data is encrypted during transmission using HTTPS/WSS.
+- Uses JWT for user authentication via backend API.
+- WebSocket connection requires token for authentication.
+- API keys are managed solely by the backend.
+- Communication uses HTTPS/WSS.
 
-## RTC Status Display
+## Connection Status Display
 
-- [x] **Connection Status Indicator**: The UI includes a visual indicator showing the status of the WebRTC connection (idle, connecting, connected, error).
-- [x] **Error Display**: When the WebRTC connection encounters an error, the error message is displayed to the user.
-- [x] **Reconnection Logic**: The application attempts to reconnect the WebRTC connection if it is disconnected unexpectedly.
+- UI includes indicators for WebSocket connection status (`useWebSocket` state).
 
 ## Debugging and Testing
 
-- [x] **Debug Mode**: The application includes a debug mode that provides additional logging and UI elements for debugging.
-- [x] **Console Logging**: Key events and errors are logged to the console for debugging purposes.
-- [x] **Unit Tests**: Components and hooks have unit tests to ensure proper functionality.
-- [x] **Integration Tests**: The application includes integration tests for key workflows.
+- Extensive console logging for key events, state changes, and WebSocket messages.
+- Standard React testing approaches can be used.
 
 ## Future Enhancements
 
