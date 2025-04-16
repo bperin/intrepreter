@@ -9,6 +9,7 @@ import { IAuthService, RefreshResult } from "./domain/services/IAuthService";
 import { IConversationService, StartSessionInput } from "./domain/services/IConversationService";
 import { IAudioProcessingService } from "./domain/services/IAudioProcessingService";
 import { IConversationRepository } from "./domain/repositories/IConversationRepository";
+import { PrismaClient } from "./generated/prisma";
 import { Message } from "./generated/prisma";
 
 import { container } from "./container";
@@ -22,16 +23,23 @@ import { IMessageService, IMessageService as IMessageServiceToken } from "./doma
 import { MessageService } from "./infrastructure/services/MessageService";
 import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken } from "./domain/services/ITextToSpeechService";
 import { TextToSpeechService } from "./infrastructure/services/TextToSpeechService";
+import { IActionRepository } from "./domain/repositories/IActionRepository";
+import { IActionService } from "./domain/services/IActionService";
+import { INotificationService } from "./domain/services/INotificationService";
+import { WebSocketNotificationService } from "./infrastructure/services/WebSocketNotificationService";
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 8080;
 
-const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+// Allow all origins for Cloud Run deployment (restrict later for security)
+const allowedOrigin = "*"; 
+console.log(`[CORS] Allowing requests from origin: ${allowedOrigin}`);
+
 app.use(
     cors({
-        origin: frontendUrl,
+        origin: allowedOrigin, 
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
     })
@@ -48,8 +56,11 @@ const authService = container.resolve<IAuthService>("IAuthService");
 const conversationService = container.resolve<IConversationService>("IConversationService");
 const audioProcessingService = container.resolve<IAudioProcessingService>("IAudioProcessingService");
 const conversationRepository = container.resolve<IConversationRepository>("IConversationRepository");
-const transcriptionService = container.resolve<TranscriptionService>('TranscriptionService');
+const transcriptionService = container.resolve(TranscriptionService);
 const messageService = container.resolve<IMessageService>(IMessageServiceToken);
+const actionService = container.resolve<IActionService>("IActionService");
+const notificationService = container.resolve<INotificationService>("INotificationService");
+const prisma = container.resolve<PrismaClient>("PrismaClient");
 
 app.use(express.json());
 
@@ -205,15 +216,20 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
         }
 
         try {
+            // --- Verify token and handle payload --- 
             const payload = await authService.verifyToken(token);
-            if (!payload) {
-                console.log("[WebSocket Router] Control Channel: Connection Rejected - Invalid or expired token.");
-                ws.close(4001, "Invalid or expired token");
-                return;
+            
+            if (typeof payload === 'object' && payload !== null && payload.id && payload.username) {
+                // Assign properties if payload is a valid object with expected claims
+                ws.userId = payload.id;
+                ws.username = payload.username as string;
+            } else {
+                // Handle invalid payload structure
+                console.error("[WebSocket Router] Control Channel: Invalid token payload received:", payload);
+                throw new Error("Invalid token payload"); 
             }
+            // ---------------------------------------
 
-            ws.userId = payload.id;
-            ws.username = payload.username;
             console.log(`[WebSocket Router] Control Channel: Client connected and authenticated as ${ws.username} (ID: ${ws.userId})`);
 
             ws.send(JSON.stringify({ type: "system", text: "Welcome! You are connected via control channel." })); // Adjusted welcome message
@@ -327,19 +343,20 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                                 throw new Error("You don't have permission to access this conversation");
                             }
                             
-                            ws.currentConversationId = conversationIdToSelect;
-                            console.log(`[WebSocket Router] Control Channel: User ${ws.username} selected conversation ${ws.currentConversationId}`);
+                            // Use the notification service to register the client
+                            notificationService.registerClient(ws as any, conversationIdToSelect);
                             
-                            // Send confirmation including status and summary
-                            console.log(`[WebSocket Router] Control Channel: Sending conversation selection confirmation. Status: ${conversation.status}, Summary Exists: ${!!conversation.summary}`);
-                            ws.send(JSON.stringify({ 
-                                type: 'conversation_selected', 
-                                payload: { 
+                            console.log(`[WebSocket Router] Control Channel: User ${ws.username} selected conversation ${conversationIdToSelect}`);
+                            
+                            ws.send(JSON.stringify({
+                                type: 'conversation_selected',
+                                payload: {
                                     conversationId: conversation.id,
-                                    isActive: conversation.status === "active", // Determine active based on status
-                                    status: conversation.status, // Send status
-                                    summary: conversation.summary // Send summary (will be null if none)
-                                } 
+                                    isActive: conversation.status === "active",
+                                    status: conversation.status,
+                                    summary: conversation.summary,
+                                    patientLanguage: conversation.patientLanguage
+                                }
                             }));
 
                         } catch (error: any) {
@@ -397,6 +414,45 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                         ws.send(JSON.stringify({ type: "error", text: error.message || "Failed to fetch conversations" }));
                     }
                     break;
+
+                // +++ Add get_actions Case +++
+                case "get_actions":
+                    console.log('[WebSocket Router] Control Channel: Entered get_actions case.');
+                    const conversationIdForActions = request.payload?.conversationId;
+                    console.log(`[WebSocket Router] Control Channel: Fetching actions for conversation: ${conversationIdForActions}`);
+
+                    if (conversationIdForActions && typeof conversationIdForActions === 'string') {
+                        try {
+                            // Use the ActionService to fetch actions
+                            const actions = await actionService.getActionsByConversationId(conversationIdForActions);
+                            
+                            console.log(`[WebSocket Router] Control Channel: Found ${actions.length} actions for conversation ${conversationIdForActions}`);
+                            
+                            // Send the actions back to the client
+                            ws.send(JSON.stringify({
+                                type: 'action_list',
+                                payload: {
+                                    conversationId: conversationIdForActions,
+                                    actions: actions
+                                }
+                            }));
+
+                        } catch (error) {
+                            console.error(`[WebSocket Router] Control Channel: Error fetching actions for ${conversationIdForActions}:`, error);
+                            ws.send(JSON.stringify({
+                                type: 'error',
+                                message: `Failed to fetch actions: ${error instanceof Error ? error.message : String(error)}`
+                            }));
+                        }
+                    } else {
+                        console.error(`[WebSocket Router] Control Channel: Received get_actions without valid conversationId from ${wsIdentifier}`);
+                        ws.send(JSON.stringify({ 
+                            type: 'error', 
+                            message: 'Invalid get_actions message: missing conversationId.' 
+                        }));
+                    }
+                    break;
+                // +++ End get_actions Case +++
 
                 case "chat_message":
                     // --- ADDED check here --- 
@@ -529,17 +585,37 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
             // --- End of switch statement ---
         });
 
-        ws.on("close", () => {
+        ws.on("close", (code: number, reason: Buffer) => {
             console.log(`[WebSocket Router] Control Channel: Client ${ws.username} disconnected`);
-            // Perform any necessary cleanup for the control channel connection if needed
+            // Use the notification service to remove the client
+            notificationService.removeClient(ws as any);
         });
 
-        ws.on("error", (error) => {
+        ws.on("error", (error: Error) => {
             console.error(`[WebSocket Router] Control Channel: Error for ${ws.username}:`, error);
         });
     }
 });
 
-server.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+// Function to check database connection
+async function checkDbConnection() {
+    console.log("Attempting to connect to database...");
+    try {
+        await prisma.$connect();
+        console.log("✅ Database connection established successfully.");
+    } catch (error) {
+        console.error("❌ Failed to establish database connection:", error);
+        // Optionally exit if connection is crucial for startup
+        // process.exit(1);
+    }
+}
+
+// Check DB connection before starting server
+checkDbConnection().then(() => {
+    server.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+    });
+}).catch(err => {
+    console.error("Database connection check failed, server not started.", err);
+    // process.exit(1); // Exit if DB check promise itself fails
 });

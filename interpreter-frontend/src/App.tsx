@@ -228,7 +228,7 @@ function App() {
                                         <>
                                             <Nav>
                                                 <NavContent>
-                                                    <Logo to="/">Clara</Logo>
+                                                    <Logo to="/">Clara.ai</Logo>
                                                     <NavLinks>
                                                         <NavLink to="/register">Register</NavLink>
                                                         <NavLink to="/login">Login</NavLink>
@@ -294,7 +294,7 @@ function App() {
                                         <>
                                             <Nav>
                                                 <NavContent>
-                                                    <Logo to="/">Clara</Logo>
+                                                    <Logo to="/">Clara.ai</Logo>
                                                     <NavLinks>
                                                         <NavLink to="/register">Register</NavLink>
                                                         <NavLink to="/login">Login</NavLink>
@@ -313,7 +313,7 @@ function App() {
                                         <>
                                             <Nav>
                                                 <NavContent>
-                                                    <Logo to="/">Clara</Logo>
+                                                    <Logo to="/">Clara.ai</Logo>
                                                     <NavLinks>
                                                         <NavLink to="/register">Register</NavLink>
                                                         <NavLink to="/login">Login</NavLink>

@@ -1,7 +1,28 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8080/ws"; // Corrected default URL
+// Get the host-accessible backend URL (e.g., http://localhost:8080) from build-time env var
+const rawBackendUrl = import.meta.env.VITE_APP_BACKEND_URL;
+
+if (!rawBackendUrl) {
+  throw new Error("Configuration Error: VITE_APP_BACKEND_URL environment variable is not set.");
+}
+
+// Derive the host-accessible WS URL for the /ws endpoint
+const getWebSocketUrl = (baseUrl: string): string => {
+  try {
+    const url = new URL(baseUrl); // e.g., http://localhost:8080
+    const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Use the host and port from the baseUrl (which is localhost:8080)
+    return `${protocol}//${url.host}/ws`; // e.g., ws://localhost:8080/ws
+  } catch (e) {
+    console.error("Failed to parse VITE_APP_BACKEND_URL to derive WebSocket URL:", baseUrl, e);
+    throw new Error(`Configuration Error: Invalid VITE_APP_BACKEND_URL format for WebSocket: ${baseUrl}`);
+  }
+};
+
+const WS_URL = getWebSocketUrl(rawBackendUrl);
+console.log(`[WebSocket Hook] Using WS URL: ${WS_URL}`);
 
 interface WebSocketHook {
     isConnected: boolean;

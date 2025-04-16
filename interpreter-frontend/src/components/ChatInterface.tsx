@@ -107,39 +107,12 @@ const MessageMeta = styled.div<ThemedProps>`
     padding: 0 ${({ theme }) => theme.spacing.sm};
 `;
 
-const ConnectionStatus = styled.div<ThemedProps & { $isConnected: boolean }>`
-    position: absolute;
-    top: ${({ theme }) => theme.spacing.sm};
-    right: ${({ theme }) => theme.spacing.sm};
-    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-    border-radius: ${({ theme }) => theme.borderRadius.full};
-    font-size: ${({ theme }) => theme.typography.sizes.xs};
-    background-color: ${({ $isConnected, theme }) => ($isConnected ? theme.colors.status.success : theme.colors.status.error)}20;
-    color: ${({ $isConnected, theme }) => ($isConnected ? theme.colors.status.success : theme.colors.status.error)};
-    display: flex;
-    align-items: center;
-    gap: ${({ theme }) => theme.spacing.xs};
-`;
-
-// New container for top-right status indicators
 const TopStatusContainer = styled.div`
     position: absolute;
     top: ${({ theme }) => theme.spacing.sm};
     right: ${({ theme }) => theme.spacing.sm};
     display: flex;
     gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-// Renamed for clarity
-const WsConnectionStatus = styled.div<ThemedProps & { $isConnected: boolean }>`
-    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-    border-radius: ${({ theme }) => theme.borderRadius.full};
-    font-size: ${({ theme }) => theme.typography.sizes.xs};
-    background-color: ${({ $isConnected, theme }) => ($isConnected ? theme.colors.status.success : theme.colors.status.error)}20;
-    color: ${({ $isConnected, theme }) => ($isConnected ? theme.colors.status.success : theme.colors.status.error)};
-    display: flex;
-    align-items: center;
-    gap: ${({ theme }) => theme.spacing.xs};
 `;
 
 // New styled component for STT status
@@ -220,6 +193,7 @@ interface Message { // Update this interface definition
     translatedText?: string | null;
     language?: string; // Language is present in backend data
     isFinal?: boolean; // isFinal is present in backend data
+    originalMessageId?: string | null; // <-- Add this field
     // Remove contentType and content as they are not in the backend payload/schema
     // contentType: "TEXT" | "AUDIO_URL" | "ACTION_DATA"; 
     // content: string | any; 
@@ -232,6 +206,10 @@ interface DisplayMessage {
     text: string;
     originalText?: string; // Store original for context if needed
     sender: "user" | "other" | "system" | "translation" | "error"; // Keep simple sender types for display logic
+    language?: string; // Language of this specific message
+    timestamp: string;
+    originalMessageId?: string | null; // Link to the original message if this is a translation
+    sourceLanguage?: string | null; // Optional: Store the source language (might derive at render time)
 }
 
 // Type guard for incoming WS messages
@@ -277,63 +255,53 @@ const base64ToArrayBuffer = (base64: string): ArrayBuffer | null => {
 const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
     console.log('🔄 [convertToDisplayMessage] Converting message:', JSON.stringify(msg, null, 2)); // Log input
 
-    // Check if the input is a valid message object expected from backend
-    if (!msg || typeof msg.originalText !== 'string' || typeof msg.senderType !== 'string' /* || typeof msg.language !== 'string' */) {
-        console.warn('⚠️ [convertToDisplayMessage] Invalid message structure received:', msg);
+    if (!msg || typeof msg.originalText !== 'string' || typeof msg.senderType !== 'string' || typeof msg.timestamp !== 'string') {
+        console.warn('⚠️ [convertToDisplayMessage] Invalid message structure received (missing required fields):', msg);
         return null;
     }
 
-    let textContent = msg.originalText; // Use originalText directly
-    let sender: DisplayMessage["sender"] = "system"; // Default to system
-
-    // Remove the logic based on contentType, as it's not in the Prisma model/backend payload
-    /* 
-    if (msg.contentType === "TEXT") { ... } 
-    else if (msg.contentType === "ACTION_DATA") { ... } 
-    else if (msg.contentType === "AUDIO_URL") { ... } 
-    else { return null; } 
-    */
-
+    let textContent = msg.translatedText || msg.originalText; // Prefer translated text if available
+    let sender: DisplayMessage["sender"] = "system"; // Default
     const msgSenderType = msg.senderType?.toUpperCase();
-    const msgLang = msg.language?.toLowerCase() || 'unknown'; // Normalize language, default to unknown
+    const msgLang = msg.language?.toLowerCase() || 'unknown';
 
-    switch (msgSenderType) { 
-        case "USER": // Clinician
-        case "CLINICIAN": // Added potential alternative
-            sender = "user";
-            break;
-        case "PATIENT":
-            sender = "other";
-            break;
-        case "ASSISTANT": // Transcribed message from backend
-            // Align based on language: Non-english maps to 'other' (patient/left), English maps to 'user' (clinician/right)
-            sender = (msgLang === 'en' || msgLang === 'unknown') ? 'user' : 'other';
-            console.log(`[convertToDisplayMessage] Assistant message language: ${msgLang}, setting sender to: ${sender}`);
-            break;
-        case "TRANSLATION":
-            sender = "translation";
-            // TODO: Handle translatedText if needed
-            // textContent = msg.translatedText || textContent;
-            break;
+    // --- Strict Language Alignment Logic ---
+    switch (msgSenderType) {
         case "SYSTEM":
-        case "ACTION": 
-            sender = "system";
+        case "ACTION":
+            sender = "system"; // Keep system messages as system (usually left)
+            textContent = msg.originalText; // System messages use original text
             break;
+        case "ERROR":
+            sender = "error"; // Keep error messages as error (usually left)
+            textContent = msg.originalText; // Error messages use original text
+            break;
+        // For USER, PATIENT, TRANSLATION - alignment depends ONLY on language
         default:
-            console.warn(`[convertToDisplayMessage] Unhandled senderType: ${msg.senderType}, defaulting to system.`);
-            sender = "system"; // Fallback
+            if (msgLang === 'en') {
+                sender = "user"; // English -> Right align
+            } else {
+                sender = "other"; // Other language -> Left align
+            }
+            // Use translated text if sender was TRANSLATION, otherwise original
+            textContent = (msgSenderType === "TRANSLATION" && msg.translatedText) ? msg.translatedText : msg.originalText;
+            break;
     }
+    // --- End Strict Language Alignment Logic ---
 
     return {
         id: msg.id,
         text: textContent,
         sender: sender,
+        language: msg.language, // Keep language info for metadata
+        timestamp: msg.timestamp,
+        originalMessageId: msg.originalMessageId,
     };
 };
 
 // --- Added for Tabs ---
 const TabContainer = styled.div<ThemedProps>`
-    display: flex;
+  display: flex;
     border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
     padding: 0 ${({ theme }) => theme.spacing.lg};
     background-color: ${({ theme }) => theme.colors.background.secondary};
@@ -398,6 +366,8 @@ const ChatInterface: React.FC = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
     const [activeTab, setActiveTab] = useState<'chat' | 'summary'>('chat');
     const [currentSummary, setCurrentSummary] = useState<string | null>(null);
+    const [patientLanguage, setPatientLanguage] = useState<string | null>(null);
+    const [processingStatus, setProcessingStatus] = useState<'idle' | 'transcribing' | 'translating'>('idle');
 
     // Define getAudioContext FIRST
     const getAudioContext = (): AudioContext | null => {
@@ -430,17 +400,27 @@ const ChatInterface: React.FC = () => {
             showError("Audio context not available for playback.", "error");
             return;
         }
+
+        // *** Added Debug Logging ***
+        console.log(`[PlayAudio Debug] AudioContext state BEFORE decode: ${context.state}`);
+
         if (context.state !== 'running') {
              console.warn(`[PlayAudio] AudioContext state is ${context.state}. Playback might require user interaction.`);
-             context.resume(); 
+             context.resume(); // Attempt to resume if suspended
         }
+
         try {
             console.log('[PlayAudio] Decoding audio data...');
             const audioBuffer = await context.decodeAudioData(audioData);
-            console.log('[PlayAudio] Audio data decoded successfully. Duration:', audioBuffer.duration);
+            console.log('[PlayAudio Debug] Audio data decoded successfully. Duration:', audioBuffer.duration);
+
             const source = context.createBufferSource();
             source.buffer = audioBuffer;
             source.connect(context.destination);
+
+            // *** Added Debug Logging ***
+            console.log(`[PlayAudio Debug] AudioContext state BEFORE source.start: ${context.state}`);
+
             console.log('[PlayAudio] Starting playback...');
             source.start(0);
             source.onended = () => {
@@ -489,14 +469,12 @@ const ChatInterface: React.FC = () => {
         transcript, 
         isProcessing,
         language,
+        isPaused: hookIsPaused,
         startRecording,
         stopRecording, 
         pauseRecording, 
         resumeRecording, 
     } = useSpeechToTextBackend(selectedConversationId, handleNewMessage, playAudio); // Correct types should now match
-
-    const [isRecording, setIsRecording] = useState(false);
-    const [isPaused, setIsPaused] = useState(false);
 
     const scrollToBottom = useCallback(() => {
         if (messageAreaRef.current) {
@@ -522,6 +500,7 @@ const ChatInterface: React.FC = () => {
                 id: `stt-error-${Date.now()}`,
                 sender: 'error',
                 text: `STT Error: ${error.message}`,
+                timestamp: new Date().toISOString(),
             };
             setDisplayMessages(prev => [...prev, sttErrorMsg]);
         }
@@ -531,14 +510,13 @@ const ChatInterface: React.FC = () => {
         console.log("[ChatInterface] STT Status:", status);
         if (status === 'failed' || status === 'error') {
         } else if (status === 'closed' || status === 'disconnected') {
-             setIsRecording(false);
-             setIsPaused(false);
+            // No local state to set anymore
         }
     }, [status]);
 
     // Effect to automatically start/stop recording on session change
     useEffect(() => {
-        console.log(`[Effect Auto Mic] Running. SelectedID: ${selectedConversationId}, SessionActive: ${isSessionActive}, STT Status: ${status}`);
+        console.log(`[Effect Auto Mic] Running. SelectedID: ${selectedConversationId}, SessionActive: ${isSessionActive}, STT Status: ${status}, IsPaused: ${hookIsPaused}`);
         // Only act if a conversation is selected and the session is marked active
         if (selectedConversationId && isSessionActive) {
             // <<< ADDED CHECK >>>: Don't auto-start if conversation is already finished
@@ -554,9 +532,13 @@ const ChatInterface: React.FC = () => {
             // <<<<<<<<<<<<<<<<<<
 
             // Start recording only if STT is currently idle or closed
-            if (status === 'idle' || status === 'closed') {
+            if ((status === 'idle' || status === 'closed') && !hookIsPaused) {
                 console.log(`[Effect Auto Mic] Session active (${selectedConversationId}), auto-starting STT recording...`);
                 startRecording(); 
+            } else if (hookIsPaused) {
+                console.log(`[Effect Auto Mic] Session active but recording is paused. No action.`);
+            } else {
+                console.log(`[Effect Auto Mic] Session active but STT status is ${status}. No action.`);
             }
         } else {
             // Stop recording if no conversation is selected or session is inactive
@@ -565,7 +547,7 @@ const ChatInterface: React.FC = () => {
                 stopRecording();
             }
         }
-    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording]);
+    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording, hookIsPaused, currentSummary]);
 
     // Effect to fetch historical messages when conversation changes
     useEffect(() => {
@@ -626,9 +608,11 @@ const ChatInterface: React.FC = () => {
             // --- Update conversation_selected handler --- 
             else if (message.type === 'conversation_selected') {
                 console.log('[WS Effect] Handling conversation_selected:', message.payload);
-                const { summary } = message.payload || {}; 
+                const { summary, patientLanguage: lang } = message.payload || {}; 
                 console.log(`[WS Effect] Received Summary data type: ${typeof summary}, value:`, summary); // Log summary details
+                console.log(`[WS Effect] Received Patient Language: ${lang}`);
                 setCurrentSummary(summary || null);
+                setPatientLanguage(lang || null);
                 setActiveTab('chat');
             }
             // --- End updated handler ---
@@ -663,6 +647,19 @@ const ChatInterface: React.FC = () => {
                 // ... (existing new_message handling)
             }
 
+            // +++ Add handlers for processing status +++
+            else if (message.type === 'transcription_started') {
+                console.log('[WS Effect] Handling transcription_started');
+                setProcessingStatus('transcribing');
+            } else if (message.type === 'translation_started') {
+                console.log('[WS Effect] Handling translation_started');
+                setProcessingStatus('translating');
+            } else if (message.type === 'processing_completed') {
+                console.log('[WS Effect] Handling processing_completed');
+                setProcessingStatus('idle');
+            }
+            // +++ End processing status handlers +++
+
             // ... (rest of message handlers: tts_audio, error, etc.)
 
         } else {
@@ -672,10 +669,11 @@ const ChatInterface: React.FC = () => {
 
     // Effect to reset summary/status when conversation changes
     useEffect(() => {
-        console.log('[Effect selectedConversationId] Resetting summary for new/no selection.');
+        console.log('[Effect selectedConversationId] Resetting summary and language for new/no selection.');
         setCurrentSummary(null);
-        // setCurrentConvStatus(null); // Remove status reset
-        setActiveTab('chat'); // Reset tab
+        setPatientLanguage(null);
+        setProcessingStatus('idle');
+        setActiveTab('chat');
         
         if (selectedConversationId) {
             console.log(`🚀 [ChatInterface] useEffect[selectedConversationId] - Fetching messages for ID: ${selectedConversationId}`);
@@ -703,36 +701,20 @@ const ChatInterface: React.FC = () => {
         }
     }, [transcript]);
 
-    // Effect to show STT errors
-    useEffect(() => {
-        if (error) {
-            console.error("[ChatInterface] STT Error:", error);
-            showError(`Speech-to-text error: ${error.message}`, "error");
-            const sttErrorMsg: DisplayMessage = {
-                id: `stt-error-${Date.now()}`,
-                sender: 'error',
-                text: `STT Error: ${error.message}`,
-            };
-            setDisplayMessages(prev => [...prev, sttErrorMsg]);
-        }
-    }, [error, showError]);
-
     // Effect to react to STT status changes
     useEffect(() => {
         console.log("[ChatInterface] STT Status:", status);
         if (status === 'failed' || status === 'error') {
             // Optionally add a system message or indicator
         } else if (status === 'closed' || status === 'disconnected') {
-             // Reset recording state if connection closes unexpectedly
-             setIsRecording(false); 
-             setIsPaused(false);
+            // No local state to reset here
         }
     }, [status]);
 
     const handleEndSession = () => {
         if (selectedConversationId) {
             console.log(`[ChatInterface] User initiated end session for ${selectedConversationId}`);
-            // Optional: Add UI feedback like disabling button, showing spinner
+            // TODO: Add UI feedback like disabling button, showing spinner
             sendMessage({ type: 'end_session', payload: { conversationId: selectedConversationId } });
         }
         // ... (rest of handler)
@@ -758,16 +740,13 @@ const ChatInterface: React.FC = () => {
     console.log(`[Render] SelectedID: ${selectedConversationId}, ActiveTab: ${activeTab}, currentSummary:`, currentSummary); // Simplified log
 
     return (
-        <ChatContainer>
+            <ChatContainer>
             <TopStatusContainer>
-                <WsConnectionStatus $isConnected={isConnected}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'currentColor', display: 'inline-block' }}></span>
-                    Backend: {isConnected ? "Connected" : "Disconnected"}
-                </WsConnectionStatus>
                 {isSessionActive && (
                     <SttStatusDisplay $status={status}>
                          {/* Optional: Add an icon based on status */} 
-                        Mic: {status} {isRecording && !isPaused && '🔴'} {isPaused && '⏸️'} {isProcessing && '...'}
+                        Mic: {status} {hookIsPaused && '⏸️'} {isProcessing && '...'}
+                        {patientLanguage && ` (Lang: ${patientLanguage})`}
                         {/* {error ? `(${error.message})` : ''} */}
                     </SttStatusDisplay>
                 )}
@@ -798,29 +777,58 @@ const ChatInterface: React.FC = () => {
                         })()}
                         {displayMessages.map((msg, index) => {
                             console.log(`[ChatInterface] Rendering message ${index + 1}/${displayMessages.length}:`, msg);
+                            // Simple time formatting (HH:MM)
+                            let formattedTime = '';
+                            let metaText = '';
+                            try {
+                                formattedTime = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            } catch (e) {
+                                console.error("Error formatting timestamp:", msg.timestamp, e);
+                                formattedTime = msg.timestamp; // Fallback to raw string
+                            }
+
+                            // Determine metadata text (Language or Translation source)
+                            if (msg.originalMessageId) {
+                                // It's likely a translation, find the original message
+                                const originalMsg = displayMessages.find(m => m.id === msg.originalMessageId);
+                                if (originalMsg && originalMsg.language) {
+                                    metaText = `(Translated from: ${originalMsg.language})`;
+                                } else {
+                                    // Fallback if original not found or has no language
+                                    metaText = `(Translation - Lang: ${msg.language || '??'})`; 
+                                }
+                            } else if (msg.language) {
+                                // Original message with language
+                                metaText = `(Lang: ${msg.language})`;
+                            }
+
+                            // Combine time and meta text
+                            const fullMeta = `${formattedTime} ${metaText}`.trim();
+
                             return (
                                 <MessageGroup key={msg.id || index} $isSender={msg.sender === "user"}>
                                     <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
                                         {msg.text}
-                                        {msg.sender === 'translation' && msg.originalText && (
-                                            <MessageMeta>Original: {msg.originalText}</MessageMeta>
-                                        )}
                                     </Bubble>
+                                    {/* Message Meta: Timestamp and Language/Translation Info */}
+                                    <MessageMeta>{fullMeta}</MessageMeta>
                                 </MessageGroup>
                             );
                         })}
-                         {isRecording && transcript && (
-                              <MessageGroup key="live-transcript">
-                                  <Bubble $type="system">
-                                      <i>Live: {transcript}</i> {isProcessing ? '...' : ''} {language ? `(${language})` : ''}
-                                      {/* Debug info */}
-                                      <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
-                                          {displayMessages.length} messages in state
-                                      </div>
-                                  </Bubble>
-                              </MessageGroup>
-                         )}
-                    </MessageArea>
+                         {/* +++ Add Processing Status Indicator +++ */} 
+                        {processingStatus !== 'idle' && (
+                            <MessageGroup key="processing-status" $isSender={false}> {/* Align left */} 
+                                <Bubble $type="system"> 
+                                    <i>
+                                        {processingStatus === 'transcribing' && 'Transcribing...'}
+                                        {processingStatus === 'translating' && 'Translating...'}
+                                        {/* Add more states here if needed */} 
+                                    </i>
+                            </Bubble>
+                        </MessageGroup>
+                        )}
+                        {/* +++ End Indicator +++ */} 
+                </MessageArea>
                 )}
                 
                 {/* Show SummaryArea only if conversation selected AND summary tab is active */} 
@@ -834,30 +842,34 @@ const ChatInterface: React.FC = () => {
                 )}
             </ContentArea>
 
-            <ControlsArea>
+                <ControlsArea>
                 {!isSessionActive ? (
                     <NoSessionText>No active session.</NoSessionText>
                 ) : (
                     <>
-                        {/* Pause/Resume might still be needed, but let's simplify first */}
+                        {/* Conditionally render Pause/Resume buttons */} 
+                        {(status === 'connected' && !hookIsPaused) ? (
+                            <button onClick={pauseRecording}>
+                                Pause Mic ⏸️
+                            </button>
+                        ) : null}
+                        {(status === 'connected' && hookIsPaused) ? (
+                            <button onClick={resumeRecording}>
+                                Resume Mic ▶️
+                            </button>
+                        ) : null}
 
-                        {/* Keep Stop and End Session */}
-                        <button 
-                            onClick={stopRecording} 
-                            disabled={status !== 'connected' && status !== 'connecting'} // Disable if not connected or connecting
-                        > 
-                           Stop Mic 
-                        </button>
-                        <EndSessionButton 
-                            onClick={handleEndSession} 
+                        {/* End Session Button */}
+                            <EndSessionButton 
+                                onClick={handleEndSession} 
                             disabled={!isSessionActive}
-                        >
-                            End Session
-                        </EndSessionButton>
+                            >
+                                End Session
+                            </EndSessionButton>
                     </>
                 )}
-            </ControlsArea>
-        </ChatContainer>
+                </ControlsArea>
+            </ChatContainer>
     );
 };
 
