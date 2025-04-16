@@ -52,6 +52,5 @@ git-dates.py
 
 # Configuration files containing potentially sensitive info
 deploy.sh
-docker-compose.yml
-clean_history.sh
 docker-compose.prod.yml
+clean_history.sh
