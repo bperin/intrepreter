@@ -745,7 +745,7 @@ export class TranscriptionService {
     }
 
     const translationUrl = 'https://api.openai.com/v1/chat/completions';
-    const prompt = `Translate the following text from ${sourceLang} to ${targetLang}: "${text}"`;
+    const prompt = `Translate the following text from ${sourceLang} to ${targetLang}. Return ONLY the translated text, without any introductory phrases or explanations. Text: "${text}"`;
 
     console.log(`[TranscriptionService] Translating text from ${sourceLang} to ${targetLang} (first 50 chars): "${text.substring(0, 50)}..."`);
 
@@ -753,10 +753,10 @@ export class TranscriptionService {
         const response = await axios.post<OpenAIChatCompletionResponse>(
             translationUrl,
             {
-                model: 'gpt-4o-mini', // Or consider gpt-4o if higher quality is needed
+                model: 'gpt-4o-mini', 
                 messages: [{ role: 'user', content: prompt }],
-                max_tokens: Math.ceil(text.length * 1.5), // Estimate tokens needed, add buffer
-                temperature: 0.3, // Lower temperature for more direct translation
+                max_tokens: Math.ceil(text.length * 1.5) + 10, // Add a small buffer for token variance
+                temperature: 0.2, // Slightly lower temp might help directness
             },
             {
                 headers: {
@@ -766,9 +766,12 @@ export class TranscriptionService {
             }
         );
 
-        const translatedContent = response.data?.choices?.[0]?.message?.content?.trim();
+        // Strip potential leading/trailing quotes from the response content
+        const translatedContent = response.data?.choices?.[0]?.message?.content?.trim().replace(/^"|"$/g, '');
 
         if (translatedContent) {
+            console.log(`[TranscriptionService] Raw translation response content: "${response.data?.choices?.[0]?.message?.content}"`);
+            console.log(`[TranscriptionService] Processed translation: "${translatedContent}"`);
             return translatedContent;
         } else {
             console.warn(`[TranscriptionService] Translation API returned empty content. Full response:`, JSON.stringify(response.data));
