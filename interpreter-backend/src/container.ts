@@ -27,7 +27,6 @@ import { ConversationService } from "./infrastructure/services/ConversationServi
 import { AudioProcessingService } from "./infrastructure/services/AudioProcessingService";
 import { OpenAIClient } from "./infrastructure/openai/OpenAIClient";
 import { TranscriptionService } from "./infrastructure/services/TranscriptionService";
-import { AuthService } from "./infrastructure/auth/AuthService";
 import { MessageService } from "./infrastructure/services/MessageService";
 import { TextToSpeechService } from "./infrastructure/services/TextToSpeechService";
 import { VoiceCommandService } from "./infrastructure/services/VoiceCommandService";
