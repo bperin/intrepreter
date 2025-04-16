@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import { Theme } from "../theme";
 import { 
@@ -9,32 +9,26 @@ import {
 } from "../types/actions";
 import { useActions } from "../context/ActionContext";
 import { format } from "date-fns";
+import CommandHelpModal from "./CommandHelpModal";
 
 type ThemedProps = { theme: Theme };
 
 const ActionStreamContainer = styled.div<ThemedProps>`
     display: flex;
     flex-direction: column;
-    gap: ${({ theme }) => theme.spacing.md};
-    background-color: ${({ theme }) => theme.colors.background.primary};
-    padding: ${({ theme }) => theme.spacing.md};
-    border-radius: ${({ theme }) => theme.borderRadius.lg};
-    border: 1px solid ${({ theme }) => theme.colors.border.light}40;
+    padding: 0;
+    border: none;
     max-height: calc(100vh - 200px);
     overflow-y: auto;
 `;
 
 const ActionItem = styled.div<ThemedProps>`
-    background-color: ${({ theme }) => theme.colors.background.card};
-    border-radius: ${({ theme }) => theme.borderRadius.lg};
+    background-color: ${({ theme }) => theme.colors.background.primary};
+    border-radius: 0;
     padding: ${({ theme }) => theme.spacing.md};
-    border: 1px solid ${({ theme }) => theme.colors.border.light};
+    border: none;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
     color: ${({ theme }) => theme.colors.text.secondary};
-    transition: transform 0.2s ease-in-out;
-
-    &:hover {
-        transform: translateX(4px);
-    }
 `;
 
 const ActionTitle = styled.h4<ThemedProps>`
@@ -103,6 +97,46 @@ const ErrorState = styled(EmptyState)`
     color: ${({ theme }) => theme.colors.status.error};
     border-color: ${({ theme }) => theme.colors.status.error}60;
 `;
+
+const ActionStream: React.FC = () => {
+    const { actions, loading, error } = useActions();
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+    if (loading) {
+        return (
+            <ActionStreamContainer>
+                <LoadingState>Loading actions...</LoadingState>
+            </ActionStreamContainer>
+        );
+    }
+
+    if (error) {
+        return (
+            <ActionStreamContainer>
+                <ErrorState>{error}</ErrorState>
+            </ActionStreamContainer>
+        );
+    }
+
+    if (!actions.length) {
+        return (
+            <ActionStreamContainer>
+                <EmptyState>Actions detected during conversation will appear here.</EmptyState>
+            </ActionStreamContainer>
+        );
+    }
+
+    return (
+        <>
+            <ActionStreamContainer>
+                {actions.map(action => (
+                    <ActionItemComponent key={action.id} action={action} />
+                ))}
+            </ActionStreamContainer>
+            <CommandHelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
+        </>
+    );
+};
 
 function isNoteData(data: any): data is NoteData {
   return typeof data?.content === 'string';
@@ -187,42 +221,6 @@ const ActionItemComponent: React.FC<{ action: AggregatedAction }> = ({ action })
             </ActionTitle>
             {content} 
         </ActionItem>
-    );
-};
-
-const ActionStream: React.FC = () => {
-    const { actions, loading, error } = useActions();
-
-    if (loading) {
-        return (
-            <ActionStreamContainer>
-                <LoadingState>Loading actions...</LoadingState>
-            </ActionStreamContainer>
-        );
-    }
-
-    if (error) {
-        return (
-            <ActionStreamContainer>
-                <ErrorState>{error}</ErrorState>
-            </ActionStreamContainer>
-        );
-    }
-
-    if (!actions.length) {
-        return (
-            <ActionStreamContainer>
-                <EmptyState>Actions detected during conversation will appear here.</EmptyState>
-            </ActionStreamContainer>
-        );
-    }
-
-    return (
-        <ActionStreamContainer>
-            {actions.map(action => (
-                <ActionItemComponent key={action.id} action={action} />
-            ))}
-        </ActionStreamContainer>
     );
 };
 

@@ -162,27 +162,51 @@ const ControlsArea = styled.div<ThemedProps>`
     min-height: 60px;
 `;
 
-const EndSessionButton = styled.button<ThemedProps>`
+const BaseButton = styled.button<ThemedProps>`
     padding: 10px 20px;
-    background-color: ${({ theme }) => theme.colors.status.error}B3;
-    color: white;
-    border: 1px solid ${({ theme }) => theme.colors.status.error};
     border-radius: 4px;
     cursor: pointer;
     font-size: 15px;
     font-weight: ${({ theme }) => theme.typography.weights.medium};
     transition: all 0.15s ease;
-
-    &:hover {
-        background-color: ${({ theme }) => theme.colors.status.error};
-        border-color: ${({ theme }) => theme.colors.status.error};
-    }
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: ${({ theme }) => theme.spacing.xs};
 
     &:disabled {
         background-color: ${({ theme }) => theme.colors.text.secondary}30;
         border-color: ${({ theme }) => theme.colors.text.secondary}30;
         color: ${({ theme }) => theme.colors.text.secondary};
         cursor: not-allowed;
+    }
+`;
+
+const EndSessionButton = styled(BaseButton)<ThemedProps>`
+    background-color: ${({ theme }) => theme.colors.status.error}B3;
+    color: white;
+    border: 1px solid ${({ theme }) => theme.colors.status.error};
+
+    &:hover:not(:disabled) {
+        background-color: ${({ theme }) => theme.colors.status.error};
+        border-color: ${({ theme }) => theme.colors.status.error};
+    }
+`;
+
+// New Styled Mic Buttons
+const MicControlButton = styled(BaseButton)<ThemedProps>`
+    background-color: transparent;
+    color: ${({ theme }) => theme.colors.text.primary};
+    border: 1px solid ${({ theme }) => theme.colors.text.primary};
+
+    &:hover:not(:disabled) {
+        background-color: ${({ theme }) => theme.colors.text.primary};
+        color: ${({ theme }) => theme.colors.background.primary};
+        transform: translateY(-1px);
+    }
+     &:active:not(:disabled) {
+        transform: translateY(0);
+        opacity: 0.8;
     }
 `;
 
@@ -924,14 +948,14 @@ const ChatInterface: React.FC = () => {
                     <>
                         {/* Conditionally render Pause/Resume buttons */} 
                         {(status === 'connected' && !hookIsPaused) ? (
-                            <button onClick={pauseRecording}>
+                            <MicControlButton onClick={pauseRecording}>
                                 Pause Mic ⏸️
-                            </button>
+                            </MicControlButton>
                         ) : null}
                         {(status === 'connected' && hookIsPaused) ? (
-                            <button onClick={resumeRecording}>
+                            <MicControlButton onClick={resumeRecording}>
                                 Resume Mic ▶️
-                            </button>
+                            </MicControlButton>
                         ) : null}
 
                         {/* End Session Button */}
