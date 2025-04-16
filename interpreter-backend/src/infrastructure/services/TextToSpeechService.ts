@@ -1,7 +1,15 @@
-import { injectable } from 'tsyringe';
 import axios from 'axios';
+import { injectable } from 'tsyringe';
 import { Buffer } from 'buffer'; // Ensure Buffer is imported
 import { ITextToSpeechService } from '../../domain/services/ITextToSpeechService';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Define valid OpenAI voice names
+type OpenAiVoice = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
 
 @injectable()
 export class TextToSpeechService implements ITextToSpeechService {
@@ -11,19 +19,37 @@ export class TextToSpeechService implements ITextToSpeechService {
     constructor() {
         this.apiKey = process.env.OPENAI_API_KEY || '';
         if (!this.apiKey) {
-            console.error('[TextToSpeechService] OPENAI_API_KEY environment variable is not set!');
-            // Consider throwing an error here if TTS is critical
+            console.error('[TextToSpeechService] Error: OPENAI_API_KEY environment variable not set.');
+            // Consider throwing an error here to prevent service initialization?
         }
     }
 
-    async synthesizeSpeech(text: string, voice: string = 'nova'): Promise<Buffer> {
+    // Helper to map language code to a specific voice
+    private getVoiceForLanguage(languageCode?: string | null): OpenAiVoice {
+        const lang = languageCode?.toLowerCase() || 'en'; // Default to English if null/undefined
+        switch (lang) {
+            case 'es':
+                return 'nova'; // Example voice for Spanish
+            case 'fr':
+                return 'shimmer'; // Example voice for French
+            // Add mappings for other languages as needed
+            case 'en':
+            default:
+                return 'alloy'; // Default/English voice
+        }
+    }
+
+    async synthesizeSpeech(text: string, language?: string): Promise<Buffer> {
         if (!this.apiKey) {
+            // Throw error if key wasn't found during construction
             throw new Error('OpenAI API key is not configured for TTS.');
         }
         if (!text) {
-             console.warn('[TextToSpeechService] synthesizeSpeech called with empty text. Skipping TTS.');
-             return Buffer.alloc(0); // Return empty buffer for empty text
+            console.warn('[TextToSpeechService] Synthesize speech called with empty text.');
+            return Buffer.alloc(0); // Return empty buffer for empty text
         }
+
+        const voice = this.getVoiceForLanguage(language);
 
         console.log(`[TextToSpeechService] Synthesizing speech for text (first 50 chars): "${text.substring(0, 50)}..." Voice: ${voice}`);
 
@@ -33,7 +59,7 @@ export class TextToSpeechService implements ITextToSpeechService {
                 {
                     model: 'tts-1', // Or 'tts-1-hd'
                     input: text,
-                    voice: voice, // e.g., 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'
+                    voice: voice, // Use the mapped voice name
                     // response_format: 'mp3' // Default is mp3
                 },
                 {
@@ -41,39 +67,36 @@ export class TextToSpeechService implements ITextToSpeechService {
                         'Authorization': `Bearer ${this.apiKey}`,
                         'Content-Type': 'application/json',
                     },
-                    responseType: 'arraybuffer', // Crucial for receiving binary audio data
+                    responseType: 'arraybuffer',
                 }
             );
 
-            console.log(`[TextToSpeechService] Received audio buffer from OpenAI. Size: ${(response.data as ArrayBuffer).byteLength} bytes.`);
-            // Convert ArrayBuffer to Node.js Buffer
-            return Buffer.from(response.data as ArrayBuffer);
-
-        } catch (error) {
-            console.error('[TextToSpeechService] Error calling OpenAI TTS API:', error);
-            
-            // --- Temporary Workaround for isAxiosError issue --- 
-            // Check for properties directly, less type-safe
-            if (error && typeof error === 'object' && (error as any).response) {
-                const axiosError = error as any; // Treat as any
-                console.error('[TextToSpeechService] OpenAI TTS Error Response Status:', axiosError.response.status);
-                try {
-                    const errorBuffer = Buffer.from(axiosError.response.data as ArrayBuffer);
-                    const errorData = JSON.parse(errorBuffer.toString('utf8'));
-                    console.error('[TextToSpeechService] OpenAI TTS Error Response Data:', JSON.stringify(errorData, null, 2));
-                } catch (parseError) {
-                    const errorBuffer = Buffer.from(axiosError.response.data as ArrayBuffer);
-                    console.error('[TextToSpeechService] OpenAI TTS Error Response Data (non-JSON):', errorBuffer.toString('utf8'));
-                }
-            } else if (error && typeof error === 'object' && (error as any).request) {
-                console.error('[TextToSpeechService] OpenAI TTS No response received:', (error as any).request);
-            } else if (error instanceof Error) {
-                console.error('[TextToSpeechService] OpenAI TTS Error setting up request or other error:', error.message);
+            // Check if response.data is actually a buffer
+            if (response.data instanceof Buffer) {
+                console.log(`[TextToSpeechService] Received audio buffer, size: ${response.data.length}`);
+                return response.data;
+            } else {
+                // If it's not a Buffer (or ArrayBuffer), log an error and return empty buffer
+                console.error('[TextToSpeechService] Unexpected response data type received from TTS API. Type:', typeof response.data);
+                // Optionally log the data itself if it's small/safe
+                // console.error('[TextToSpeechService] Received data:', response.data);
+                return Buffer.alloc(0); // Return empty buffer on unexpected type
             }
-            // --- End Workaround ---
 
-            // Re-throw a generic error to be handled by the caller
-            throw new Error(`Failed to synthesize speech: ${error instanceof Error ? error.message : String(error)}`);
+        } catch (error: any) { // Use standard error handling
+            console.error('[TextToSpeechService] Error calling OpenAI TTS API:', error.message);
+            if (error.response) {
+                console.error('[TextToSpeechService] OpenAI TTS Error Response Status:', error.response.status);
+                // Avoid parsing error.response.data directly here to prevent linter issues
+                console.error('[TextToSpeechService] OpenAI TTS Error: Check API key, input text, and voice name.');
+            } else if (error.request) {
+                // Handle cases where the request was made but no response received
+                console.error('[TextToSpeechService] OpenAI TTS No response received:', error.request);
+            }
+            // Re-throw a more specific error (or return empty buffer)
+            // Returning empty buffer might be safer than throwing in some contexts
+            console.error('Returning empty buffer due to TTS synthesis error.');
+            return Buffer.alloc(0);
         }
     }
 } 

@@ -6,5 +6,5 @@ dist
 .DS_Store
 .vscode
 Dockerfile
-nginx.conf
+# nginx.conf - Removed, needed for Nginx config
 README.md 

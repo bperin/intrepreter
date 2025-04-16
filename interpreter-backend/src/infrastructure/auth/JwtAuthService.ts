@@ -25,7 +25,7 @@ export class JwtAuthService implements IAuthService {
             jwt.sign(
                 { id: user.id, username: user.username },
                 JWT_SECRET,
-                { expiresIn: JWT_EXPIRES_IN }, // Standard short expiry for access tokens
+                { expiresIn: JWT_EXPIRES_IN },
                 (err, token) => {
                     if (err || !token) {
                         return reject(err || new Error("Access token generation failed"));
