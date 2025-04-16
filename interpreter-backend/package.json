@@ -33,7 +33,9 @@
         "jsonwebtoken": "^9.0.2",
         "openai": "^4.95.0",
         "reflect-metadata": "^0.2.2",
-        "tsyringe": "^4.9.1"
+        "tsyringe": "^4.9.1",
+        "@types/uuid": "^10.0.0",
+        "uuid": "^11.1.0"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^6.6.3",

@@ -849,6 +849,12 @@ const ChatInterface: React.FC = () => {
                         </EndSessionButton>
                     </>
                 )}
+                {/* Display disabled button if session selected but ended */}
+                {selectedConversationId && !isSessionActive && (
+                     <EndSessionButton disabled={true}>
+                         Session Ended
+                     </EndSessionButton>
+                 )}
                 {!selectedConversationId && (
                     <NoSessionText>Start or select a conversation to begin.</NoSessionText>
                 )}

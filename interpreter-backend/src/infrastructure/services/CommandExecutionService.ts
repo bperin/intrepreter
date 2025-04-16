@@ -34,7 +34,7 @@ export class CommandExecutionService implements ICommandExecutionService { // <-
                             status: 'success', 
                             name: toolName, 
                             message: 'Note saved successfully.', 
-                            data: { noteId: noteResult.id } // <-- Use data instead of payload
+                            data: { note: noteResult } // Return the full note object
                         };
                     } else {
                          return { status: 'error', name: toolName, message: 'Failed to save note.' };
@@ -50,7 +50,7 @@ export class CommandExecutionService implements ICommandExecutionService { // <-
                             status: 'success', 
                             name: toolName, 
                             message: `Follow-up scheduled for ${args.duration} ${args.unit}(s).`, 
-                            data: { followUpId: followUpResult.id } // <-- Use data instead of payload
+                            data: { followUp: followUpResult } // Return the full follow-up object
                         };
                     } else {
                          return { status: 'error', name: toolName, message: 'Failed to schedule follow-up.' };
@@ -66,7 +66,7 @@ export class CommandExecutionService implements ICommandExecutionService { // <-
                             status: 'success', 
                             name: toolName, 
                             message: `Prescription for ${args.medication_name} recorded.`, 
-                            data: { prescriptionId: prescriptionResult.id } // <-- Use data instead of payload
+                            data: { prescription: prescriptionResult } // Return the full prescription object
                         };
                     } else {
                         return { status: 'error', name: toolName, message: 'Failed to record prescription.' };
