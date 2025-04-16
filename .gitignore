@@ -54,3 +54,4 @@ git-dates.py
 deploy.sh
 docker-compose.yml
 clean_history.sh
+docker-compose.prod.yml
