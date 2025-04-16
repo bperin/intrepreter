@@ -333,9 +333,10 @@ export class TranscriptionService {
 
           // Handle PCM data coming out of FFmpeg
           this.ffmpegProcess.stdout.on('data', (chunk: Buffer) => {
-              console.log(`[TranscriptionService] Received PCM chunk from FFmpeg stdout (Length: ${chunk.length})`);
+              // console.log(`[TranscriptionService] Received PCM chunk from FFmpeg stdout (Length: ${chunk.length})`); // Commented out: Verbose
               
               // --- DEBUG: Save raw PCM chunk --- 
+              /* // Commented out: Verbose debug file saving
               const tempDir = os.tmpdir();
               const pcmFileName = `ffmpeg_output_${Date.now()}_${pcmChunkCounter++}.raw`;
               const pcmFilePath = path.join(tempDir, pcmFileName);
@@ -345,6 +346,7 @@ export class TranscriptionService {
               } catch (writeErr) {
                    console.error(`[TranscriptionService] DEBUG: Error saving PCM chunk:`, writeErr);
               }
+              */
               // --- END DEBUG --- 
 
               if (this.isOpenAIConnected) {
@@ -361,7 +363,7 @@ export class TranscriptionService {
 
           // Handle FFmpeg stderr (for debugging)
           this.ffmpegProcess.stderr.on('data', (chunk: Buffer) => {
-              console.error(`[TranscriptionService] FFmpeg stderr: ${chunk.toString()}`);
+              // console.error(`[TranscriptionService] FFmpeg stderr: ${chunk.toString()}`); // Commented out: Can be very verbose
           });
 
           // Handle FFmpeg process errors
