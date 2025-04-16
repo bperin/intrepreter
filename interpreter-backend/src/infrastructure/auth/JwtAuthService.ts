@@ -71,7 +71,7 @@ export class JwtAuthService implements IAuthService {
             where: { id: user.id },
             data: {
                 refreshToken: refreshToken,
-                refreshTokenExpiresAt: expiryDate,
+                refreshTokenExpiry: expiryDate,
             },
         });
 
@@ -84,21 +84,22 @@ export class JwtAuthService implements IAuthService {
             return null;
         }
 
-        const user = await this.prisma.user.findUnique({
+        // Use findFirst as refreshToken is not guaranteed unique
+        const user = await this.prisma.user.findFirst({
             where: { refreshToken: token },
-            select: { id: true, refreshTokenExpiresAt: true }, // Select only needed fields
+            select: { id: true, refreshTokenExpiry: true },
         });
 
-        if (!user || !user.refreshTokenExpiresAt) {
+        if (!user || !user.refreshTokenExpiry) {
             // Token not found
             return null;
         }
 
-        if (new Date() > user.refreshTokenExpiresAt) {
+        if (new Date() > user.refreshTokenExpiry) {
             // Token expired, clear it from DB (optional but good practice)
             await this.prisma.user.update({
                 where: { id: user.id },
-                data: { refreshToken: null, refreshTokenExpiresAt: null },
+                data: { refreshToken: null, refreshTokenExpiry: null },
             });
             return null;
         }
