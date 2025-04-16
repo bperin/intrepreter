@@ -101,7 +101,7 @@ export class TranscriptionService {
     clientWs.on('message', async (message) => {
       // Ensure FFmpeg process is running before piping data
       if (!this.ffmpegProcess || !this.ffmpegProcess.stdin || this.ffmpegProcess.stdin.destroyed || this.ffmpegStdinEnded) {
-           console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed, cannot process audio chunk.`);
+          //  console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed, cannot process audio chunk.`);
            // Maybe retry or drop? For now, just log.
            return;
       }
