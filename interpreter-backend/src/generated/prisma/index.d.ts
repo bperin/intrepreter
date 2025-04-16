@@ -1331,6 +1331,37 @@ export namespace Prisma {
 
 
   /**
+   * Count Type MessageCountOutputType
+   */
+
+  export type MessageCountOutputType = {
+    derivedMessages: number
+  }
+
+  export type MessageCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    derivedMessages?: boolean | MessageCountOutputTypeCountDerivedMessagesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * MessageCountOutputType without action
+   */
+  export type MessageCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MessageCountOutputType
+     */
+    select?: MessageCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * MessageCountOutputType without action
+   */
+  export type MessageCountOutputTypeCountDerivedMessagesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MessageWhereInput
+  }
+
+
+  /**
    * Models
    */
 
@@ -4741,6 +4772,7 @@ export namespace Prisma {
     translatedText: string | null
     language: string | null
     isFinal: boolean | null
+    originalMessageId: string | null
   }
 
   export type MessageMaxAggregateOutputType = {
@@ -4752,6 +4784,7 @@ export namespace Prisma {
     translatedText: string | null
     language: string | null
     isFinal: boolean | null
+    originalMessageId: string | null
   }
 
   export type MessageCountAggregateOutputType = {
@@ -4763,6 +4796,7 @@ export namespace Prisma {
     translatedText: number
     language: number
     isFinal: number
+    originalMessageId: number
     _all: number
   }
 
@@ -4776,6 +4810,7 @@ export namespace Prisma {
     translatedText?: true
     language?: true
     isFinal?: true
+    originalMessageId?: true
   }
 
   export type MessageMaxAggregateInputType = {
@@ -4787,6 +4822,7 @@ export namespace Prisma {
     translatedText?: true
     language?: true
     isFinal?: true
+    originalMessageId?: true
   }
 
   export type MessageCountAggregateInputType = {
@@ -4798,6 +4834,7 @@ export namespace Prisma {
     translatedText?: true
     language?: true
     isFinal?: true
+    originalMessageId?: true
     _all?: true
   }
 
@@ -4882,6 +4919,7 @@ export namespace Prisma {
     translatedText: string | null
     language: string
     isFinal: boolean
+    originalMessageId: string | null
     _count: MessageCountAggregateOutputType | null
     _min: MessageMinAggregateOutputType | null
     _max: MessageMaxAggregateOutputType | null
@@ -4910,7 +4948,11 @@ export namespace Prisma {
     translatedText?: boolean
     language?: boolean
     isFinal?: boolean
+    originalMessageId?: boolean
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+    originalMessage?: boolean | Message$originalMessageArgs<ExtArgs>
+    derivedMessages?: boolean | Message$derivedMessagesArgs<ExtArgs>
+    _count?: boolean | MessageCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["message"]>
 
   export type MessageSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -4922,7 +4964,9 @@ export namespace Prisma {
     translatedText?: boolean
     language?: boolean
     isFinal?: boolean
+    originalMessageId?: boolean
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+    originalMessage?: boolean | Message$originalMessageArgs<ExtArgs>
   }, ExtArgs["result"]["message"]>
 
   export type MessageSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -4934,7 +4978,9 @@ export namespace Prisma {
     translatedText?: boolean
     language?: boolean
     isFinal?: boolean
+    originalMessageId?: boolean
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+    originalMessage?: boolean | Message$originalMessageArgs<ExtArgs>
   }, ExtArgs["result"]["message"]>
 
   export type MessageSelectScalar = {
@@ -4946,23 +4992,31 @@ export namespace Prisma {
     translatedText?: boolean
     language?: boolean
     isFinal?: boolean
+    originalMessageId?: boolean
   }
 
-  export type MessageOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "conversationId" | "timestamp" | "senderType" | "originalText" | "translatedText" | "language" | "isFinal", ExtArgs["result"]["message"]>
+  export type MessageOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "conversationId" | "timestamp" | "senderType" | "originalText" | "translatedText" | "language" | "isFinal" | "originalMessageId", ExtArgs["result"]["message"]>
   export type MessageInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+    originalMessage?: boolean | Message$originalMessageArgs<ExtArgs>
+    derivedMessages?: boolean | Message$derivedMessagesArgs<ExtArgs>
+    _count?: boolean | MessageCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type MessageIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+    originalMessage?: boolean | Message$originalMessageArgs<ExtArgs>
   }
   export type MessageIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+    originalMessage?: boolean | Message$originalMessageArgs<ExtArgs>
   }
 
   export type $MessagePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Message"
     objects: {
       conversation: Prisma.$ConversationPayload<ExtArgs>
+      originalMessage: Prisma.$MessagePayload<ExtArgs> | null
+      derivedMessages: Prisma.$MessagePayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -4973,6 +5027,7 @@ export namespace Prisma {
       translatedText: string | null
       language: string
       isFinal: boolean
+      originalMessageId: string | null
     }, ExtArgs["result"]["message"]>
     composites: {}
   }
@@ -5368,6 +5423,8 @@ export namespace Prisma {
   export interface Prisma__MessageClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     conversation<T extends ConversationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ConversationDefaultArgs<ExtArgs>>): Prisma__ConversationClient<$Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    originalMessage<T extends Message$originalMessageArgs<ExtArgs> = {}>(args?: Subset<T, Message$originalMessageArgs<ExtArgs>>): Prisma__MessageClient<$Result.GetResult<Prisma.$MessagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    derivedMessages<T extends Message$derivedMessagesArgs<ExtArgs> = {}>(args?: Subset<T, Message$derivedMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5405,6 +5462,7 @@ export namespace Prisma {
     readonly translatedText: FieldRef<"Message", 'String'>
     readonly language: FieldRef<"Message", 'String'>
     readonly isFinal: FieldRef<"Message", 'Boolean'>
+    readonly originalMessageId: FieldRef<"Message", 'String'>
   }
     
 
@@ -5796,6 +5854,49 @@ export namespace Prisma {
      * Limit how many Messages to delete.
      */
     limit?: number
+  }
+
+  /**
+   * Message.originalMessage
+   */
+  export type Message$originalMessageArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Message
+     */
+    select?: MessageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Message
+     */
+    omit?: MessageOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MessageInclude<ExtArgs> | null
+    where?: MessageWhereInput
+  }
+
+  /**
+   * Message.derivedMessages
+   */
+  export type Message$derivedMessagesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Message
+     */
+    select?: MessageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Message
+     */
+    omit?: MessageOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MessageInclude<ExtArgs> | null
+    where?: MessageWhereInput
+    orderBy?: MessageOrderByWithRelationInput | MessageOrderByWithRelationInput[]
+    cursor?: MessageWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: MessageScalarFieldEnum | MessageScalarFieldEnum[]
   }
 
   /**
@@ -6957,7 +7058,8 @@ export namespace Prisma {
     originalText: 'originalText',
     translatedText: 'translatedText',
     language: 'language',
-    isFinal: 'isFinal'
+    isFinal: 'isFinal',
+    originalMessageId: 'originalMessageId'
   };
 
   export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
@@ -7303,7 +7405,10 @@ export namespace Prisma {
     translatedText?: StringNullableFilter<"Message"> | string | null
     language?: StringFilter<"Message"> | string
     isFinal?: BoolFilter<"Message"> | boolean
+    originalMessageId?: StringNullableFilter<"Message"> | string | null
     conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+    originalMessage?: XOR<MessageNullableScalarRelationFilter, MessageWhereInput> | null
+    derivedMessages?: MessageListRelationFilter
   }
 
   export type MessageOrderByWithRelationInput = {
@@ -7315,7 +7420,10 @@ export namespace Prisma {
     translatedText?: SortOrderInput | SortOrder
     language?: SortOrder
     isFinal?: SortOrder
+    originalMessageId?: SortOrderInput | SortOrder
     conversation?: ConversationOrderByWithRelationInput
+    originalMessage?: MessageOrderByWithRelationInput
+    derivedMessages?: MessageOrderByRelationAggregateInput
   }
 
   export type MessageWhereUniqueInput = Prisma.AtLeast<{
@@ -7330,7 +7438,10 @@ export namespace Prisma {
     translatedText?: StringNullableFilter<"Message"> | string | null
     language?: StringFilter<"Message"> | string
     isFinal?: BoolFilter<"Message"> | boolean
+    originalMessageId?: StringNullableFilter<"Message"> | string | null
     conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+    originalMessage?: XOR<MessageNullableScalarRelationFilter, MessageWhereInput> | null
+    derivedMessages?: MessageListRelationFilter
   }, "id">
 
   export type MessageOrderByWithAggregationInput = {
@@ -7342,6 +7453,7 @@ export namespace Prisma {
     translatedText?: SortOrderInput | SortOrder
     language?: SortOrder
     isFinal?: SortOrder
+    originalMessageId?: SortOrderInput | SortOrder
     _count?: MessageCountOrderByAggregateInput
     _max?: MessageMaxOrderByAggregateInput
     _min?: MessageMinOrderByAggregateInput
@@ -7359,6 +7471,7 @@ export namespace Prisma {
     translatedText?: StringNullableWithAggregatesFilter<"Message"> | string | null
     language?: StringWithAggregatesFilter<"Message"> | string
     isFinal?: BoolWithAggregatesFilter<"Message"> | boolean
+    originalMessageId?: StringNullableWithAggregatesFilter<"Message"> | string | null
   }
 
   export type ActionWhereInput = {
@@ -7687,6 +7800,8 @@ export namespace Prisma {
     language: string
     isFinal?: boolean
     conversation: ConversationCreateNestedOneWithoutMessagesInput
+    originalMessage?: MessageCreateNestedOneWithoutDerivedMessagesInput
+    derivedMessages?: MessageCreateNestedManyWithoutOriginalMessageInput
   }
 
   export type MessageUncheckedCreateInput = {
@@ -7698,6 +7813,8 @@ export namespace Prisma {
     translatedText?: string | null
     language: string
     isFinal?: boolean
+    originalMessageId?: string | null
+    derivedMessages?: MessageUncheckedCreateNestedManyWithoutOriginalMessageInput
   }
 
   export type MessageUpdateInput = {
@@ -7709,6 +7826,8 @@ export namespace Prisma {
     language?: StringFieldUpdateOperationsInput | string
     isFinal?: BoolFieldUpdateOperationsInput | boolean
     conversation?: ConversationUpdateOneRequiredWithoutMessagesNestedInput
+    originalMessage?: MessageUpdateOneWithoutDerivedMessagesNestedInput
+    derivedMessages?: MessageUpdateManyWithoutOriginalMessageNestedInput
   }
 
   export type MessageUncheckedUpdateInput = {
@@ -7720,6 +7839,8 @@ export namespace Prisma {
     translatedText?: NullableStringFieldUpdateOperationsInput | string | null
     language?: StringFieldUpdateOperationsInput | string
     isFinal?: BoolFieldUpdateOperationsInput | boolean
+    originalMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    derivedMessages?: MessageUncheckedUpdateManyWithoutOriginalMessageNestedInput
   }
 
   export type MessageCreateManyInput = {
@@ -7731,6 +7852,7 @@ export namespace Prisma {
     translatedText?: string | null
     language: string
     isFinal?: boolean
+    originalMessageId?: string | null
   }
 
   export type MessageUpdateManyMutationInput = {
@@ -7752,6 +7874,7 @@ export namespace Prisma {
     translatedText?: NullableStringFieldUpdateOperationsInput | string | null
     language?: StringFieldUpdateOperationsInput | string
     isFinal?: BoolFieldUpdateOperationsInput | boolean
+    originalMessageId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type ActionCreateInput = {
@@ -8092,6 +8215,11 @@ export namespace Prisma {
     isNot?: ConversationWhereInput
   }
 
+  export type MessageNullableScalarRelationFilter = {
+    is?: MessageWhereInput | null
+    isNot?: MessageWhereInput | null
+  }
+
   export type MessageCountOrderByAggregateInput = {
     id?: SortOrder
     conversationId?: SortOrder
@@ -8101,6 +8229,7 @@ export namespace Prisma {
     translatedText?: SortOrder
     language?: SortOrder
     isFinal?: SortOrder
+    originalMessageId?: SortOrder
   }
 
   export type MessageMaxOrderByAggregateInput = {
@@ -8112,6 +8241,7 @@ export namespace Prisma {
     translatedText?: SortOrder
     language?: SortOrder
     isFinal?: SortOrder
+    originalMessageId?: SortOrder
   }
 
   export type MessageMinOrderByAggregateInput = {
@@ -8123,6 +8253,7 @@ export namespace Prisma {
     translatedText?: SortOrder
     language?: SortOrder
     isFinal?: SortOrder
+    originalMessageId?: SortOrder
   }
 
   export type BoolWithAggregatesFilter<$PrismaModel = never> = {
@@ -8418,6 +8549,26 @@ export namespace Prisma {
     connect?: ConversationWhereUniqueInput
   }
 
+  export type MessageCreateNestedOneWithoutDerivedMessagesInput = {
+    create?: XOR<MessageCreateWithoutDerivedMessagesInput, MessageUncheckedCreateWithoutDerivedMessagesInput>
+    connectOrCreate?: MessageCreateOrConnectWithoutDerivedMessagesInput
+    connect?: MessageWhereUniqueInput
+  }
+
+  export type MessageCreateNestedManyWithoutOriginalMessageInput = {
+    create?: XOR<MessageCreateWithoutOriginalMessageInput, MessageUncheckedCreateWithoutOriginalMessageInput> | MessageCreateWithoutOriginalMessageInput[] | MessageUncheckedCreateWithoutOriginalMessageInput[]
+    connectOrCreate?: MessageCreateOrConnectWithoutOriginalMessageInput | MessageCreateOrConnectWithoutOriginalMessageInput[]
+    createMany?: MessageCreateManyOriginalMessageInputEnvelope
+    connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+  }
+
+  export type MessageUncheckedCreateNestedManyWithoutOriginalMessageInput = {
+    create?: XOR<MessageCreateWithoutOriginalMessageInput, MessageUncheckedCreateWithoutOriginalMessageInput> | MessageCreateWithoutOriginalMessageInput[] | MessageUncheckedCreateWithoutOriginalMessageInput[]
+    connectOrCreate?: MessageCreateOrConnectWithoutOriginalMessageInput | MessageCreateOrConnectWithoutOriginalMessageInput[]
+    createMany?: MessageCreateManyOriginalMessageInputEnvelope
+    connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+  }
+
   export type BoolFieldUpdateOperationsInput = {
     set?: boolean
   }
@@ -8428,6 +8579,44 @@ export namespace Prisma {
     upsert?: ConversationUpsertWithoutMessagesInput
     connect?: ConversationWhereUniqueInput
     update?: XOR<XOR<ConversationUpdateToOneWithWhereWithoutMessagesInput, ConversationUpdateWithoutMessagesInput>, ConversationUncheckedUpdateWithoutMessagesInput>
+  }
+
+  export type MessageUpdateOneWithoutDerivedMessagesNestedInput = {
+    create?: XOR<MessageCreateWithoutDerivedMessagesInput, MessageUncheckedCreateWithoutDerivedMessagesInput>
+    connectOrCreate?: MessageCreateOrConnectWithoutDerivedMessagesInput
+    upsert?: MessageUpsertWithoutDerivedMessagesInput
+    disconnect?: MessageWhereInput | boolean
+    delete?: MessageWhereInput | boolean
+    connect?: MessageWhereUniqueInput
+    update?: XOR<XOR<MessageUpdateToOneWithWhereWithoutDerivedMessagesInput, MessageUpdateWithoutDerivedMessagesInput>, MessageUncheckedUpdateWithoutDerivedMessagesInput>
+  }
+
+  export type MessageUpdateManyWithoutOriginalMessageNestedInput = {
+    create?: XOR<MessageCreateWithoutOriginalMessageInput, MessageUncheckedCreateWithoutOriginalMessageInput> | MessageCreateWithoutOriginalMessageInput[] | MessageUncheckedCreateWithoutOriginalMessageInput[]
+    connectOrCreate?: MessageCreateOrConnectWithoutOriginalMessageInput | MessageCreateOrConnectWithoutOriginalMessageInput[]
+    upsert?: MessageUpsertWithWhereUniqueWithoutOriginalMessageInput | MessageUpsertWithWhereUniqueWithoutOriginalMessageInput[]
+    createMany?: MessageCreateManyOriginalMessageInputEnvelope
+    set?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+    disconnect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+    delete?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+    connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+    update?: MessageUpdateWithWhereUniqueWithoutOriginalMessageInput | MessageUpdateWithWhereUniqueWithoutOriginalMessageInput[]
+    updateMany?: MessageUpdateManyWithWhereWithoutOriginalMessageInput | MessageUpdateManyWithWhereWithoutOriginalMessageInput[]
+    deleteMany?: MessageScalarWhereInput | MessageScalarWhereInput[]
+  }
+
+  export type MessageUncheckedUpdateManyWithoutOriginalMessageNestedInput = {
+    create?: XOR<MessageCreateWithoutOriginalMessageInput, MessageUncheckedCreateWithoutOriginalMessageInput> | MessageCreateWithoutOriginalMessageInput[] | MessageUncheckedCreateWithoutOriginalMessageInput[]
+    connectOrCreate?: MessageCreateOrConnectWithoutOriginalMessageInput | MessageCreateOrConnectWithoutOriginalMessageInput[]
+    upsert?: MessageUpsertWithWhereUniqueWithoutOriginalMessageInput | MessageUpsertWithWhereUniqueWithoutOriginalMessageInput[]
+    createMany?: MessageCreateManyOriginalMessageInputEnvelope
+    set?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+    disconnect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+    delete?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+    connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+    update?: MessageUpdateWithWhereUniqueWithoutOriginalMessageInput | MessageUpdateWithWhereUniqueWithoutOriginalMessageInput[]
+    updateMany?: MessageUpdateManyWithWhereWithoutOriginalMessageInput | MessageUpdateManyWithWhereWithoutOriginalMessageInput[]
+    deleteMany?: MessageScalarWhereInput | MessageScalarWhereInput[]
   }
 
   export type ConversationCreateNestedOneWithoutActionsInput = {
@@ -8797,6 +8986,8 @@ export namespace Prisma {
     translatedText?: string | null
     language: string
     isFinal?: boolean
+    originalMessage?: MessageCreateNestedOneWithoutDerivedMessagesInput
+    derivedMessages?: MessageCreateNestedManyWithoutOriginalMessageInput
   }
 
   export type MessageUncheckedCreateWithoutConversationInput = {
@@ -8807,6 +8998,8 @@ export namespace Prisma {
     translatedText?: string | null
     language: string
     isFinal?: boolean
+    originalMessageId?: string | null
+    derivedMessages?: MessageUncheckedCreateNestedManyWithoutOriginalMessageInput
   }
 
   export type MessageCreateOrConnectWithoutConversationInput = {
@@ -8933,6 +9126,7 @@ export namespace Prisma {
     translatedText?: StringNullableFilter<"Message"> | string | null
     language?: StringFilter<"Message"> | string
     isFinal?: BoolFilter<"Message"> | boolean
+    originalMessageId?: StringNullableFilter<"Message"> | string | null
   }
 
   export type ActionUpsertWithWhereUniqueWithoutConversationInput = {
@@ -9001,6 +9195,68 @@ export namespace Prisma {
     create: XOR<ConversationCreateWithoutMessagesInput, ConversationUncheckedCreateWithoutMessagesInput>
   }
 
+  export type MessageCreateWithoutDerivedMessagesInput = {
+    id?: string
+    timestamp?: Date | string
+    senderType: string
+    originalText: string
+    translatedText?: string | null
+    language: string
+    isFinal?: boolean
+    conversation: ConversationCreateNestedOneWithoutMessagesInput
+    originalMessage?: MessageCreateNestedOneWithoutDerivedMessagesInput
+  }
+
+  export type MessageUncheckedCreateWithoutDerivedMessagesInput = {
+    id?: string
+    conversationId: string
+    timestamp?: Date | string
+    senderType: string
+    originalText: string
+    translatedText?: string | null
+    language: string
+    isFinal?: boolean
+    originalMessageId?: string | null
+  }
+
+  export type MessageCreateOrConnectWithoutDerivedMessagesInput = {
+    where: MessageWhereUniqueInput
+    create: XOR<MessageCreateWithoutDerivedMessagesInput, MessageUncheckedCreateWithoutDerivedMessagesInput>
+  }
+
+  export type MessageCreateWithoutOriginalMessageInput = {
+    id?: string
+    timestamp?: Date | string
+    senderType: string
+    originalText: string
+    translatedText?: string | null
+    language: string
+    isFinal?: boolean
+    conversation: ConversationCreateNestedOneWithoutMessagesInput
+    derivedMessages?: MessageCreateNestedManyWithoutOriginalMessageInput
+  }
+
+  export type MessageUncheckedCreateWithoutOriginalMessageInput = {
+    id?: string
+    conversationId: string
+    timestamp?: Date | string
+    senderType: string
+    originalText: string
+    translatedText?: string | null
+    language: string
+    isFinal?: boolean
+    derivedMessages?: MessageUncheckedCreateNestedManyWithoutOriginalMessageInput
+  }
+
+  export type MessageCreateOrConnectWithoutOriginalMessageInput = {
+    where: MessageWhereUniqueInput
+    create: XOR<MessageCreateWithoutOriginalMessageInput, MessageUncheckedCreateWithoutOriginalMessageInput>
+  }
+
+  export type MessageCreateManyOriginalMessageInputEnvelope = {
+    data: MessageCreateManyOriginalMessageInput | MessageCreateManyOriginalMessageInput[]
+  }
+
   export type ConversationUpsertWithoutMessagesInput = {
     update: XOR<ConversationUpdateWithoutMessagesInput, ConversationUncheckedUpdateWithoutMessagesInput>
     create: XOR<ConversationCreateWithoutMessagesInput, ConversationUncheckedCreateWithoutMessagesInput>
@@ -9042,6 +9298,57 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+  }
+
+  export type MessageUpsertWithoutDerivedMessagesInput = {
+    update: XOR<MessageUpdateWithoutDerivedMessagesInput, MessageUncheckedUpdateWithoutDerivedMessagesInput>
+    create: XOR<MessageCreateWithoutDerivedMessagesInput, MessageUncheckedCreateWithoutDerivedMessagesInput>
+    where?: MessageWhereInput
+  }
+
+  export type MessageUpdateToOneWithWhereWithoutDerivedMessagesInput = {
+    where?: MessageWhereInput
+    data: XOR<MessageUpdateWithoutDerivedMessagesInput, MessageUncheckedUpdateWithoutDerivedMessagesInput>
+  }
+
+  export type MessageUpdateWithoutDerivedMessagesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
+    senderType?: StringFieldUpdateOperationsInput | string
+    originalText?: StringFieldUpdateOperationsInput | string
+    translatedText?: NullableStringFieldUpdateOperationsInput | string | null
+    language?: StringFieldUpdateOperationsInput | string
+    isFinal?: BoolFieldUpdateOperationsInput | boolean
+    conversation?: ConversationUpdateOneRequiredWithoutMessagesNestedInput
+    originalMessage?: MessageUpdateOneWithoutDerivedMessagesNestedInput
+  }
+
+  export type MessageUncheckedUpdateWithoutDerivedMessagesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
+    senderType?: StringFieldUpdateOperationsInput | string
+    originalText?: StringFieldUpdateOperationsInput | string
+    translatedText?: NullableStringFieldUpdateOperationsInput | string | null
+    language?: StringFieldUpdateOperationsInput | string
+    isFinal?: BoolFieldUpdateOperationsInput | boolean
+    originalMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type MessageUpsertWithWhereUniqueWithoutOriginalMessageInput = {
+    where: MessageWhereUniqueInput
+    update: XOR<MessageUpdateWithoutOriginalMessageInput, MessageUncheckedUpdateWithoutOriginalMessageInput>
+    create: XOR<MessageCreateWithoutOriginalMessageInput, MessageUncheckedCreateWithoutOriginalMessageInput>
+  }
+
+  export type MessageUpdateWithWhereUniqueWithoutOriginalMessageInput = {
+    where: MessageWhereUniqueInput
+    data: XOR<MessageUpdateWithoutOriginalMessageInput, MessageUncheckedUpdateWithoutOriginalMessageInput>
+  }
+
+  export type MessageUpdateManyWithWhereWithoutOriginalMessageInput = {
+    where: MessageScalarWhereInput
+    data: XOR<MessageUpdateManyMutationInput, MessageUncheckedUpdateManyWithoutOriginalMessageInput>
   }
 
   export type ConversationCreateWithoutActionsInput = {
@@ -9252,6 +9559,7 @@ export namespace Prisma {
     translatedText?: string | null
     language: string
     isFinal?: boolean
+    originalMessageId?: string | null
   }
 
   export type ActionCreateManyConversationInput = {
@@ -9271,6 +9579,8 @@ export namespace Prisma {
     translatedText?: NullableStringFieldUpdateOperationsInput | string | null
     language?: StringFieldUpdateOperationsInput | string
     isFinal?: BoolFieldUpdateOperationsInput | boolean
+    originalMessage?: MessageUpdateOneWithoutDerivedMessagesNestedInput
+    derivedMessages?: MessageUpdateManyWithoutOriginalMessageNestedInput
   }
 
   export type MessageUncheckedUpdateWithoutConversationInput = {
@@ -9281,6 +9591,8 @@ export namespace Prisma {
     translatedText?: NullableStringFieldUpdateOperationsInput | string | null
     language?: StringFieldUpdateOperationsInput | string
     isFinal?: BoolFieldUpdateOperationsInput | boolean
+    originalMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    derivedMessages?: MessageUncheckedUpdateManyWithoutOriginalMessageNestedInput
   }
 
   export type MessageUncheckedUpdateManyWithoutConversationInput = {
@@ -9291,6 +9603,7 @@ export namespace Prisma {
     translatedText?: NullableStringFieldUpdateOperationsInput | string | null
     language?: StringFieldUpdateOperationsInput | string
     isFinal?: BoolFieldUpdateOperationsInput | boolean
+    originalMessageId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type ActionUpdateWithoutConversationInput = {
@@ -9318,6 +9631,52 @@ export namespace Prisma {
     metadata?: NullableJsonNullValueInput | InputJsonValue
     detectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     executedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type MessageCreateManyOriginalMessageInput = {
+    id?: string
+    conversationId: string
+    timestamp?: Date | string
+    senderType: string
+    originalText: string
+    translatedText?: string | null
+    language: string
+    isFinal?: boolean
+  }
+
+  export type MessageUpdateWithoutOriginalMessageInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
+    senderType?: StringFieldUpdateOperationsInput | string
+    originalText?: StringFieldUpdateOperationsInput | string
+    translatedText?: NullableStringFieldUpdateOperationsInput | string | null
+    language?: StringFieldUpdateOperationsInput | string
+    isFinal?: BoolFieldUpdateOperationsInput | boolean
+    conversation?: ConversationUpdateOneRequiredWithoutMessagesNestedInput
+    derivedMessages?: MessageUpdateManyWithoutOriginalMessageNestedInput
+  }
+
+  export type MessageUncheckedUpdateWithoutOriginalMessageInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
+    senderType?: StringFieldUpdateOperationsInput | string
+    originalText?: StringFieldUpdateOperationsInput | string
+    translatedText?: NullableStringFieldUpdateOperationsInput | string | null
+    language?: StringFieldUpdateOperationsInput | string
+    isFinal?: BoolFieldUpdateOperationsInput | boolean
+    derivedMessages?: MessageUncheckedUpdateManyWithoutOriginalMessageNestedInput
+  }
+
+  export type MessageUncheckedUpdateManyWithoutOriginalMessageInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
+    senderType?: StringFieldUpdateOperationsInput | string
+    originalText?: StringFieldUpdateOperationsInput | string
+    translatedText?: NullableStringFieldUpdateOperationsInput | string | null
+    language?: StringFieldUpdateOperationsInput | string
+    isFinal?: BoolFieldUpdateOperationsInput | boolean
   }
 
 
