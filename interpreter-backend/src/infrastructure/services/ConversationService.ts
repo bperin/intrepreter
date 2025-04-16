@@ -143,13 +143,50 @@ export class ConversationService implements IConversationService {
      */
     private formatMessagesForTranscript(messages: Message[]): string {
         return messages.map(msg => {
-            // Include sender, language, and distinguish original/translation if needed
             let prefix = `${msg.senderType} (${msg.language})`;
             if (msg.senderType === 'translation' && msg.originalMessageId) {
-                 prefix += ` [transl. for ${msg.originalMessageId.substring(0, 4)}...]`; 
+                 prefix += ` [transl. for ${msg.originalMessageId.substring(0, 4)}...]`;
             }
-            return `${prefix}: ${msg.originalText}`;
+            // Use originalText for non-translations, translatedText for translations
+            const textToShow = (msg.senderType === 'translation' && msg.translatedText) ? msg.translatedText : msg.originalText;
+            return `${prefix}: ${textToShow}`; // Use textToShow
         }).join('\n');
+    }
+
+    /**
+     * Formats Notes, Prescriptions, and FollowUps into a structured string.
+     * @param notes Array of Note objects.
+     * @param prescriptions Array of Prescription objects.
+     * @param followUps Array of FollowUp objects.
+     * @returns A formatted string containing the actions.
+     */
+    private formatActionsForTranscript(
+        notes: { content: string }[],
+        prescriptions: { medicationName: string; dosage: string; frequency: string; details?: string | null }[],
+        followUps: { duration: number; unit: string; details?: string | null }[]
+    ): string {
+        let actionsText = "";
+
+        if (notes.length > 0) {
+            actionsText += "\n--- Notes ---\n";
+            actionsText += notes.map(n => `- ${n.content}`).join("\n");
+        }
+
+        if (prescriptions.length > 0) {
+            actionsText += "\n\n--- Prescriptions ---\n";
+            actionsText += prescriptions.map(p =>
+                `- ${p.medicationName} (${p.dosage}, ${p.frequency})${p.details ? ': ' + p.details : ''}`
+            ).join("\n");
+        }
+
+        if (followUps.length > 0) {
+            actionsText += "\n\n--- Follow Ups ---\n";
+            actionsText += followUps.map(f =>
+                `- Follow up in ${f.duration} ${f.unit}${f.details ? ': ' + f.details : ''}`
+            ).join("\n");
+        }
+
+        return actionsText.trim(); // Remove leading/trailing whitespace
     }
 
     /**
@@ -158,60 +195,81 @@ export class ConversationService implements IConversationService {
     async endAndSummarizeConversation(conversationId: string): Promise<ConversationWithRelations> {
         console.log(`[ConversationService] Attempting to end and summarize conversation: ${conversationId}`);
 
-        // 1. Fetch Messages
-        const messages = await this.messageService.getMessagesByConversationId(conversationId);
-        if (messages.length === 0) {
-            console.warn(`[ConversationService] No messages found for conversation ${conversationId}. Skipping summary generation.`);
-            try {
-                 const updatedConv = await this.prisma.conversation.update({
-                    where: { id: conversationId },
-                    data: {
-                        status: 'ended',
-                        endTime: new Date(),
-                    },
-                     include: { 
-                         patient: true, 
-                         summary: true,
-                         user: { select: { username: true } },
-                         messages: true,
-                         notes: true,
-                         followUps: true,
-                         prescriptions: true,
-                         medicalHistory: true
-                     }, 
-                });
-                console.log(`[ConversationService] Conversation ${conversationId} marked as ended (no messages).`);
-                return updatedConv as ConversationWithRelations;
-            } catch (updateError) {
-                console.error(`[ConversationService] Error marking empty conversation ${conversationId} as ended:`, updateError);
-                throw new Error(`Failed to end empty conversation ${conversationId}`);
-            }
+        // --- Step 1: Fetch all relevant data concurrently ---
+        let messages: Message[];
+        let notes: { content: string }[];
+        let prescriptions: { medicationName: string; dosage: string; frequency: string; details?: string | null }[];
+        let followUps: { duration: number; unit: string; details?: string | null }[];
+
+        try {
+            [messages, notes, prescriptions, followUps] = await Promise.all([
+                this.messageService.getMessagesByConversationId(conversationId),
+                this.prisma.note.findMany({
+                    where: { conversationId },
+                    select: { content: true }, // Select only needed fields
+                    orderBy: { createdAt: 'asc' }
+                }),
+                this.prisma.prescription.findMany({
+                    where: { conversationId },
+                    select: { medicationName: true, dosage: true, frequency: true, details: true }, // Select only needed fields
+                    orderBy: { createdAt: 'asc' }
+                }),
+                this.prisma.followUp.findMany({
+                    where: { conversationId },
+                    select: { duration: true, unit: true, details: true }, // Select only needed fields
+                    orderBy: { createdAt: 'asc' }
+                })
+            ]);
+            console.log(`[ConversationService] Fetched data for ${conversationId}: ${messages.length} messages, ${notes.length} notes, ${prescriptions.length} prescriptions, ${followUps.length} follow-ups.`);
+        } catch (fetchError) {
+            console.error(`[ConversationService] Error fetching data for conversation ${conversationId}:`, fetchError);
+            throw new Error(`Failed to fetch data needed for summary for conversation ${conversationId}`);
         }
 
-        // 2. Format Transcript
-        const transcript = this.formatMessagesForTranscript(messages);
+        // Handle case with no messages (but potentially actions)
+        if (messages.length === 0) {
+            console.warn(`[ConversationService] No messages found for conversation ${conversationId}. Checking for actions before deciding summary.`);
+            // If there are no actions either, end normally without summary attempt
+            if (notes.length === 0 && prescriptions.length === 0 && followUps.length === 0) {
+                console.log(`[ConversationService] No messages or actions for ${conversationId}. Ending session without summary.`);
+                 try {
+                     const updatedConv = await this.prisma.conversation.update({
+                        where: { id: conversationId },
+                        data: { status: 'ended', endTime: new Date() },
+                         include: { /* ... include necessary relations ... */ patient: true, summary: true, user: { select: { username: true } }, messages: true, notes: true, followUps: true, prescriptions: true, medicalHistory: true },
+                    });
+                    return updatedConv as ConversationWithRelations;
+                 } catch (updateError) {
+                     console.error(`[ConversationService] Error marking empty conversation ${conversationId} as ended:`, updateError);
+                     throw new Error(`Failed to end empty conversation ${conversationId}`);
+                 }
+            }
+            // If there are actions but no messages, we might still want a summary based on actions
+            console.log(`[ConversationService] Actions found for ${conversationId} despite no messages. Proceeding with summary generation based on actions.`);
+        }
 
-        // 3. Generate Summary
-        const summaryText = await this.generateSummary(transcript);
-        if (summaryText === null || summaryText === "(Summary generation failed)" || summaryText === "(No messages to summarize)") {
-            console.error(`[ConversationService] Summary generation failed for ${conversationId}. Ending session without summary.`);
+        // --- Step 2: Format Transcript and Actions ---
+        const transcriptText = this.formatMessagesForTranscript(messages);
+        const actionsText = this.formatActionsForTranscript(notes, prescriptions, followUps);
+
+        // Combine transcript and actions for the summary prompt
+        let fullContext = transcriptText;
+        if (actionsText) {
+            fullContext += `\n\n--- Recorded Actions ---${actionsText}`; // actionsText already has leading newlines handled
+        }
+
+        // --- Step 3: Generate Summary ---
+        console.log(`[ConversationService] Generating summary for ${conversationId} using full context (messages + actions)...`);
+        const summaryText = await this.generateSummary(fullContext); // Pass the combined context
+
+        if (summaryText === null || summaryText === "(Summary generation failed)") {
+            console.error(`[ConversationService] Summary generation failed for ${conversationId}. Ending session with error status.`);
              try {
+                 // Use the existing logic to end with 'ended_error' status
                  const updatedConv = await this.prisma.conversation.update({
                     where: { id: conversationId },
-                    data: {
-                        status: 'ended_error', 
-                        endTime: new Date(),
-                    },
-                     include: { 
-                         patient: true, 
-                         summary: true,
-                         user: { select: { username: true } },
-                         messages: true,
-                         notes: true,
-                         followUps: true,
-                         prescriptions: true,
-                         medicalHistory: true
-                     }, 
+                    data: { status: 'ended_error', endTime: new Date() },
+                     include: { /* ... include necessary relations ... */ patient: true, summary: true, user: { select: { username: true } }, messages: true, notes: true, followUps: true, prescriptions: true, medicalHistory: true },
                 });
                  console.warn(`[ConversationService] Session ${conversationId} ended with error, summary generation failed.`);
                  return updatedConv as ConversationWithRelations;
@@ -221,65 +279,53 @@ export class ConversationService implements IConversationService {
              }
         }
 
-        // 4. Create Summary record and Update Conversation in DB
+        // Handle the "(No messages to summarize)" case specifically if it comes from generateSummary
+        const finalSummaryContent = summaryText === "(No messages to summarize)" ? "(No messages found, summary based on recorded actions)" : summaryText;
+
+        // --- Step 4: Create Summary record and Update Conversation in DB ---
         try {
+            console.log(`[ConversationService] Attempting DB transaction for conversation ${conversationId} with summary.`);
             const updatedConversation = await this.prisma.$transaction(async (tx) => {
-                // Create the summary linked to the conversation
-                await tx.summary.create({
-                    data: {
-                        content: summaryText,
-                        conversation: {
-                            connect: { id: conversationId }
-                        }
+                // Create or Update the summary linked to the conversation
+                // Using upsert might be safer if somehow a summary record could pre-exist
+                await tx.summary.upsert({
+                    where: { conversationId: conversationId },
+                    update: { content: finalSummaryContent },
+                    create: {
+                        content: finalSummaryContent,
+                        conversation: { connect: { id: conversationId } }
                     }
                 });
-                console.log(`[ConversationService] Summary record created for conversation ${conversationId}`);
+                console.log(`[ConversationService] Summary record created/updated for conversation ${conversationId}`);
 
                 // Update the conversation status and end time
                 const conv = await tx.conversation.update({
                     where: { id: conversationId },
                     data: {
-                        status: 'summarized', 
+                        status: 'summarized',
                         endTime: new Date(),
                     },
-                    include: { 
-                        patient: true, 
-                        summary: true,
-                        user: { select: { username: true } },
-                        messages: true,
-                        notes: true,
-                        followUps: true,
-                        prescriptions: true,
-                        medicalHistory: true
-                     }, 
+                     include: { /* ... include necessary relations ... */ patient: true, summary: true, user: { select: { username: true } }, messages: true, notes: true, followUps: true, prescriptions: true, medicalHistory: true },
                 });
-                console.log(`[ConversationService] Conversation ${conversationId} status updated to summarized.`);
+                console.log(`[ConversationService] Conversation ${conversationId} status updated to 'summarized'.`);
                 return conv;
             });
+            console.log(`[ConversationService] Transaction successful for conversation ${conversationId}.`);
             return updatedConversation as ConversationWithRelations;
+
         } catch (error) {
-            console.error(`[ConversationService] Error creating summary or updating conversation ${conversationId}:`, error);
+            console.error(`[ConversationService] Error during summary saving transaction for ${conversationId}:`, error);
+            // Attempt to mark conversation as ended with error if transaction fails
             try {
-                const fallbackConv = await this.prisma.conversation.update({
+                 await this.prisma.conversation.update({
                     where: { id: conversationId },
                     data: { status: 'ended_error', endTime: new Date() },
-                    include: { 
-                        patient: true, 
-                        summary: true,
-                        user: { select: { username: true } },
-                        messages: true,
-                        notes: true,
-                        followUps: true,
-                        prescriptions: true,
-                        medicalHistory: true
-                     }, 
                 });
-                console.warn(`[ConversationService] Marked conversation ${conversationId} as ended_error due to transaction failure.`);
-                return fallbackConv as ConversationWithRelations;
-            } catch (fallbackError) {
-                console.error(`[ConversationService] Failed to even mark conversation ${conversationId} as ended_error:`, fallbackError);
-                throw new Error(`Failed transaction and failed to mark conversation ${conversationId} as ended_error.`);
+                 console.warn(`[ConversationService] Marked conversation ${conversationId} as 'ended_error' due to transaction failure during summary save.`);
+            } catch (finalUpdateError) {
+                 console.error(`[ConversationService] CRITICAL: Failed transaction AND failed to mark ${conversationId} as ended_error:`, finalUpdateError);
             }
+            throw new Error(`Failed to save summary and update conversation ${conversationId} status.`);
         }
     }
 

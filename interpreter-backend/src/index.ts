@@ -40,15 +40,32 @@ import { IUserRepository } from "./domain/repositories/IUserRepository";
 const app = express();
 const port = process.env.PORT || 8080;
 
-// --- CORS Configuration (Reverted to Static) ---
-// Define the single allowed origin directly
-const allowedOrigin = 'https://interpreter-frontend-service-rc7cuwbtwa-uc.a.run.app';
+// --- CORS Configuration (Allow Specific Origins) ---
+const allowedOrigins = [
+    'https://interpreter-frontend-service-rc7cuwbtwa-uc.a.run.app', // Deployed frontend
+    'http://localhost:5173', // Local frontend dev server (Vite default)
+    'http://localhost:3000'  // Local frontend dev server (CRA default)
+];
+
+console.log(`[CORS] Configuring allowed origins:`, allowedOrigins);
 
 const corsOptions: cors.CorsOptions = {
-    origin: allowedOrigin, // Use the static string
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests) - uncomment if needed
+        // if (!origin) return callback(null, true);
+        
+        // Check if the origin is in our allowed list or if it's undefined (e.g. same-origin)
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            console.log(`[CORS] Allowed origin: ${origin}`);
+            callback(null, true);
+        } else {
+            console.warn(`[CORS] Blocked origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
-    optionsSuccessStatus: 204 // For legacy browser compatibility
+    optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
