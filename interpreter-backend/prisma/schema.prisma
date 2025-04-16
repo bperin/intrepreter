@@ -7,6 +7,7 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -16,7 +17,7 @@ datasource db {
   // 2. Set DATABASE_URL in .env.local to "file:./prisma/dev.db".
   // 3. Run `npm run prisma:migrate`.
   // REMEMBER to change provider back to "postgresql" before building for production!
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -53,9 +54,8 @@ model Conversation {
   endTime         DateTime?     // Nullable, set when conversation ends
   summary         String?       // Optional summary generated later
   status          String        @default("active") // e.g., active, ended, summarized
-  preferredLanguage String?     // Clinician's preferred language for interpretation output
-  language1       String?       // Detected language 1 (e.g., patient)
-  language2       String?       // Detected language 2 (e.g., clinician - maybe fixed like 'en')
+  preferredLanguage String?     // Clinician's preferred language for interpretation output (UNUSED currently)
+  patientLanguage String        @default("es") // Patient's detected/assumed language
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   messages        Message[]

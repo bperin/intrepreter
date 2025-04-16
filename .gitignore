@@ -21,3 +21,8 @@ build/
 .vscode/
 *.sublime-workspace
 *.sublime-project
+docker-compose.yml
+docker-compose.yml
+docker-compose.yml
+write.sh
+docker-compose.yml

@@ -1,10 +1,17 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+// Get the host-accessible backend URL (e.g., http://localhost:8080) from build-time env var
+const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+
+if (!API_BASE_URL) {
+  throw new Error("Configuration Error: VITE_APP_BACKEND_URL environment variable is not set.");
+}
+
+console.log(`[API Config] Using API Base URL: ${API_BASE_URL}`);
 
 // Create Axios instance
 const api = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: API_BASE_URL.replace(/\/$/, ""), // Remove trailing slash if present
 });
 
 let isRefreshing = false;
