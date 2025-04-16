@@ -1,5 +1,6 @@
 import WebSocket from "ws";
-import { ActionPayload } from "../models/Action";
+// import { ActionPayload } from "../models/Action"; // Remove old import
+import { AggregatedAction } from "../models/AggregatedAction"; // Import new aggregated type
 
 interface AuthenticatedWebSocket extends WebSocket {
     userId?: string;
@@ -10,7 +11,8 @@ interface AuthenticatedWebSocket extends WebSocket {
 export const INotificationService = Symbol("INotificationService");
 
 export interface INotificationService {
-    notifyActionCreated(conversationId: string, action: ActionPayload): void;
+    // Modify this method to accept AggregatedAction
+    notifyActionCreated(conversationId: string, action: AggregatedAction): void;
     registerClient(ws: AuthenticatedWebSocket, conversationId: string): void;
     removeClient(ws: AuthenticatedWebSocket): void;
 } 
