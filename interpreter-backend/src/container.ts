@@ -7,6 +7,7 @@ import { IConversationRepository } from "./domain/repositories/IConversationRepo
 import { IPatientRepository } from "./domain/repositories/IPatientRepository";
 import { IActionRepository } from "./domain/repositories/IActionRepository";
 import { IMessageRepository } from "./domain/repositories/IMessageRepository";
+import { IMessageService } from "./domain/services/IMessageService";
 import { IAuthService } from "./domain/services/IAuthService";
 import { IConversationService } from "./domain/services/IConversationService";
 import { IAudioProcessingService } from "./domain/services/IAudioProcessingService";
