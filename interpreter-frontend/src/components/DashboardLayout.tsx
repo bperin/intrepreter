@@ -29,9 +29,11 @@ const Topbar = styled.header<ThemedProps>`
     flex-shrink: 0; // Prevent shrinking
 `;
 
-const Logo = styled.img<ThemedProps>`
-    height: 32px;
-    width: auto;
+const Logo = styled.div<ThemedProps>`
+    font-size: ${({ theme }) => theme.typography.sizes.lg};
+    font-weight: ${({ theme }) => theme.typography.weights.bold};
+    color: ${({ theme }) => theme.colors.text.primary};
+    letter-spacing: -0.03em;
 `;
 
 const LogoutButton = styled.button<ThemedProps>`
@@ -238,14 +240,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ leftColumnContent, mi
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        logout(); // Clears tokens via AuthContext
-        navigate("/"); // Navigate to home/index page
+        logout();
+        navigate("/");
     };
 
     return (
         <LayoutContainer>
             <Topbar>
-                <Logo src="/clara.jpg" alt="Clara AI Logo" />
+                <Logo>Clara.ai</Logo>
                 <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
             </Topbar>
             <MainContentArea>
