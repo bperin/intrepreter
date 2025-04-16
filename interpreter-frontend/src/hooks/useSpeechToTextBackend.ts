@@ -48,8 +48,6 @@ export const useSpeechToTextBackend = (
   
   // Accumulated transcript ref
   const accumulatedTranscriptRef = useRef<string>('');
-  // Buffer for chunks arriving before WS is open
-  const pendingChunksRef = useRef<Blob[]>([]);
 
   // Constants for WebSocket connection
   const getBackendWsUrl = useCallback(() => {
@@ -58,11 +56,10 @@ export const useSpeechToTextBackend = (
     
     // Use secure WebSocket if on HTTPS
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use environment variable for backend host, fallback to window location
-    const backendHost = import.meta.env.VITE_BACKEND_WS_HOST || window.location.host;
+    const host = "localhost:8080"
     
     // Construct the WebSocket URL with query params
-    return `${protocol}//${backendHost}/transcription?conversationId=${conversationId}`;
+    return `${protocol}//${host}/transcription?conversationId=${conversationId}`;
   }, [conversationId]);
   
   // Logging utility functions
@@ -109,7 +106,7 @@ export const useSpeechToTextBackend = (
    */
   const initializeWebSocket = useCallback(() => {
     const wsUrl = getBackendWsUrl();
-    console.log(`[useSpeechToTextBackend] Attempting to connect WebSocket to: ${wsUrl}`);
+    console.log(`[useSpeechToTextBackend] initializeWebSocket called. URL: ${wsUrl}`);
     
     if (!wsUrl) {
       logError("Cannot initialize WebSocket: Missing conversationId");
@@ -141,30 +138,27 @@ export const useSpeechToTextBackend = (
         logDebug("WebSocket connection to backend opened");
         isWsOpenRef.current = true;
         setStatus('connected');
-
-        // --- Send any pending chunks --- 
-        if (pendingChunksRef.current.length > 0) {
-            logDebug(`WebSocket open, sending ${pendingChunksRef.current.length} pending chunk(s)...`);
-            const chunksToSend = [...pendingChunksRef.current]; // Create copy
-            pendingChunksRef.current = []; // Clear original queue
-            chunksToSend.forEach(chunk => {
-                // Call sendAudioChunk directly - it will handle base64 conversion etc.
-                // Need to ensure sendAudioChunk doesn't re-queue when called from here!
-                // The readyState check within sendAudioChunk handles this.
-                sendAudioChunk(chunk);
-            });
+        
+        // --- Start MediaRecorder only AFTER WS is open --- 
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
+            logDebug("WebSocket open, starting MediaRecorder...");
+            // Use the timeslice defined in startRecording
+            const timeslice = 500; // Make sure this matches the value in startRecording
+            mediaRecorderRef.current.start(timeslice);
+        } else if (mediaRecorderRef.current) {
+             logDebug(`WebSocket open, but MediaRecorder state is: ${mediaRecorderRef.current.state}. Not starting.`);
         }
-        // -------------------------------
+        // --------------------------------------------------
       };
 
       ws.onclose = (event) => {
-        console.error(`❌ [useSpeechToTextBackend] WebSocket CLOSED. Code: ${event.code}, Reason: ${event.reason || 'No reason given'}, Was Clean: ${event.wasClean}`);
+        logDebug(`WebSocket connection closed: ${event.code} ${event.reason}`);
         isWsOpenRef.current = false;
         setStatus('closed');
       };
 
       ws.onerror = (event) => {
-        console.error('❌ [useSpeechToTextBackend] WebSocket ERROR event fired.', event);
+        logError("WebSocket error", event);
         setError(new Error("WebSocket connection error"));
         setStatus('error');
       };
@@ -249,7 +243,7 @@ export const useSpeechToTextBackend = (
         }
       };
     } catch (err) {
-      console.error('❌ [useSpeechToTextBackend] Error during WebSocket constructor or handler attachment:', err);
+      logError("Failed to initialize WebSocket", err);
       setError(err instanceof Error ? err : new Error("Failed to initialize WebSocket"));
       setStatus('failed');
     }
@@ -259,46 +253,28 @@ export const useSpeechToTextBackend = (
    * Send audio data over WebSocket
    */
   const sendAudioChunk = useCallback(async (audioBlob: Blob) => {
-    // Added check for null wsRef before accessing readyState
-    if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED || wsRef.current.readyState === WebSocket.CLOSING) {
-      logError("Cannot send audio chunk: WebSocket not initialized or is closed/closing");
+    if (!wsRef.current) {
+      logError("Cannot send audio chunk: WebSocket not initialized");
       return;
     }
     
-    // If connecting, queue the chunk
-    if (wsRef.current.readyState === WebSocket.CONNECTING) {
-        logDebug(`WebSocket connecting, queuing audio chunk (size: ${audioBlob.size})`);
-        pendingChunksRef.current.push(audioBlob);
-        return;
+    if (wsRef.current.readyState !== WebSocket.OPEN) {
+      logError(`Cannot send audio chunk: WebSocket not open (state: ${wsRef.current.readyState})`);
+      return;
     }
 
-    // If OPEN, process immediately (and flush queue if needed, though onopen handles initial flush)
     try {
-        // Defensive check: If this call happens *after* onopen but before queue is flushed by onopen,
-        // ensure queue is sent first. This might be redundant if onopen is reliable.
-        if (pendingChunksRef.current.length > 0) {
-            logDebug(`sendAudioChunk: Sending ${pendingChunksRef.current.length} pending chunk(s) before current chunk...`);
-            const chunksToSend = [...pendingChunksRef.current];
-            pendingChunksRef.current = [];
-            for (const chunk of chunksToSend) { // Use for...of with await
-                // We need to await the base64 conversion and send for each chunk
-                const base64Pending = await blobToBase64(chunk);
-                const pendingMessage = { type: "input_audio_buffer.append", audio: base64Pending };
-                wsRef.current.send(JSON.stringify(pendingMessage));
-            }
-        }
-
-        // Convert current blob to base64
-        const base64Audio = await blobToBase64(audioBlob);
-        logDebug(`[useSpeechToTextBackend] Sending audio chunk (Base64 size: ${base64Audio.length})`);
-        
-        // Send audio data
-        const audioMessage = {
-          type: "input_audio_buffer.append",
-          audio: base64Audio
-        };
-        
-        wsRef.current.send(JSON.stringify(audioMessage));
+      // Convert blob to base64
+      const base64Audio = await blobToBase64(audioBlob);
+      logDebug(`[useSpeechToTextBackend] Sending audio chunk (Base64 size: ${base64Audio.length})`);
+      
+      // Send audio data
+      const audioMessage = {
+        type: "input_audio_buffer.append",
+        audio: base64Audio
+      };
+      
+      wsRef.current.send(JSON.stringify(audioMessage));
     } catch (err) {
       logError("Failed to send audio chunk", err);
     }
@@ -326,9 +302,6 @@ export const useSpeechToTextBackend = (
     accumulatedTranscriptRef.current = '';
     audioChunksRef.current = [];
     setIsPaused(false);
-
-    // Also clear pending chunks from any previous attempt
-    pendingChunksRef.current = [];
 
     // Ensure WebSocket is ready before getting media
     initializeWebSocket();
@@ -417,7 +390,12 @@ export const useSpeechToTextBackend = (
 
       const timeslice = 500; // Send data approx every 500ms
       logDebug(`Starting MediaRecorder with timeslice: ${timeslice}ms`);
-      mediaRecorderRef.current.start(timeslice);
+      // ---- IMPORTANT: Do NOT start the recorder here anymore ----
+      // mediaRecorderRef.current.start(timeslice); 
+      // It will be started in the ws.onopen handler once the connection is ready.
+      logDebug("MediaRecorder configured. Waiting for WebSocket connection to open before starting...");
+      // We might need an intermediate status here if the UI needs to show 'Mic ready, connecting...'
+      // setStatus('mic_ready'); // Example intermediate status
 
     } catch (err) {
       logError('Error starting recording', err);
