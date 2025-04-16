@@ -158,7 +158,7 @@ export class TranscriptionService {
       const ffmpegExists = !!(convState && convState.ffmpegProcess);
       const stdinOk = ffmpegExists && convState!.ffmpegProcess!.stdin && !convState!.ffmpegProcess!.stdin.destroyed;
       const stdinEndedFlag = convState ? convState.ffmpegStdinEnded : 'N/A';
-      console.log(`[Transcription Debug][${conversationId}] Message received. convState exists: ${!!convState}, ffmpegProcess exists: ${ffmpegExists}, stdin OK: ${stdinOk}, stdinEndedFlag: ${stdinEndedFlag}`);
+      // console.log(`[Transcription Debug][${conversationId}] Message received. convState exists: ${!!convState}, ffmpegProcess exists: ${ffmpegExists}, stdin OK: ${stdinOk}, stdinEndedFlag: ${stdinEndedFlag}`);
       // +++ End Debug Log +++
 
       if (!convState || !convState.ffmpegProcess || !convState.ffmpegProcess.stdin || convState.ffmpegProcess.stdin.destroyed || convState.ffmpegStdinEnded) {
