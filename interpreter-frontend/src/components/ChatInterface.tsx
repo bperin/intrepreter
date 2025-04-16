@@ -537,10 +537,10 @@ const ChatInterface: React.FC = () => {
                 startRecording(); 
             } else if (hookIsPaused) {
                 console.log(`[Effect Auto Mic] Session active but recording is paused. No action.`);
-            } else {
+                        } else {
                 console.log(`[Effect Auto Mic] Session active but STT status is ${status}. No action.`);
             }
-        } else {
+                } else {
             // Stop recording if no conversation is selected or session is inactive
             if (status === 'connected' || status === 'connecting') { 
                 console.log(`[Effect Auto Mic] Session inactive or deselected, stopping STT recording.`);
@@ -807,8 +807,8 @@ const ChatInterface: React.FC = () => {
 
                             return (
                                 <MessageGroup key={msg.id || index} $isSender={msg.sender === "user"}>
-                                    <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
-                                        {msg.text}
+                            <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
+                                {msg.text}
                                     </Bubble>
                                     {/* Message Meta: Timestamp and Language/Translation Info */}
                                     <MessageMeta>{fullMeta}</MessageMeta>
@@ -866,8 +866,8 @@ const ChatInterface: React.FC = () => {
                             >
                                 End Session
                             </EndSessionButton>
-                    </>
-                )}
+                        </>
+                    )}
                 </ControlsArea>
             </ChatContainer>
     );
