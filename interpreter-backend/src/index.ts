@@ -478,6 +478,50 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                     break;
                 // --- End REWRITTEN end_session Case ---
 
+                // +++ Add get_summary Case +++
+                case "get_summary":
+                    console.log('[WebSocket Router] Control Channel: Entered get_summary case.');
+                    const conversationIdToSummarize = request.payload?.conversationId;
+                    console.log(`[WebSocket Router] Control Channel: Extracted conversationId: ${conversationIdToSummarize}`);
+
+                    if (conversationIdToSummarize && typeof conversationIdToSummarize === 'string') {
+                        try {
+                            // Find the conversation
+                            const conversation = await conversationRepository.findById(conversationIdToSummarize);
+                            
+                            if (!conversation) {
+                                throw new Error(`Conversation not found: ${conversationIdToSummarize}`);
+                            }
+                            // Optional: Check user access again if needed
+                            if (conversation.userId !== ws.userId) {
+                                 throw new Error("Access denied to this conversation summary.");
+                            }
+                            
+                            console.log(`[WebSocket Router] Control Channel: Found conversation ${conversationIdToSummarize}. Status: ${conversation.status}, Summary Exists: ${!!conversation.summary}`);
+                            
+                            // Send back the summary data (even if null/empty)
+                            ws.send(JSON.stringify({
+                                type: 'summary_data',
+                                payload: {
+                                    conversationId: conversation.id,
+                                    summary: conversation.summary || null // Ensure null is sent if undefined
+                                }
+                            }));
+
+                        } catch (error) {
+                            console.error(`[WebSocket Router] Control Channel: Error processing get_summary for ${conversationIdToSummarize}:`, error);
+                            ws.send(JSON.stringify({
+                                 type: 'error',
+                                 message: `Failed to get summary for ${conversationIdToSummarize}: ${error instanceof Error ? error.message : String(error)}`
+                             }));
+                        }
+                    } else {
+                        console.error(`[WebSocket Router] Control Channel: Received get_summary message from ${wsIdentifier} without valid conversationId.`);
+                         ws.send(JSON.stringify({ type: 'error', message: 'Invalid get_summary message: missing conversationId.' }));
+                    }
+                    break;
+                // +++ End get_summary Case +++
+
                 default:
                     console.log(`[WebSocket Router] Control Channel: Received unknown message type from ${wsIdentifier}:`, request.type);
                     ws.send(JSON.stringify({ type: "error", text: `Unknown message type: ${request.type}` }));
