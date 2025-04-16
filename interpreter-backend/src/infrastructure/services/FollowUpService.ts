@@ -3,12 +3,13 @@ import { FollowUp } from "../../generated/prisma";
 import { IFollowUpRepository } from "../../domain/repositories/IFollowUpRepository";
 import { IFollowUpService, FollowUpUnit } from "../../domain/services/IFollowUpService";
 import { INotificationService } from "../../domain/services/INotificationService";
+import { AggregatedAction } from "../../domain/models/AggregatedAction";
 
 @injectable()
 export class FollowUpService implements IFollowUpService {
     constructor(
         @inject("IFollowUpRepository") private followUpRepository: IFollowUpRepository,
-        // @inject("INotificationService") private notificationService: INotificationService // Temporarily remove injection
+        @inject("INotificationService") private notificationService: INotificationService
     ) {}
 
     async createFollowUp(conversationId: string, duration: number, unit: FollowUpUnit, details?: string): Promise<FollowUp> {
@@ -27,8 +28,9 @@ export class FollowUpService implements IFollowUpService {
         });
         console.log(`[FollowUpService] Created follow-up: ${followUp.id}, scheduled for: ${scheduledFor?.toISOString()}`);
 
-        // TODO: Reinstate notification with correct method/payload after refactoring INotificationService
-        // this.notificationService.notifyActionCreated(conversationId, ...);
+        // Map to AggregatedAction and notify
+        const aggregatedAction = this.mapToAggregatedAction(followUp);
+        this.notificationService.notifyActionCreated(conversationId, aggregatedAction);
 
         return followUp;
     }
@@ -57,5 +59,23 @@ export class FollowUpService implements IFollowUpService {
         // Optionally, set to a specific time like start of day or end of day?
         // For now, keep the current time.
         return now;
+    }
+
+    // Private helper to map FollowUp to AggregatedAction
+    private mapToAggregatedAction(followUp: FollowUp): AggregatedAction {
+        return {
+            id: followUp.id,
+            conversationId: followUp.conversationId,
+            type: 'followup',
+            status: followUp.status,
+            createdAt: followUp.createdAt,
+            updatedAt: followUp.updatedAt,
+            data: {
+                duration: followUp.duration,
+                unit: followUp.unit,
+                scheduledFor: followUp.scheduledFor,
+                details: followUp.details
+            }
+        };
     }
 } 

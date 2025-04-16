@@ -1,14 +1,16 @@
-import { Conversation, Prisma, User, Patient, Message, Action, Summary, MedicalHistory } from "../../generated/prisma";
+import { Conversation, Prisma, User, Patient, Message, Summary, MedicalHistory, Note, FollowUp, Prescription } from "../../generated/prisma";
 
-// Define a type that includes the relations we commonly need
-export type ConversationWithRelations = Conversation & {
-    user: { username: string }; // Example: Assuming we only need username from user
+// Define the shape of Conversation when including relations
+export interface ConversationWithRelations extends Conversation {
+    user: User;
     patient: Patient;
     messages: Message[];
-    actions: Action[];
-    summary: Summary | null; // <-- Include Summary relation (nullable)
-    medicalHistory: MedicalHistory | null; // <-- Include MedicalHistory relation (nullable)
-};
+    notes: Note[];
+    followUps: FollowUp[];
+    prescriptions: Prescription[];
+    summary: Summary | null;
+    medicalHistory: MedicalHistory | null;
+}
 
 export interface IConversationRepository {
     /**

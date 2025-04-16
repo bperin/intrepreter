@@ -2,13 +2,14 @@ import { injectable, inject } from "tsyringe";
 import { Note } from "../../generated/prisma";
 import { INoteRepository } from "../../domain/repositories/INoteRepository";
 import { INoteService } from "../../domain/services/INoteService";
-import { INotificationService } from "../../domain/services/INotificationService"; // Assuming we notify on creation
+import { INotificationService } from "../../domain/services/INotificationService";
+import { AggregatedAction } from "../../domain/models/AggregatedAction"; // Import AggregatedAction
 
 @injectable()
 export class NoteService implements INoteService {
     constructor(
         @inject("INoteRepository") private noteRepository: INoteRepository,
-        // @inject("INotificationService") private notificationService: INotificationService // Temporarily remove injection
+        @inject("INotificationService") private notificationService: INotificationService // Reinject notification service
     ) {}
 
     async createNote(conversationId: string, content: string): Promise<Note> {
@@ -20,15 +21,29 @@ export class NoteService implements INoteService {
         });
         console.log(`[NoteService] Created note: ${note.id}`);
 
-        // Notify clients (adjust payload as needed)
-        // TODO: Define a proper payload structure for notifications
-        // this.notificationService.notifyGeneric(conversationId, 'note_created', note);
-        // TODO: Reinstate notification with correct method/payload after refactoring INotificationService
+        // Map to AggregatedAction and notify
+        const aggregatedAction = this.mapToAggregatedAction(note);
+        this.notificationService.notifyActionCreated(conversationId, aggregatedAction);
 
         return note;
     }
 
     async getNotesByConversationId(conversationId: string): Promise<Note[]> {
         return this.noteRepository.findByConversationId(conversationId);
+    }
+
+    // Private helper to map Note to AggregatedAction
+    private mapToAggregatedAction(note: Note): AggregatedAction {
+        return {
+            id: note.id,
+            conversationId: note.conversationId,
+            type: 'note',
+            status: note.status,
+            createdAt: note.createdAt,
+            updatedAt: note.updatedAt,
+            data: { 
+                content: note.content
+            }
+        };
     }
 } 

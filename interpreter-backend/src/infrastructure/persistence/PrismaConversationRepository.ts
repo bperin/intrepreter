@@ -13,7 +13,9 @@ export class PrismaConversationRepository implements IConversationRepository {
                 user: true,
                 patient: true,
                 messages: true,
-                actions: true,
+                notes: true,
+                followUps: true,
+                prescriptions: true,
                 summary: true,
                 medicalHistory: true
             },
