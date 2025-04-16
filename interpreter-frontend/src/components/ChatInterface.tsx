@@ -494,6 +494,25 @@ const ChatInterface: React.FC = () => {
                 setDisplayMessages(prev => [...prev, errorMsg]);
             }
 
+            else if (message.type === 'tts_audio' && message.payload) {
+                const audioBase64 = message.payload.audioBase64;
+                console.log(`[ChatInterface] Received tts_audio. Base64 length: ${audioBase64?.length}`);
+
+                if (audioBase64 && typeof audioBase64 === 'string') {
+                    const audioBuffer = base64ToArrayBuffer(audioBase64);
+                    if (audioBuffer) {
+                        console.log('[ChatInterface] Decoded TTS audio buffer, attempting playback...');
+                        playAudio(audioBuffer);
+                    } else {
+                        console.error("[ChatInterface] Failed to decode Base64 TTS audio data.");
+                        showError("Failed to process received TTS audio.", "error");
+                    }
+                } else {
+                    console.error("[ChatInterface] Received tts_audio message without valid audioBase64 payload.", message);
+                    showError("Received invalid TTS audio data from server.", "warning");
+                }
+            }
+
             else if (message.type === 'session_ended') {
                  console.log('[ChatInterface] Session ended by backend signal.');
                  endCurrentSession();
@@ -608,7 +627,7 @@ const ChatInterface: React.FC = () => {
                 {isSessionActive && (
                     <SttStatusDisplay $status={status}>
                          {/* Optional: Add an icon based on status */} 
-                        Mic: {status} {isRecording && !isPaused && '��'} {isPaused && '⏸️'} {isProcessing && '...'}
+                        Mic: {status} {isRecording && !isPaused && '🔴'} {isPaused && '⏸️'} {isProcessing && '...'}
                         {/* {error ? `(${error.message})` : ''} */}
                     </SttStatusDisplay>
                 )}
