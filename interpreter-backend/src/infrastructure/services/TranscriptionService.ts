@@ -15,6 +15,7 @@ import { IConversationRepository } from '../../domain/repositories/IConversation
 import { CommandDetectionService } from './CommandDetectionService';
 import { CommandExecutionService, CommandExecutionResult } from './CommandExecutionService';
 import { ILanguageDetectionService } from '../../domain/services/ILanguageDetectionService';
+import { FFmpegService } from './FFmpegService';
 
 // Load environment variables from .env file in the parent directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -68,14 +69,12 @@ interface OpenAIChatCompletionResponse {
 // --- NEW: Interface for Per-Conversation State ---
 interface ConversationState {
     openaiConnection: WebSocket | null;
-    ffmpegProcess: ChildProcessWithoutNullStreams | null;
+    ffmpegService: FFmpegService | null;
     isOpenAIConnected: boolean;
     isConnecting: boolean;
     openaiConnectionCooldownUntil: number;
     openaiReconnectionAttempts: number;
-    ffmpegStdinEnded: boolean;
     isPaused: boolean;
-    // Add any other state that needs to be per-conversation
 }
 // ---------------------------------------------
 
@@ -122,12 +121,11 @@ export class TranscriptionService {
         console.log(`[TranscriptionService][${conversationId}] Initializing state for new conversation.`);
         this.conversationStates.set(conversationId, {
             openaiConnection: null,
-            ffmpegProcess: null,
+            ffmpegService: null,
             isOpenAIConnected: false,
             isConnecting: false,
             openaiConnectionCooldownUntil: 0,
             openaiReconnectionAttempts: 0,
-            ffmpegStdinEnded: false,
             isPaused: false,
         });
     }
@@ -155,74 +153,58 @@ export class TranscriptionService {
     });
 
     clientWs.on('message', async (message) => {
-      // TODO: Refactor this message handler to use conversationState
       const convState = this.conversationStates.get(conversationId);
+      const currentFfmpegService = convState?.ffmpegService;
 
-      // +++ Add Detailed Debug Log +++
-      const ffmpegExists = !!(convState && convState.ffmpegProcess);
-      const stdinOk = ffmpegExists && convState!.ffmpegProcess!.stdin && !convState!.ffmpegProcess!.stdin.destroyed;
-      const stdinEndedFlag = convState ? convState.ffmpegStdinEnded : 'N/A';
-      // console.log(`[Transcription Debug][${conversationId}] Message received. convState exists: ${!!convState}, ffmpegProcess exists: ${ffmpegExists}, stdin OK: ${stdinOk}, stdinEndedFlag: ${stdinEndedFlag}`);
-      // +++ End Debug Log +++
-
-      if (!convState || !convState.ffmpegProcess || !convState.ffmpegProcess.stdin || convState.ffmpegProcess.stdin.destroyed || convState.ffmpegStdinEnded) {
-          console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed for this conversation, cannot process audio chunk.`);
-          return;
-      }
-      const currentFfmpegProcess = convState.ffmpegProcess; // Use the specific ffmpeg process
-      const currentFfmpegStdinEnded = convState.ffmpegStdinEnded; // Use the specific flag
-
-      // --- TEMPORARY - Keep old logic structure but use conversation-specific vars ---
-      if (!currentFfmpegProcess || !currentFfmpegProcess.stdin || currentFfmpegProcess.stdin.destroyed || currentFfmpegStdinEnded) {
-           console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed (redundant check).`);
+      if (!convState) {
+           console.warn(`[TranscriptionService][${conversationId}] Message received but state missing.`);
            return;
       }
+
+      // +++ Add Detailed Debug Log +++
+      const ffmpegExists = !!currentFfmpegService;
+      const stdinOk = ffmpegExists && currentFfmpegService!.isReadyForData(); // Use the helper method
+      // const stdinEndedFlag = convState ? !currentFfmpegService!.isReadyForData() : 'N/A'; // Infer ended if not ready
+      // console.log(`[Transcription Debug][${conversationId}] Message received. convState exists: ${!!convState}, ffmpegService exists: ${ffmpegExists}, stdin OK: ${stdinOk}`);
+      // +++ End Debug Log +++
+
+      // Check if the service exists and is ready for data
+      if (!currentFfmpegService || !currentFfmpegService.isReadyForData()) {
+          console.warn(`[TranscriptionService][${conversationId}] FFmpeg service not ready or missing for this conversation, cannot process audio chunk.`);
+          return;
+      }
+      // --- REMOVED redundant check --- 
 
       try {
         const data = JSON.parse(message.toString());
         
         if (data.type === 'input_audio_buffer.append' && data.audio) {
+          // Re-check readiness just before writing (optional, but safer)
+          if (!currentFfmpegService.isReadyForData()) {
+              console.warn(`[TranscriptionService][${conversationId}] FFmpeg service became not ready before write.`);
+              return;
+          }
           try {
             const inputChunkBuffer = Buffer.from(data.audio, 'base64');
-            // Write the raw WebM/Opus chunk to the CONVERSATION'S FFmpeg process
-            currentFfmpegProcess.stdin.write(inputChunkBuffer, (error) => {
-                 if (error) {
-                     console.error(`[TranscriptionService][${conversationId}] Error writing chunk to FFmpeg stdin:`, error);
-                 }
-            });
-          } catch (decodeOrWriteError) {
-            console.error(`[TranscriptionService][${conversationId}] Error decoding or writing audio chunk to FFmpeg:`, decodeOrWriteError);
-            this.broadcastToClients(conversationId, { type: 'error', message: 'Backend audio processing error.' });
+            currentFfmpegService.writeChunk(inputChunkBuffer);
+          } catch (decodeError) {
+            console.error(`[TranscriptionService][${conversationId}] Error decoding base64 audio chunk:`, decodeError);
+            this.broadcastToClients(conversationId, { type: 'error', message: 'Backend audio decoding error.' });
           }
-
         } else if (data.type === 'input_audio_buffer.finalize') {
-          console.log(`[TranscriptionService][${conversationId}] Finalize received. Ending FFmpeg stdin stream.`);
-          try {
-            if (currentFfmpegProcess && currentFfmpegProcess.stdin && !currentFfmpegProcess.stdin.destroyed) {
-               currentFfmpegProcess.stdin.end(); // Signal end of input to FFmpeg
-               convState.ffmpegStdinEnded = true; // Mark that we've ended input FOR THIS CONVERSATION
-               console.log(`[TranscriptionService][${conversationId}] FFmpeg stdin stream ended.`);
-            } else {
-                 console.warn(`[TranscriptionService][${conversationId}] Cannot end FFmpeg stdin: Process not running or stdin destroyed.`);
-            }
-          } catch (finalizeError) {
-            console.error(`[TranscriptionService][${conversationId}] Error ending FFmpeg stdin stream:`, finalizeError);
-            this.broadcastToClients(conversationId, { type: 'error', message: 'Backend failed to finalize stream.' });
-          }
+          console.log(`[TranscriptionService][${conversationId}] Finalize received.`);
+          // Service handles internal checks, just call finalize
+          currentFfmpegService.finalizeInput();
         } else if (data.type === 'input_audio_buffer.pause') {
              console.log(`[TranscriptionService][${conversationId}] Pause message received. Setting isPaused flag.`);
-             if (convState) {
-                 convState.isPaused = true;
-             }
+             convState.isPaused = true;
         } else if (data.type === 'input_audio_buffer.resume') {
              console.log(`[TranscriptionService][${conversationId}] Resume message received. Clearing isPaused flag.`);
-             if (convState) {
-                 convState.isPaused = false;
-             }
+             convState.isPaused = false;
         }
       } catch (err) {
         console.error(`[TranscriptionService][${conversationId}] Error handling client message:`, err);
-         this.broadcastToClients(conversationId, { type: 'error', message: 'Backend error processing message.' });
+        this.broadcastToClients(conversationId, { type: 'error', message: 'Backend error processing message.' });
       }
     });
 
@@ -241,7 +223,7 @@ export class TranscriptionService {
   }
 
   /**
-   * Ensures OpenAI connection and FFmpeg process are running for a specific conversation.
+   * Ensures OpenAI connection and FFmpeg service are running for a specific conversation.
    * Initiates connection/process if needed, ensuring old resources are handled.
    */
   private _ensureConversationResources(conversationId: string): void {
@@ -252,9 +234,8 @@ export class TranscriptionService {
       // This might indicate a race condition or error elsewhere.
       console.warn(`[TranscriptionService][${conversationId}] Re-initializing missing state.`);
       this.conversationStates.set(conversationId, {
-          openaiConnection: null, ffmpegProcess: null, isOpenAIConnected: false, isConnecting: false,
-          openaiConnectionCooldownUntil: 0, openaiReconnectionAttempts: 0, ffmpegStdinEnded: false,
-          isPaused: false,
+          openaiConnection: null, ffmpegService: null, isOpenAIConnected: false, isConnecting: false,
+          openaiConnectionCooldownUntil: 0, openaiReconnectionAttempts: 0, isPaused: false,
        });
        // Proceed to connect after initializing state
        this._connectOpenAIForConversation(conversationId);
@@ -268,9 +249,9 @@ export class TranscriptionService {
     {
         console.log(`[TranscriptionService][${conversationId}] Resources already ensured (connecting or open).`);
         // Additionally ensure FFmpeg is running if WS is open but process is missing (edge case)
-        if (conversationState.openaiConnection?.readyState === WebSocket.OPEN && !conversationState.ffmpegProcess) {
-             console.warn(`[TranscriptionService][${conversationId}] OpenAI connection is open, but FFmpeg process missing. Restarting FFmpeg.`);
-             this._startFFmpegForConversation(conversationId);
+        if (conversationState.openaiConnection?.readyState === WebSocket.OPEN && !conversationState.ffmpegService) {
+             console.warn(`[TranscriptionService][${conversationId}] OpenAI connection is open, but FFmpeg service missing. Re-creating.`);
+             this._createAndStartFFmpegService(conversationId);
         }
         return; // Exit if connecting or already connected and open
     }
@@ -285,7 +266,7 @@ export class TranscriptionService {
   }
 
   /**
-   * Cleans up resources (OpenAI connection, FFmpeg process) for a specific conversation.
+   * Cleans up resources (OpenAI connection, FFmpeg service) for a specific conversation.
    * Called when the last client disconnects or a fatal error occurs.
    */
   private _cleanupConversationResources(conversationId: string): void {
@@ -297,8 +278,12 @@ export class TranscriptionService {
 
     console.log(`[TranscriptionService][${conversationId}] Cleaning up resources...`);
 
-    this._killFFmpegForConversation(conversationId); // Kill FFmpeg first
-    this._closeOpenAIConnectionForConversation(conversationId); // Then close WebSocket
+    // Stop FFmpegService if it exists
+    conversationState.ffmpegService?.stop();
+    conversationState.ffmpegService = null;
+
+    // Close OpenAI connection
+    this._closeOpenAIConnectionForConversation(conversationId);
 
     // Remove the state from the map AFTER cleanup attempts
     this.conversationStates.delete(conversationId);
@@ -307,7 +292,7 @@ export class TranscriptionService {
 
   /**
    * Establishes a WebSocket connection to OpenAI for a SPECIFIC conversation.
-   * Manages the connection lifecycle and associated FFmpeg process for that conversation.
+   * Manages the connection lifecycle and associated FFmpeg service for that conversation.
    */
   private _connectOpenAIForConversation(conversationId: string): void {
     const conversationState = this.conversationStates.get(conversationId);
@@ -342,11 +327,11 @@ export class TranscriptionService {
     conversationState.isConnecting = true;
     conversationState.isOpenAIConnected = false;
     
-    // --- Explicit Cleanup Before Connecting --- 
-    console.log(`[TranscriptionService][${conversationId}] Cleaning up any stale resources before connecting...`);
-    this._killFFmpegForConversation(conversationId); 
-    this._closeOpenAIConnectionForConversation(conversationId); // Ensure previous WS is closed
-    // ------------------------------------------
+    // Cleanup before connecting
+    console.log(`[TranscriptionService][${conversationId}] Cleaning up stale resources before connecting...`);
+    conversationState.ffmpegService?.stop(); // Stop existing FFmpeg service
+    conversationState.ffmpegService = null;
+    this._closeOpenAIConnectionForConversation(conversationId);
 
     try {
       console.log(`[TranscriptionService][${conversationId}] Creating new OpenAI WebSocket...`);
@@ -366,8 +351,8 @@ export class TranscriptionService {
             currentState.isConnecting = false;
             currentState.openaiReconnectionAttempts = 0;
             
-            // Start FFmpeg process specific to this conversation
-            this._startFFmpegForConversation(conversationId);
+            // Create and start the FFmpeg service for this conversation
+            this._createAndStartFFmpegService(conversationId);
             
             console.log(`[TranscriptionService][${conversationId}] Sending configuration update to OpenAI...`);
             const updateConfig = {
@@ -713,114 +698,62 @@ export class TranscriptionService {
     }
   }
 
-  /** Starts the FFmpeg process for a SPECIFIC conversation */
-  private _startFFmpegForConversation(conversationId: string): void {
+  /** Starts the FFmpeg service for a SPECIFIC conversation */
+  private _createAndStartFFmpegService(conversationId: string): void {
     const conversationState = this.conversationStates.get(conversationId);
     if (!conversationState) {
-        console.error(`[TranscriptionService][${conversationId}] Cannot start FFmpeg: State not found.`);
+        console.error(`[TranscriptionService][${conversationId}] Cannot create FFmpeg service: State not found.`);
         return;
     }
-    if (conversationState.ffmpegProcess) {
-        console.warn(`[TranscriptionService][${conversationId}] Attempted to start FFmpeg process, but one already exists.`);
-      return;
+    if (conversationState.ffmpegService) {
+        console.warn(`[TranscriptionService][${conversationId}] FFmpeg service already exists. Stopping old one.`);
+        conversationState.ffmpegService.stop();
     }
-    console.log(`[TranscriptionService][${conversationId}] Starting FFmpeg process...`);
-    conversationState.ffmpegStdinEnded = false; // Reset flag
 
-    const ffmpegPath = ffmpegInstaller.path;
-    const ffmpegArgs = [
-        '-i', 'pipe:0',
-        '-f', 's16le',
-        '-acodec', 'pcm_s16le',
-        '-ar', '24000',
-        '-ac', '1',
-        'pipe:1'
-    ];
+    console.log(`[TranscriptionService][${conversationId}] Creating and starting FFmpegService...`);
+    const ffmpegService = new FFmpegService(conversationId);
+    conversationState.ffmpegService = ffmpegService;
 
-    try {
-        const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
-        conversationState.ffmpegProcess = ffmpegProcess; // Store in conversation state
-        console.log(`[TranscriptionService][${conversationId}] FFmpeg process spawned with PID: ${ffmpegProcess.pid}`);
+    ffmpegService.on('data', (pcmChunk: Buffer) => {
+        const currentState = this.conversationStates.get(conversationId); // Re-fetch state
+        if (currentState?.isPaused) {
+            // console.log(`[TranscriptionService][${conversationId}] Dropping FFmpeg output chunk due to paused state.`);
+            return; // Skip sending if paused
+        }
+        if (currentState && currentState.isOpenAIConnected) {
+            try {
+                const pcmBase64 = pcmChunk.toString('base64');
+                this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.append", audio: pcmBase64 }));
+            } catch (err) {
+                console.error(`[TranscriptionService][${conversationId}] Error sending PCM chunk to OpenAI:`, err);
+            }
+        } else {
+            // console.warn(`[TranscriptionService][${conversationId}] Received FFmpeg data, but OpenAI not connected/state missing.`);
+        }
+    });
 
-        // Handle PCM data coming out of FFmpeg
-        ffmpegProcess.stdout.on('data', (chunk: Buffer) => {
-             const currentState = this.conversationStates.get(conversationId);
-             // +++ Add Check for Paused State +++
-             if (currentState?.isPaused) {
-                 // console.log(`[TranscriptionService][${conversationId}] Dropping FFmpeg output chunk due to paused state.`);
-                 return; // Don't process or send if paused
+    ffmpegService.on('finished', () => {
+        const currentState = this.conversationStates.get(conversationId); // Re-fetch state
+         console.log(`[TranscriptionService][${conversationId}] FFmpeg finished cleanly. Sending commit to OpenAI.`);
+         if (currentState && currentState.isOpenAIConnected) {
+             try {
+                 this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.commit" }));
+             } catch (commitErr) {
+                  console.error(`[TranscriptionService][${conversationId}] Error sending final commit to OpenAI:`, commitErr);
              }
-             // ++++++++++++++++++++++++++++++++++
-            if (currentState && currentState.isOpenAIConnected) {
-                try {
-                    const pcmBase64 = chunk.toString('base64');
-                    this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.append", audio: pcmBase64 }));
-                } catch (err) {
-                    console.error(`[TranscriptionService][${conversationId}] Error sending PCM chunk to OpenAI:`, err);
-                }
-            } else {
-                console.warn(`[TranscriptionService][${conversationId}] Received FFmpeg stdout data, but OpenAI not connected or state missing. Discarding.`);
-            }
-        });
-
-        // Handle FFmpeg stderr (for debugging)
-        ffmpegProcess.stderr.on('data', (chunk: Buffer) => {
-            // console.error(`[TranscriptionService][${conversationId}] FFmpeg stderr: ${chunk.toString()}`); // Keep commented unless debugging
-        });
-
-        // Handle FFmpeg process errors
-        ffmpegProcess.on('error', (error) => {
-            console.error(`[TranscriptionService][${conversationId}] FFmpeg process error:`, error);
-            this._killFFmpegForConversation(conversationId); // Clean up on error
-            this.broadcastToClients(conversationId, { type: 'error', message: 'Internal audio processing error.'});
-        });
-
-        // Handle FFmpeg process exit
-        ffmpegProcess.on('close', (code, signal) => {
-            console.log(`[TranscriptionService][${conversationId}] FFmpeg process exited with code ${code}, signal ${signal}.`);
-            const currentState = this.conversationStates.get(conversationId);
-            // If stdin was ended gracefully, send commit
-            if (currentState && currentState.ffmpegStdinEnded && code === 0) {
-                 console.log(`[TranscriptionService][${conversationId}] FFmpeg finished after stdin ended. Sending commit to OpenAI.`);
-                 try {
-                      this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.commit" }));
-                 } catch (commitErr) {
-                      console.error(`[TranscriptionService][${conversationId}] Error sending final commit to OpenAI after FFmpeg exit:`, commitErr);
-                 }
-            } else if (code !== 0 && code !== null) {
-                 console.error(`[TranscriptionService][${conversationId}] FFmpeg exited unexpectedly.`);
-                 // Maybe signal error to clients
-            }
-            // Clear the handle in the state, even if exit was ok
-            if(currentState) {
-                 currentState.ffmpegProcess = null;
-            }
-        });
-
-        // Handle FFmpeg stdin errors (like EPIPE)
-        ffmpegProcess.stdin.on('error', (error: NodeJS.ErrnoException) => {
-             console.error(`[TranscriptionService][${conversationId}] FFmpeg stdin error:`, error);
-             this._killFFmpegForConversation(conversationId); // Ensure it's cleaned up
-        });
-
-    } catch (spawnError) {
-         console.error(`[TranscriptionService][${conversationId}] Failed to spawn FFmpeg process:`, spawnError);
-         if (conversationState) {
-             conversationState.ffmpegProcess = null;
+         } else {
+              console.warn(`[TranscriptionService][${conversationId}] FFmpeg finished, but OpenAI not connected/state missing.`);
          }
-         this.broadcastToClients(conversationId, { type: 'error', message: 'Failed to start internal audio processing.'});
-    }
-  }
+    });
 
-  /** Kills the FFmpeg process for a SPECIFIC conversation */
-  private _killFFmpegForConversation(conversationId: string): void {
-      const conversationState = this.conversationStates.get(conversationId);
-      if (conversationState && conversationState.ffmpegProcess && !conversationState.ffmpegProcess.killed) {
-          console.log(`[TranscriptionService][${conversationId}] Killing FFmpeg process (PID: ${conversationState.ffmpegProcess.pid})...`);
-          conversationState.ffmpegProcess.kill('SIGTERM');
-          conversationState.ffmpegProcess = null;
-          conversationState.ffmpegStdinEnded = false; // Reset flag
-      }
+    ffmpegService.on('error', (error) => {
+        console.error(`[TranscriptionService][${conversationId}] FFmpegService emitted error:`, error);
+        this.broadcastToClients(conversationId, { type: 'error', message: 'Internal audio processing error.'});
+        // Consider full cleanup on FFmpeg error
+        this._cleanupConversationResources(conversationId);
+    });
+
+    ffmpegService.start(); // Start the process
   }
 
   /**
