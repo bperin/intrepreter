@@ -96,11 +96,16 @@ app.post("/auth/login", (req: Request, res: Response, next: NextFunction) => {
             }
             const result = await authAppService.loginUser(command);
             if (result.success && result.token && result.refreshToken) {
+                // --- DEBUG LOG --- 
+                console.log("[DEBUG /auth/login] Result object before sending response:", result);
+                // -----------------
+                
+                // Ensure userId and username are included in the response
                 res.status(200).json({
                     accessToken: result.token,
                     refreshToken: result.refreshToken,
-                    userId: result.userId,
-                    username: result.username
+                    userId: result.userId,      // Include userId
+                    username: result.username   // Include username
                 });
             } else {
                 res.status(401).json({ message: result.error || "Invalid username or password." });
@@ -678,3 +683,23 @@ checkDbConnection().then(() => {
     console.error("Database connection check failed, server not started.", err);
     // process.exit(1); // Exit if DB check promise itself fails
 });
+
+// --- Add Global Uncaught Exception Handler for Debugging ---
+process.on('uncaughtException', (error) => {
+  console.error('--- UNCAUGHT EXCEPTION ---');
+  console.error('Caught exception:', error.message);
+  console.error('Stack Trace:', error.stack);
+  console.error('--------------------------');
+  // Optionally exit after logging
+  // process.exit(1); 
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('--- UNHANDLED REJECTION ---');
+  console.error('Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  console.error('---------------------------');
+  // Optionally exit after logging
+  // process.exit(1);
+});
+// ---------------------------------------------------------
