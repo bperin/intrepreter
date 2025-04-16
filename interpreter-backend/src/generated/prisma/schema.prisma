@@ -56,7 +56,9 @@ model Conversation {
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
   messages       Message[] // Relation to messages
-  actions        Action[] // Relation to actions
+  notes          Note[] // Relation to notes
+  followUps      FollowUp[] // Relation to follow-ups
+  prescriptions  Prescription[] // Relation to prescriptions
   summary        Summary? // Relation to Summary (one-to-one)
   medicalHistory MedicalHistory? // Relation to MedicalHistory (one-to-one)
 
@@ -107,15 +109,44 @@ model Message {
   @@index([originalMessageId]) // Index the foreign key
 }
 
-model Action {
+model Note {
   id             String       @id @default(cuid())
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-  type           String // e.g., 'schedule_followup', 'send_lab_order', 'write_prescription'
-  status         String       @default("detected") // e.g., detected, pending_review, confirmed, executed, cancelled
-  metadata       Json? // Store details like date, doctor, medication info
-  detectedAt     DateTime     @default(now())
-  executedAt     DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  content        String       @db.Text
+  status         String       @default("created") // e.g., created, reviewed
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId])
+}
+
+model FollowUp {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  duration       Int // e.g., 1, 2
+  unit           String // e.g., "day", "week", "month"
+  scheduledFor   DateTime? // Calculated timestamp for the follow-up date/time
+  details        String?      @db.Text // Optional field for extra context
+  status         String       @default("scheduled") // e.g., scheduled, completed, cancelled
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId])
+}
+
+model Prescription {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  medicationName String
+  dosage         String
+  frequency      String
+  details        String?      @db.Text // Optional field for extra instructions/quantity/refills
+  status         String       @default("pending_review") // e.g., pending_review, sent, filled, cancelled
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([conversationId])
 }

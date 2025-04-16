@@ -12,8 +12,10 @@ import { IMessageService, IMessageService as IMessageServiceToken } from '../../
 import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken } from '../../domain/services/ITextToSpeechService';
 import dotenv from 'dotenv';
 import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
-import { VoiceCommandService } from './VoiceCommandService';
 import { CommandDetectionService } from './CommandDetectionService';
+import { INoteService } from '../../domain/services/INoteService';
+import { IFollowUpService, FollowUpUnit } from '../../domain/services/IFollowUpService';
+import { IPrescriptionService } from '../../domain/services/IPrescriptionService';
 
 // Load environment variables from .env file in the parent directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -93,8 +95,10 @@ export class TranscriptionService {
       @inject(IMessageServiceToken) private messageService: IMessageService,
       @inject(ITextToSpeechServiceToken) private ttsService: ITextToSpeechService,
       @inject('IConversationRepository') private conversationRepository: IConversationRepository,
-      @inject(VoiceCommandService) private voiceCommandService: VoiceCommandService,
-      @inject(CommandDetectionService) private commandDetectionService: CommandDetectionService
+      @inject(CommandDetectionService) private commandDetectionService: CommandDetectionService,
+      @inject('INoteService') private noteService: INoteService,
+      @inject('IFollowUpService') private followUpService: IFollowUpService,
+      @inject('IPrescriptionService') private prescriptionService: IPrescriptionService
   ) {
       this.openaiApiKey = process.env.OPENAI_API_KEY || '';
       // --- DEBUG LOG ---
@@ -353,246 +357,12 @@ export class TranscriptionService {
       });
 
       newWs.on('message', async (data) => {
-        // TODO: Refactor the message processing logic here
-        const rawMessage = data.toString();
-        // console.log(`[TranscriptionService][${conversationId}] Raw message from OpenAI: ${rawMessage.substring(0, 100)}...`); // Can be verbose
-
         try {
-            const message: OpenAITranscriptionMessage = JSON.parse(rawMessage);
-
-            if (message.type === 'transcription_session.created') {
-                console.log(`[TranscriptionService][${conversationId}] OpenAI session created.`);
-            } else if (message.type === 'conversation.item.input_audio_transcription.completed') {
-                // --- Start of Moved Processing Logic ---
-                const completedText = message.transcript || '';
-                if (!completedText) {
-                    console.log(`[TranscriptionService][${conversationId}] Skipping empty completed transcription.`);
-                    return; // Exit if no text
-                }
-
-                console.log(`[TranscriptionService][${conversationId}] Processing completed transcription: "${completedText.substring(0, 50)}..."`);
-
-                const detectedLanguage = await this.detectLanguage(completedText);
-                const sender = (detectedLanguage === 'en' || detectedLanguage === 'unknown') ? 'user' : 'patient'; // user=clinician, patient=patient
-
-                let textForTTS: string = completedText; // Default TTS text
-                let savedOriginalMessageId: string | undefined = undefined;
-                let translationToSave: string | null = null; // Text of the translation to be saved
-                let translationLangToSave: string | null = null; // Language of the translation to be saved
-                let currentPatientLanguage: string = 'es'; // Default assumption
-                let isVoiceCommand: boolean = false; // Flag to track if this is a voice command
-
-                // --- Fetch current conversation state --- 
-                let conversation;
-                try {
-                     conversation = await this.conversationRepository.findById(conversationId);
-                     if (!conversation) {
-                         console.error(`[TranscriptionService][${conversationId}] CRITICAL: Conversation not found! Cannot proceed.`);
-                         // Maybe cleanup resources? this._cleanupConversationResources(conversationId);
-                         return;
-                     }
-                     currentPatientLanguage = conversation.patientLanguage; // Get actual patient language
-                     console.log(`[TranscriptionService][${conversationId}] Fetched conversation. Current patientLanguage: ${currentPatientLanguage}`);
-                } catch (fetchErr) {
-                    console.error(`[TranscriptionService][${conversationId}] Error fetching conversation:`, fetchErr);
-                    // Maybe cleanup? return;
-                    return; // Stop if we can't fetch conversation
-                }
-                // --------------------------------------
-
-                // --- Process based on sender --- 
-                if (sender === 'user') {
-                    // Clinician spoke - check for commands using the new service ASYNCHRONOUSLY
-                    console.log(`[TranscriptionService][${conversationId}] Clinician spoke. Starting async command detection...`);
-                    
-                    // Call detectCommand without await and handle the promise
-                    this.commandDetectionService.detectCommand(completedText)
-                        .then(commandResult => {
-                            if (commandResult) {
-                                // Command detected!
-                                console.log(`[TranscriptionService][${conversationId}][Async] Command detected by service: ${commandResult.toolName}. Routing...`);
-                                // Call the handler for the detected tool
-                                this.voiceCommandService.handleToolCall(commandResult.toolName, commandResult.arguments, conversationId)
-                                    .then(() => console.log(`[TranscriptionService][${conversationId}][Async] VoiceCommandService processed tool call: ${commandResult.toolName}.`))
-                                    .catch(err => console.error(`[TranscriptionService][${conversationId}][Async] Error processing tool call via VoiceCommandService:`, err));
-                            } else {
-                                // No command detected by the async check
-                                console.log(`[TranscriptionService][${conversationId}][Async] No command detected by service.`);
-                            }
-                        })
-                        .catch(detectionError => {
-                            // Log errors specifically from the command detection process
-                            console.error(`[TranscriptionService][${conversationId}][Async] Error during command detection:`, detectionError);
-                        });
-                    
-                    // ** IMPORTANT: Do NOT return here. Proceed immediately with regular message handling **
-                }
-                // --- End command check initiation ---
-
-                // Proceed with standard message processing REGARDLESS of command check outcome
-                
-                // +++ Send transcription_started event +++
-                this.broadcastToClients(conversationId, { type: 'transcription_started' });
-                
-                // 1. Save the original message
-                try {
-                    if (!completedText || completedText.trim() === '') {
-                        console.log(`[TranscriptionService][${conversationId}] Skipping save for empty original message.`);
-                    } else {
-                        console.log(`[TranscriptionService][${conversationId}] Saving original message. Sender: ${sender}, Lang: ${detectedLanguage}...`);
-                        const savedMessage = await this.messageService.createMessage(
-                            conversationId,
-                            completedText,
-                            sender,
-                            detectedLanguage
-                        );
-                        savedOriginalMessageId = savedMessage.id;
-                        console.log(`[TranscriptionService][${conversationId}] Original message saved (ID: ${savedOriginalMessageId}). Broadcasting.`);
-                        this.broadcastToClients(conversationId, { type: 'new_message', payload: savedMessage });
-                    }
-                } catch (saveError) {
-                    console.error(`[TranscriptionService][${conversationId}] Failed to save original message:`, saveError);
-                    this.broadcastToClients(conversationId, { type: 'error', message: 'Failed to save transcription.' });
-                    return; // Don't proceed if saving failed
-                }
-
-                // 2. Handle Translation, Patient Language Update, and Determine TTS Text
-                if (sender === 'patient' && detectedLanguage !== 'en' && detectedLanguage !== 'unknown') {
-                    // --- Patient spoke Non-English --- 
-                    console.log(`[Translation Logic][${conversationId}] Patient spoke ${detectedLanguage}. Current patient lang: ${currentPatientLanguage}`);
-
-                    if (detectedLanguage !== currentPatientLanguage) {
-                        console.log(`[Translation Logic][${conversationId}] Detected language ${detectedLanguage} differs from stored ${currentPatientLanguage}. Updating conversation...`);
-                        try {
-                            await this.conversationRepository.update(conversationId, { patientLanguage: detectedLanguage });
-                            console.log(`[Translation Logic][${conversationId}] Conversation patientLanguage updated to ${detectedLanguage}.`);
-                            currentPatientLanguage = detectedLanguage; // Update local variable
-                        } catch (updateErr) {
-                             console.error(`[Translation Logic][${conversationId}] Failed to update patient language:`, updateErr);
-                             // Continue, but log the error
-                        }
-                    }
-
-                    console.log(`[Translation Logic][${conversationId}] Translating ${detectedLanguage} -> English for Clinician.`);
-                    this.broadcastToClients(conversationId, { type: 'translation_started' });
-                    translationToSave = await this.translateText(completedText, detectedLanguage, 'en');
-                    if (translationToSave) {
-                        textForTTS = translationToSave; // Clinician hears English
-                        translationLangToSave = 'en';
-                        console.log(`[Translation Logic][${conversationId}] English translation successful.`);
-                    } else {
-                        console.warn(`[Translation Logic][${conversationId}] Failed to translate ${detectedLanguage} -> en. Clinician TTS will use original text.`);
-                        textForTTS = completedText; // Fallback to original if translation fails
-                    }
-
-                } else if (sender === 'user') {
-                    // --- Clinician spoke English --- 
-                    const patientTargetLang = currentPatientLanguage; // Use fetched patient language
-                    if (patientTargetLang && patientTargetLang !== 'en') { // Only translate if patient lang is set and not English
-                        console.log(`[Translation Logic][${conversationId}] Clinician spoke English. Translating to Patient language (${patientTargetLang}).`);
-                        this.broadcastToClients(conversationId, { type: 'translation_started' });
-                        translationToSave = await this.translateText(completedText, 'en', patientTargetLang);
-                        if (translationToSave) {
-                            textForTTS = translationToSave; // Patient hears their language
-                            translationLangToSave = patientTargetLang;
-                            console.log(`[Translation Logic][${conversationId}] Translation to ${patientTargetLang} successful.`);
-                        } else {
-                            console.warn(`[Translation Logic][${conversationId}] Failed to translate en -> ${patientTargetLang}. Patient TTS will use original English text.`);
-                            textForTTS = completedText; // Fallback to original
-                        }
-                    } else {
-                        console.log(`[Translation Logic][${conversationId}] Clinician spoke English, Patient language is English or unset. No translation needed.`);
-                        textForTTS = completedText; // No translation needed
-                    }
-                 } else {
-                       // --- Patient spoke English (or detected as unknown/en) ---
-                       console.log(`[Translation Logic][${conversationId}] Patient spoke English/Unknown. No translation needed.`);
-                       textForTTS = completedText;
-                  }
-
-                // 3. Save Translation if one was generated
-                if (translationToSave && translationLangToSave && savedOriginalMessageId) { // Also ensure original was saved
-                    try {
-                        if (translationToSave.trim() === '') {
-                            console.log(`[TranscriptionService][${conversationId}] Skipping save for empty translation message.`);
-                        } else {
-                            console.log(`[TranscriptionService][${conversationId}] Saving translated (${translationLangToSave}) message...`);
-                            const savedTranslation = await this.messageService.createMessage(
-                                conversationId,
-                                translationToSave,
-                                'translation',
-                                translationLangToSave,
-                                savedOriginalMessageId // Link to original message
-                            );
-                            console.log(`[TranscriptionService][${conversationId}] Translated (${translationLangToSave}) message saved (ID: ${savedTranslation.id}). Broadcasting.`);
-                            this.broadcastToClients(conversationId, { type: 'new_message', payload: savedTranslation });
-                        }
-                    } catch (saveTranslationError) {
-                        console.error(`[TranscriptionService][${conversationId}] Failed to save translated (${translationLangToSave}) message:`, saveTranslationError);
-                        this.broadcastToClients(conversationId, { type: 'error', message: `Failed to save ${translationLangToSave} translation.` });
-                        // Continue with TTS even if translation saving fails?
-                    }
-                }
-
-                // 4. Trigger TTS with the final determined text (if original message was saved)
-                if (textForTTS && savedOriginalMessageId) {
-                     try {
-                         console.log(`[TranscriptionService][${conversationId}] Synthesizing speech linked to original message ID: ${savedOriginalMessageId}. Using text (first 50): "${textForTTS.substring(0, 50)}..."`);
-                         // Determine language/voice for TTS based on who is speaking and target language
-                         // This might need more sophisticated logic based on detectedLanguage, translationLangToSave, etc.
-                         const ttsLang = translationLangToSave || detectedLanguage; // Simplified: Use translation lang if available, else detected lang
-                         const audioBuffer = await this.ttsService.synthesizeSpeech(textForTTS, ttsLang); // Pass language if your TTS service supports it
-
-                         if (audioBuffer && audioBuffer.length > 0) {
-                             const audioBase64 = audioBuffer.toString('base64');
-                             console.log(`[TranscriptionService][${conversationId}] Speech synthesized (${audioBuffer.length} bytes). Broadcasting 'tts_audio' event linked to original message ID: ${savedOriginalMessageId}.`);
-                             
-                             // *** Added Backend Debug Logging: Before Broadcast ***
-                             const ttsPayload = {
-                                 type: 'tts_audio',
-                                 payload: {
-                                     audioBase64: audioBase64.substring(0, 50) + '...', // Log only snippet
-                                     format: 'audio/mpeg',
-                                     originalMessageId: savedOriginalMessageId
-                                 }
-                             };
-                             console.log(`[Backend TTS Debug][${conversationId}] Broadcasting payload:`, JSON.stringify(ttsPayload));
-                             // *** End Backend Debug Logging ***
-
-                             // *** Check the broadcast call ***
-                             this.broadcastToClients(conversationId, {
-                                 type: 'tts_audio', // Correct type? YES
-                                 payload: {
-                                     audioBase64: audioBase64,
-                                     format: 'audio/mpeg', // Assuming TTS service returns mp3
-                                     originalMessageId: savedOriginalMessageId
-                                 }
-                             });
-                         } else {
-                             console.log(`[TranscriptionService][${conversationId}] TTS returned empty buffer, skipping broadcast.`);
-                         }
-                     } catch (ttsError) {
-                         console.error(`[TranscriptionService][${conversationId}] Failed to synthesize or broadcast TTS for original message ${savedOriginalMessageId}:`, ttsError);
-                     }
-                } else {
-                     console.log(`[TranscriptionService][${conversationId}] Skipping TTS as textForTTS is empty or original message wasn't saved.`);
-                }
-
-                // +++ Send processing_completed event +++
-                this.broadcastToClients(conversationId, { type: 'processing_completed' });
-                // ++++++++++++++++++++++++++++++++++++++++
-                // --- End of Moved Processing Logic ---
-
-            } else if (message.type === 'error') {
-                console.error(`[TranscriptionService][${conversationId}] OpenAI Error:`, JSON.stringify(message, null, 2));
-                this.broadcastToClients(conversationId, { type: 'error', message: 'OpenAI processing error.' });
-            } else {
-                console.log(`[TranscriptionService][${conversationId}] Received unhandled OpenAI message type: ${message.type}`);
-                // Optionally forward other types if needed
-                // this.broadcastToClients(conversationId, message);
-          }
-        } catch (err) {
-            console.error(`[TranscriptionService][${conversationId}] Error handling OpenAI message:`, err, `Raw Data: ${rawMessage.substring(0, 100)}...`);
+          const message = JSON.parse(data.toString());
+          // console.log(`[OpenAI WS][${conversationId}] Raw Message Received:`, JSON.stringify(message, null, 2));
+          await this.handleOpenAIMessage(conversationId, message); // Handle message
+        } catch (error) {
+          console.error(`[OpenAI WS][${conversationId}] Error parsing OpenAI message:`, error);
         }
       });
 
@@ -980,5 +750,306 @@ export class TranscriptionService {
         else { console.error('An unknown translation error occurred:', String(error)); }
         return null; 
     }
+  }
+
+  // --- NEW: Unified OpenAI Message Handler ---
+  private async handleOpenAIMessage(conversationId: string, message: any): Promise<void> {
+    // console.log(`[OpenAI Handler][${conversationId}] Processing message type: ${message.type}`);
+    switch (message.type) {
+      case 'transcription_session.created':
+        console.log(`[OpenAI Handler][${conversationId}] Session Created. Session ID: ${message.session?.id}`);
+        // Store session info if needed
+        break;
+      
+      case 'transcription.final':
+        // --- Start of Restored Processing Logic (with integrated command detection) ---
+        const completedText = message.transcription?.text || '';
+        const detectedLanguage = message.transcription?.language || 'unknown'; // Use language from final message
+
+        if (!completedText) {
+            console.log(`[OpenAI Handler][${conversationId}] Skipping empty final transcription.`);
+            return; // Exit if no text
+        }
+
+        console.log(`[OpenAI Handler][${conversationId}] Processing final transcription (Lang: ${detectedLanguage}): "${completedText.substring(0, 50)}..."`);
+
+        // Assume sender is 'user' (clinician) for now if language is english-like, else 'patient'
+        // TODO: Implement proper speaker diarization if needed
+        const sender = (detectedLanguage === 'en' || detectedLanguage === 'unknown') ? 'user' : 'patient';
+
+        let textForTTS: string = completedText; // Default TTS text
+        let savedOriginalMessageId: string | undefined = undefined;
+        let translationToSave: string | null = null; // Text of the translation to be saved
+        let translationLangToSave: string | null = null; // Language of the translation to be saved
+        let currentPatientLanguage: string = 'es'; // Default assumption
+
+        // --- Fetch current conversation state --- 
+        let conversation;
+        try {
+             conversation = await this.conversationRepository.findById(conversationId);
+             if (!conversation) {
+                 console.error(`[OpenAI Handler][${conversationId}] CRITICAL: Conversation not found! Cannot process final transcription.`);
+                 return;
+             }
+             currentPatientLanguage = conversation.patientLanguage; // Get actual patient language
+             console.log(`[OpenAI Handler][${conversationId}] Fetched conversation. Current patientLanguage: ${currentPatientLanguage}`);
+        } catch (fetchErr) {
+            console.error(`[OpenAI Handler][${conversationId}] Error fetching conversation:`, fetchErr);
+            return; // Stop if we can't fetch conversation
+        }
+        // --------------------------------------
+
+        // +++ Send transcription_started event +++
+        this.broadcastToClients(conversationId, { type: 'transcription_started' });
+
+        // --- ASYNC: Command Detection for Clinician --- 
+        let commandDetectionPromise: Promise<void> | null = null;
+        if (sender === 'user') {
+             console.log(`[OpenAI Handler][${conversationId}] Clinician spoke (${detectedLanguage}). Starting async command detection...`);
+             commandDetectionPromise = this.commandDetectionService.detectCommand(completedText)
+                 .then(commandResult => {
+                     if (commandResult) {
+                         console.log(`[OpenAI Handler][${conversationId}][Async] Command detected by service: ${commandResult.toolName}. Executing...`);
+                         // Execute the command asynchronously
+                         return this.executeDetectedCommand(conversationId, commandResult.toolName, commandResult.arguments);
+                     } else {
+                         console.log(`[OpenAI Handler][${conversationId}][Async] No command detected by service.`);
+                     }
+                 })
+                 .catch(detectionError => {
+                     console.error(`[OpenAI Handler][${conversationId}][Async] Error during command detection/execution:`, detectionError);
+                 });
+         }
+         // --- End Async Command Detection --- 
+
+        // --- Proceed with standard message processing IMMEDIATELY ---
+        
+        // 1. Save the original message
+        try {
+            if (!completedText || completedText.trim() === '') {
+                console.log(`[OpenAI Handler][${conversationId}] Skipping save for empty original message.`);
+            } else {
+                console.log(`[OpenAI Handler][${conversationId}] Saving original message. Sender: ${sender}, Lang: ${detectedLanguage}...`);
+                // Use the correct createMessage method
+                const savedMessage = await this.messageService.createMessage(
+                    conversationId,
+                    completedText,
+                    sender,
+                    detectedLanguage
+                );
+                savedOriginalMessageId = savedMessage.id;
+                console.log(`[OpenAI Handler][${conversationId}] Original message saved (ID: ${savedOriginalMessageId}). Broadcasting.`);
+                this.broadcastToClients(conversationId, { type: 'new_message', payload: savedMessage });
+            }
+        } catch (saveError) {
+            console.error(`[OpenAI Handler][${conversationId}] Failed to save original message:`, saveError);
+            this.broadcastToClients(conversationId, { type: 'error', message: 'Failed to save transcription.' });
+            return; // Don't proceed if saving failed
+        }
+
+        // 2. Handle Translation, Patient Language Update, and Determine TTS Text
+        if (sender === 'patient' && detectedLanguage !== 'en' && detectedLanguage !== 'unknown') {
+            // --- Patient spoke Non-English --- 
+            console.log(`[Translation Logic][${conversationId}] Patient spoke ${detectedLanguage}. Current patient lang: ${currentPatientLanguage}`);
+            if (detectedLanguage !== currentPatientLanguage) {
+                console.log(`[Translation Logic][${conversationId}] Detected language ${detectedLanguage} differs from stored ${currentPatientLanguage}. Updating conversation...`);
+                try {
+                    await this.conversationRepository.update(conversationId, { patientLanguage: detectedLanguage });
+                    console.log(`[Translation Logic][${conversationId}] Conversation patientLanguage updated to ${detectedLanguage}.`);
+                    currentPatientLanguage = detectedLanguage; // Update local variable
+                } catch (updateErr) {
+                     console.error(`[Translation Logic][${conversationId}] Failed to update patient language:`, updateErr);
+                }
+            }
+            console.log(`[Translation Logic][${conversationId}] Translating ${detectedLanguage} -> English for Clinician.`);
+            this.broadcastToClients(conversationId, { type: 'translation_started' });
+            translationToSave = await this.translateText(completedText, detectedLanguage, 'en');
+            if (translationToSave) {
+                textForTTS = translationToSave; // Clinician hears English
+                translationLangToSave = 'en';
+                console.log(`[Translation Logic][${conversationId}] English translation successful.`);
+            } else {
+                console.warn(`[Translation Logic][${conversationId}] Failed to translate ${detectedLanguage} -> en. Clinician TTS will use original text.`);
+                textForTTS = completedText; // Fallback
+            }
+        } else if (sender === 'user') {
+            // --- Clinician spoke English (or detected as such) --- 
+            const patientTargetLang = currentPatientLanguage;
+            if (patientTargetLang && patientTargetLang !== 'en') { // Translate if patient lang is set and not English
+                console.log(`[Translation Logic][${conversationId}] Clinician spoke English. Translating to Patient language (${patientTargetLang}).`);
+                this.broadcastToClients(conversationId, { type: 'translation_started' });
+                translationToSave = await this.translateText(completedText, 'en', patientTargetLang);
+                if (translationToSave) {
+                    textForTTS = translationToSave; // Patient hears their language
+                    translationLangToSave = patientTargetLang;
+                    console.log(`[Translation Logic][${conversationId}] Translation to ${patientTargetLang} successful.`);
+                } else {
+                    console.warn(`[Translation Logic][${conversationId}] Failed to translate en -> ${patientTargetLang}. Patient TTS will use original English text.`);
+                    textForTTS = completedText; // Fallback
+                }
+            } else {
+                console.log(`[Translation Logic][${conversationId}] Clinician spoke English, Patient language is English or unset. No translation needed.`);
+                textForTTS = completedText; // No translation needed
+            }
+         } else {
+               // --- Patient spoke English (or detected as unknown/en) ---
+               console.log(`[Translation Logic][${conversationId}] Patient spoke English/Unknown. No translation needed.`);
+               textForTTS = completedText;
+          }
+
+        // 3. Save Translation if one was generated
+        if (translationToSave && translationLangToSave && savedOriginalMessageId) { 
+            try {
+                if (translationToSave.trim() === '') {
+                    console.log(`[OpenAI Handler][${conversationId}] Skipping save for empty translation message.`);
+                } else {
+                    console.log(`[OpenAI Handler][${conversationId}] Saving translated (${translationLangToSave}) message...`);
+                    const savedTranslation = await this.messageService.createMessage(
+                        conversationId,
+                        translationToSave,
+                        'translation',
+                        translationLangToSave,
+                        savedOriginalMessageId // Link to original message
+                    );
+                    console.log(`[OpenAI Handler][${conversationId}] Translated (${translationLangToSave}) message saved (ID: ${savedTranslation.id}). Broadcasting.`);
+                    this.broadcastToClients(conversationId, { type: 'new_message', payload: savedTranslation });
+                }
+            } catch (saveTranslationError) {
+                console.error(`[OpenAI Handler][${conversationId}] Failed to save translated (${translationLangToSave}) message:`, saveTranslationError);
+                this.broadcastToClients(conversationId, { type: 'error', message: `Failed to save ${translationLangToSave} translation.` });
+            }
+        }
+
+        // 4. Trigger TTS with the final determined text (if original message was saved)
+        if (textForTTS && savedOriginalMessageId) {
+             try {
+                 console.log(`[OpenAI Handler][${conversationId}] Synthesizing speech linked to original message ID: ${savedOriginalMessageId}. Using text (first 50): "${textForTTS.substring(0, 50)}..."`);
+                 const ttsLang = translationLangToSave || detectedLanguage; // Use translation lang if available, else detected lang
+                 const audioBuffer = await this.ttsService.synthesizeSpeech(textForTTS, ttsLang);
+
+                 if (audioBuffer && audioBuffer.length > 0) {
+                     const audioBase64 = audioBuffer.toString('base64');
+                     console.log(`[OpenAI Handler][${conversationId}] Speech synthesized (${audioBuffer.length} bytes). Broadcasting 'tts_audio' event linked to original message ID: ${savedOriginalMessageId}.`);
+                     this.broadcastToClients(conversationId, {
+                         type: 'tts_audio',
+                         payload: {
+                             audioBase64: audioBase64,
+                             format: 'audio/mpeg',
+                             originalMessageId: savedOriginalMessageId
+                         }
+                     });
+                 } else {
+                     console.log(`[OpenAI Handler][${conversationId}] TTS returned empty buffer, skipping broadcast.`);
+                 }
+             } catch (ttsError) {
+                 console.error(`[OpenAI Handler][${conversationId}] Failed to synthesize or broadcast TTS for original message ${savedOriginalMessageId}:`, ttsError);
+             }
+        } else {
+             console.log(`[OpenAI Handler][${conversationId}] Skipping TTS as textForTTS is empty or original message wasn't saved.`);
+        }
+
+        // +++ Send processing_completed event +++
+        this.broadcastToClients(conversationId, { type: 'processing_completed' });
+
+        // Await the command detection promise here if necessary (though it runs in parallel)
+        // This ensures the handler function doesn't exit before the async command logic finishes
+        // if there are race conditions to worry about, otherwise it can run truly in background.
+        // For now, let's await it to ensure logs appear in sequence if a command *was* detected.
+        if (commandDetectionPromise) {
+             await commandDetectionPromise;
+        }
+        
+        // --- End of Restored Processing Logic ---
+        break;
+
+      case 'transcription.partial':
+        // console.log(`[OpenAI Handler][${conversationId}] Partial Transcription:`, message.transcription.text);
+        // Broadcast partial transcription for real-time feedback
+        this.broadcastToClients(conversationId, {
+          type: 'partial_transcription',
+          text: message.transcription.text,
+          language: message.transcription.language
+        });
+        break;
+
+      case 'transcription.error':
+        console.error(`[OpenAI Handler][${conversationId}] Transcription Error:`, message.error.message);
+        this.broadcastToClients(conversationId, { type: 'error', message: `Transcription Error: ${message.error.message}` });
+        break;
+
+      default:
+        // console.log(`[OpenAI Handler][${conversationId}] Received unhandled message type: ${message.type}`);
+        break;
+    }
+  }
+
+  // --- NEW: Command Execution Logic ---
+  private async executeDetectedCommand(conversationId: string, toolName: string, args: any): Promise<void> {
+      console.log(`[Command Executor][${conversationId}] Executing command: ${toolName} with args:`, args);
+      try {
+          switch (toolName) {
+              case 'take_note':
+                  if (!args.note_content) {
+                      console.error(`[Command Executor][${conversationId}] Missing 'note_content' for take_note`);
+                      return;
+                  }
+                  await this.noteService.createNote(conversationId, args.note_content);
+                  console.log(`[Command Executor][${conversationId}] Note created successfully.`);
+                  // Optionally send confirmation back to client?
+                  this.broadcastToClients(conversationId, { type: 'command_executed', name: 'take_note', status: 'success' });
+                  break;
+
+              case 'schedule_follow_up':
+                  if (args.duration === undefined || args.unit === undefined) {
+                      console.error(`[Command Executor][${conversationId}] Missing 'duration' or 'unit' for schedule_follow_up`);
+                      return;
+                  }
+                  // Validate unit
+                  const validUnits: FollowUpUnit[] = ["day", "week", "month"];
+                  if (!validUnits.includes(args.unit)) {
+                      console.error(`[Command Executor][${conversationId}] Invalid 'unit' for schedule_follow_up: ${args.unit}`);
+                      return;
+                  }
+                  const followUp = await this.followUpService.createFollowUp(
+                      conversationId, 
+                      parseInt(args.duration, 10),
+                      args.unit as FollowUpUnit,
+                      args.details // Optional details
+                  );
+                  console.log(`[Command Executor][${conversationId}] Follow-up scheduled successfully for ${followUp.scheduledFor?.toISOString()}.`);
+                  // Optionally send confirmation back to client?
+                  this.broadcastToClients(conversationId, {
+                      type: 'command_executed', 
+                      name: 'schedule_follow_up', 
+                      status: 'success', 
+                      details: { scheduledFor: followUp.scheduledFor?.toISOString() } 
+                  });
+                  break;
+
+              case 'write_prescription':
+                  if (!args.medication_name || !args.dosage || !args.frequency) {
+                      console.error(`[Command Executor][${conversationId}] Missing required fields for write_prescription`);
+                      return;
+                  }
+                  await this.prescriptionService.createPrescription(
+                      conversationId,
+                      args.medication_name,
+                      args.dosage,
+                      args.frequency,
+                      args.details // Optional details
+                  );
+                  console.log(`[Command Executor][${conversationId}] Prescription created successfully.`);
+                  // Optionally send confirmation back to client?
+                  this.broadcastToClients(conversationId, { type: 'command_executed', name: 'write_prescription', status: 'success' });
+                  break;
+
+              default:
+                  console.warn(`[Command Executor][${conversationId}] Attempted to execute unhandled command: ${toolName}`);
+          }
+      } catch (error) {
+          console.error(`[Command Executor][${conversationId}] Error executing command ${toolName}:`, error);
+          // Optionally send error back to client?
+          this.broadcastToClients(conversationId, { type: 'command_executed', name: toolName, status: 'error', message: 'Failed to execute command.' });
+      }
   }
 } 
