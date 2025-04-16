@@ -1,4 +1,5 @@
 import { Conversation } from "../../generated/prisma";
+import { ConversationWithRelations } from "../repositories/IConversationRepository";
 
 // Input data structure for starting a new session
 export interface StartSessionInput {
@@ -27,10 +28,10 @@ export interface IConversationService {
     /**
      * Ends a conversation, generates a summary, and updates the database.
      * @param conversationId The ID of the conversation to end and summarize.
-     * @returns A promise resolving to the updated Conversation object with the summary.
+     * @returns A promise resolving to the updated Conversation object including relations like summary.
      * @throws Error if the conversation is not found or summarization fails.
      */
-    endAndSummarizeConversation(conversationId: string): Promise<Conversation>;
+    endAndSummarizeConversation(conversationId: string): Promise<ConversationWithRelations>;
 
     // Add other conversation-related methods if needed later
     // e.g., endSession(conversationId: string): Promise<Conversation>;

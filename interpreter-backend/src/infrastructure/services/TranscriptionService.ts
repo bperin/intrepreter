@@ -151,6 +151,14 @@ export class TranscriptionService {
     clientWs.on('message', async (message) => {
       // TODO: Refactor this message handler to use conversationState
       const convState = this.conversationStates.get(conversationId);
+
+      // +++ Add Detailed Debug Log +++
+      const ffmpegExists = !!(convState && convState.ffmpegProcess);
+      const stdinOk = ffmpegExists && convState!.ffmpegProcess!.stdin && !convState!.ffmpegProcess!.stdin.destroyed;
+      const stdinEndedFlag = convState ? convState.ffmpegStdinEnded : 'N/A';
+      console.log(`[Transcription Debug][${conversationId}] Message received. convState exists: ${!!convState}, ffmpegProcess exists: ${ffmpegExists}, stdin OK: ${stdinOk}, stdinEndedFlag: ${stdinEndedFlag}`);
+      // +++ End Debug Log +++
+
       if (!convState || !convState.ffmpegProcess || !convState.ffmpegProcess.stdin || convState.ffmpegProcess.stdin.destroyed || convState.ffmpegStdinEnded) {
           console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed for this conversation, cannot process audio chunk.`);
           return;
@@ -160,7 +168,7 @@ export class TranscriptionService {
 
       // --- TEMPORARY - Keep old logic structure but use conversation-specific vars ---
       if (!currentFfmpegProcess || !currentFfmpegProcess.stdin || currentFfmpegProcess.stdin.destroyed || currentFfmpegStdinEnded) {
-           console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed, cannot process audio chunk.`);
+           console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed (redundant check).`);
            return;
       }
 
@@ -390,6 +398,7 @@ export class TranscriptionService {
                 }
                 // --------------------------------------
 
+                /*
                 // +++ Voice Command Check (Clinician Only) - NEW Logic +++
                 isVoiceCommand = false; // Reset flag for each message
                 if (sender === 'user') {
@@ -422,6 +431,10 @@ export class TranscriptionService {
                     // If it doesn't start with "hey clara ", it's just regular speech.
                 }
                 // +++ End Voice Command Check +++
+                */
+
+                // Ensure isVoiceCommand is false if the block above is commented out
+                isVoiceCommand = false;
 
                 // If isVoiceCommand is true, we returned earlier. 
                 // If it's false, proceed with saving/translation/TTS.

@@ -360,6 +360,8 @@ const SummaryArea = styled.div<ThemedProps>`
     color: ${({ theme }) => theme.colors.text.primary};
     font-family: ${({ theme }) => theme.typography.fontFamily};
 `;
+
+const MedicalHistoryArea = styled(SummaryArea)``; // Reuse SummaryArea styling for now
 // --- End Tabs ---
 
 const ChatInterface: React.FC = () => {
@@ -376,8 +378,9 @@ const ChatInterface: React.FC = () => {
     const messageAreaRef = useRef<HTMLDivElement>(null);
     const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([]);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const [activeTab, setActiveTab] = useState<'chat' | 'summary'>('chat');
+    const [activeTab, setActiveTab] = useState<'chat' | 'summary' | 'history'>('chat');
     const [currentSummary, setCurrentSummary] = useState<string | null>(null);
+    const [currentMedicalHistory, setCurrentMedicalHistory] = useState<string | null>(null);
     const [processingStatus, setProcessingStatus] = useState<'idle' | 'transcribing' | 'translating'>('idle');
 
     // Extract patientName and clinicianUsername once
@@ -658,6 +661,20 @@ const ChatInterface: React.FC = () => {
             }
             // +++ End handler +++
 
+            // +++ Add handler for medical_history_data +++
+            else if (message.type === 'medical_history_data') {
+                console.log('[WS Effect] Handling medical_history_data:', message.payload);
+                const { history, conversationId } = message.payload || {};
+                // Update history only if it pertains to the currently selected conversation
+                if (conversationId && conversationId === selectedConversationId) {
+                    console.log(`[WS Effect] Updating medical history state for ${conversationId}`);
+                    setCurrentMedicalHistory(history || null); // Update with content or null
+                } else {
+                     console.log(`[WS Effect] Received medical_history_data for non-selected conversation (${conversationId}). Ignoring.`);
+                }
+            }
+            // +++ End handler +++
+
             else if (message.type === 'new_message') {
                 // ... (existing new_message handling)
             }
@@ -686,6 +703,7 @@ const ChatInterface: React.FC = () => {
     useEffect(() => {
         console.log('[Effect selectedConversationId] Resetting summary and language for new/no selection.');
         setCurrentSummary(null);
+        setCurrentMedicalHistory(null);
         setActiveTab('chat');
         
         if (selectedConversationId) {
@@ -747,6 +765,20 @@ const ChatInterface: React.FC = () => {
         }
     }, [currentSummary, selectedConversationId, sendMessage]); // Dependencies
 
+    // Function to handle clicking the history tab
+    const handleSelectHistoryTab = useCallback(() => {
+        console.log('[handleSelectHistoryTab] Clicked. Current history:', currentMedicalHistory);
+        setActiveTab('history');
+        // If history isn't loaded yet and a conversation is selected, request it
+        if (currentMedicalHistory === null && selectedConversationId) {
+             console.log(`[handleSelectHistoryTab] History not loaded. Requesting for ${selectedConversationId}...`);
+             sendMessage({ 
+                 type: 'get_medical_history', 
+                 payload: { conversationId: selectedConversationId } 
+             });
+        }
+    }, [currentMedicalHistory, selectedConversationId, sendMessage]); // Dependencies
+
     // Remove showTabs calculation
     // const showTabs = currentConvStatus === 'summarized' || currentConvStatus === 'ended_error';
     // console.log(`[Render] currentConvStatus: ${currentConvStatus}, showTabs: ${showTabs}`);
@@ -768,10 +800,11 @@ const ChatInterface: React.FC = () => {
                 <TabContainer>
                     <TabButton $isActive={activeTab === 'chat'} onClick={() => setActiveTab('chat')}>Chat</TabButton>
                     <TabButton $isActive={activeTab === 'summary'} onClick={handleSelectSummaryTab}>Summary</TabButton>
+                    <TabButton $isActive={activeTab === 'history'} onClick={handleSelectHistoryTab}>Medical History</TabButton>
                 </TabContainer>
             )}
             
-            {/* Content Area: Switches between Chat and Summary */} 
+            {/* Content Area: Switches between Chat, Summary, and History */} 
             <ContentArea>
                 {/* Show MessageArea if no conversation selected OR chat tab is active */} 
                 {(!selectedConversationId || activeTab === 'chat') && (
@@ -871,6 +904,16 @@ const ChatInterface: React.FC = () => {
                             return currentSummary || 'Summary not available.';
                         })()}
                     </SummaryArea>
+                )}
+
+                {/* Show MedicalHistoryArea only if conversation selected AND history tab is active */} 
+                {(selectedConversationId && activeTab === 'history') && (
+                    <MedicalHistoryArea>
+                        {currentMedicalHistory !== null 
+                            ? (currentMedicalHistory || 'No medical history available.') // Show history or placeholder
+                            : 'Loading medical history...' // Show loading state
+                        }
+                    </MedicalHistoryArea>
                 )}
             </ContentArea>
 

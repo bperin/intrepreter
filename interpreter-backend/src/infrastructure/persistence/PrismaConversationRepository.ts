@@ -14,6 +14,8 @@ export class PrismaConversationRepository implements IConversationRepository {
                 patient: true,
                 messages: true,
                 actions: true,
+                summary: true,
+                medicalHistory: true
             },
         });
     }
