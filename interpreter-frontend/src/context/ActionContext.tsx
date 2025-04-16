@@ -1,19 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useConversation } from './ConversationContext';
-
-export interface Action {
-    id: string;
-    type: 'note' | 'followup';
-    content?: string;
-    duration?: number;
-    unit?: string;
-    createdAt: string;
-    conversationId: string;
-}
+import { AggregatedAction } from '../types/actions';
 
 interface ActionContextType {
-    actions: Action[];
+    actions: AggregatedAction[];
     loading: boolean;
     error: string | null;
 }
@@ -21,55 +12,73 @@ interface ActionContextType {
 const ActionContext = createContext<ActionContextType | undefined>(undefined);
 
 export const ActionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [actions, setActions] = useState<Action[]>([]);
+    const [actions, setActions] = useState<AggregatedAction[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { isConnected, sendMessage, lastMessage } = useWebSocket();
     const { currentConversation } = useConversation();
+    const currentConversationId = useMemo(() => currentConversation?.id, [currentConversation]);
 
-    // Effect to send initial request for actions
     useEffect(() => {
-        if (!isConnected || !currentConversation) return;
+        if (!isConnected || !currentConversationId) {
+            setActions([]);
+            setLoading(false);
+            return;
+        }
 
-        // Reset state when conversation changes
+        console.log(`[ActionContext] Requesting actions for ${currentConversationId}`);
         setActions([]);
         setLoading(true);
         setError(null);
 
-        // Request actions for the current conversation
         sendMessage({
             type: 'get_actions',
-            payload: { conversationId: currentConversation.id }
+            payload: { conversationId: currentConversationId }
         });
-    }, [isConnected, currentConversation, sendMessage]);
 
-    // Effect to handle incoming messages
+    }, [isConnected, currentConversationId, sendMessage]);
+
     useEffect(() => {
-        if (!lastMessage || !currentConversation) return;
+        if (!lastMessage || !currentConversationId) return;
 
         const data = lastMessage;
+
         switch (data.type) {
             case 'action_list':
-                if (data.payload.conversationId === currentConversation.id) {
-                    setActions(data.payload.actions);
+                if (data.payload?.conversationId === currentConversationId && Array.isArray(data.payload?.actions)) {
+                    console.log(`[ActionContext] Received action_list for current conversation ${currentConversationId}`);
+                    setActions(data.payload.actions as AggregatedAction[]);
                     setLoading(false);
+                    setError(null);
+                } else {
+                    console.log(`[ActionContext] Ignoring action_list for different conversation: ${data.payload?.conversationId}`);
                 }
                 break;
                 
             case 'action_created':
-                if (data.payload.conversationId === currentConversation.id) {
-                    setActions(prev => [...prev, data.payload.action]);
+                const newAction = data.payload as AggregatedAction;
+                if (newAction?.conversationId === currentConversationId) {
+                    console.log(`[ActionContext] Received action_created for current conversation: ${newAction.id} (${newAction.type})`);
+                    setActions(prev => {
+                        if (prev.some(a => a.id === newAction.id)) {
+                            return prev;
+                        }
+                        return [...prev, newAction].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                    });
+                } else {
+                     console.log(`[ActionContext] Ignoring action_created for different conversation: ${newAction?.conversationId}`);
                 }
                 break;
 
             case 'error':
-                if (data.message.includes('actions')) {
+                 if (typeof data.message === 'string' && data.message.toLowerCase().includes('action')) {
+                    console.error(`[ActionContext] Received error related to actions: ${data.message}`);
                     setError(data.message);
                     setLoading(false);
-                }
+                 }
                 break;
         }
-    }, [lastMessage, currentConversation]);
+    }, [lastMessage, currentConversationId]);
 
     return (
         <ActionContext.Provider value={{ actions, loading, error }}>
