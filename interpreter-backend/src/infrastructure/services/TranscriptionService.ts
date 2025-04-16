@@ -101,14 +101,16 @@ export class TranscriptionService {
       @inject('IPrescriptionService') private prescriptionService: IPrescriptionService
   ) {
       this.openaiApiKey = process.env.OPENAI_API_KEY || '';
-      // --- DEBUG LOG ---
-      console.log(`[TranscriptionService DEBUG] Constructor: Read OPENAI_API_KEY from process.env. Value: '${this.openaiApiKey ? this.openaiApiKey.substring(0, 5) + '...' + this.openaiApiKey.substring(this.openaiApiKey.length - 4) : 'NOT SET'}'`);
-      // -----------------
       if (!this.openaiApiKey) {
-          console.error('[TranscriptionService] OPENAI_API_KEY is not set! Language detection and other features may fail.');
-      }
-      else{
-        console.log('[TranscriptionService] OPENAI_API_KEY is set to: ' + this.openaiApiKey);
+          // --- Throw Error ---
+          console.error('[TranscriptionService] FATAL ERROR: OPENAI_API_KEY environment variable is not set.');
+          throw new Error('OPENAI_API_KEY environment variable is not set. The TranscriptionService cannot function without it.');
+          // -----------------
+      } else {
+          // --- DEBUG LOG ---
+          console.log(`[TranscriptionService DEBUG] Constructor: Read OPENAI_API_KEY from process.env. Value: '${this.openaiApiKey.substring(0, 5)}...${this.openaiApiKey.substring(this.openaiApiKey.length - 4)}'`);
+          // -----------------
+          console.log('[TranscriptionService] OPENAI_API_KEY is set.');
       }
   }
 
@@ -349,8 +351,6 @@ export class TranscriptionService {
           console.log(`[TranscriptionService][${conversationId}] Configuration update sent successfully.`);
         } catch (configError) {
           console.error(`[TranscriptionService][${conversationId}] Error sending configuration update:`, configError);
-          // Close this specific connection if config fails?
-          // this._cleanupConversationResources(conversationId);
         }
 
         this.broadcastToClients(conversationId, { type: 'openai_connected', message: 'Ready for audio' });
@@ -436,6 +436,7 @@ export class TranscriptionService {
 
         // Handle PCM data coming out of FFmpeg
         ffmpegProcess.stdout.on('data', (chunk: Buffer) => {
+            console.log(`[TranscriptionService][${conversationId}] FFmpeg stdout received chunk, size: ${chunk.length}`);
              const currentState = this.conversationStates.get(conversationId);
             if (currentState && currentState.isOpenAIConnected) {
                 try {
@@ -443,7 +444,6 @@ export class TranscriptionService {
                     this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.append", audio: pcmBase64 }));
                 } catch (err) {
                     console.error(`[TranscriptionService][${conversationId}] Error sending PCM chunk to OpenAI:`, err);
-                    // Maybe close this conversation? this._cleanupConversationResources(conversationId);
                 }
             } else {
                 console.warn(`[TranscriptionService][${conversationId}] Received FFmpeg stdout data, but OpenAI not connected. Discarding.`);
@@ -452,7 +452,7 @@ export class TranscriptionService {
 
         // Handle FFmpeg stderr (for debugging)
         ffmpegProcess.stderr.on('data', (chunk: Buffer) => {
-            // console.error(`[TranscriptionService][${conversationId}] FFmpeg stderr: ${chunk.toString()}`); // Keep commented unless debugging
+            // console.error(`[TranscriptionService][${conversationId}] FFmpeg stderr: ${chunk.toString()}`); 
         });
 
         // Handle FFmpeg process errors
@@ -468,15 +468,15 @@ export class TranscriptionService {
             const currentState = this.conversationStates.get(conversationId);
             // If stdin was ended gracefully, send commit
             if (currentState && currentState.ffmpegStdinEnded && code === 0) {
-                 console.log(`[TranscriptionService][${conversationId}] FFmpeg finished after stdin ended. Sending commit to OpenAI.`);
+                 console.log(`[TranscriptionService][${conversationId}] FFmpeg finished after stdin ended. Attempting to send commit to OpenAI.`);
                  try {
                       this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.commit" }));
+                      console.log(`[TranscriptionService][${conversationId}] Commit message sent to OpenAI.`);
                  } catch (commitErr) {
                       console.error(`[TranscriptionService][${conversationId}] Error sending final commit to OpenAI after FFmpeg exit:`, commitErr);
                  }
             } else if (code !== 0 && code !== null) {
-                 console.error(`[TranscriptionService][${conversationId}] FFmpeg exited unexpectedly.`);
-                 // Maybe signal error to clients
+                 console.error(`[TranscriptionService][${conversationId}] FFmpeg exited unexpectedly (code: ${code}, signal: ${signal}).`);
             }
             // Clear the handle in the state, even if exit was ok
             if(currentState) {
@@ -514,21 +514,27 @@ export class TranscriptionService {
    * Send a message over the OpenAI connection for a SPECIFIC conversation.
    */
   private _sendToOpenAIForConversation(conversationId: string, message: string): void {
+    let messageType = 'unknown';
+    try {
+        const parsed = JSON.parse(message);
+        messageType = parsed.type || 'unknown';
+    } catch {}
+    console.log(`[TranscriptionService][${conversationId}] Attempting to send to OpenAI. Type: ${messageType}, Size: ${message.length}`);
+    
     const conversationState = this.conversationStates.get(conversationId);
     if (conversationState && conversationState.openaiConnection && conversationState.isOpenAIConnected && conversationState.openaiConnection.readyState === WebSocket.OPEN) {
       try {
         conversationState.openaiConnection.send(message);
+        // console.log(`[TranscriptionService][${conversationId}] Successfully sent message type ${messageType} to OpenAI.`); // Can be verbose
       } catch (sendError) {
         console.error(`[TranscriptionService][${conversationId}] _sendToOpenAIForConversation Error during send:`, sendError);
-        // Consider cleaning up this conversation's resources on send error
-        // this._cleanupConversationResources(conversationId);
         throw sendError; // Re-throw send error
       }
     } else {
       const stateDetails = conversationState
         ? `State: ${conversationState.openaiConnection?.readyState}, ConnectedFlag: ${conversationState.isOpenAIConnected}`
         : 'State not found';
-      const errMsg = `[TranscriptionService][${conversationId}] _sendToOpenAIForConversation: Cannot send, OpenAI WebSocket not ready or state missing. ${stateDetails}`;
+      const errMsg = `[TranscriptionService][${conversationId}] _sendToOpenAIForConversation: Cannot send, OpenAI WebSocket not ready or state missing. ${stateDetails}`; // Log state details
       console.error(errMsg);
       throw new Error('OpenAI WebSocket not ready for conversation');
     }

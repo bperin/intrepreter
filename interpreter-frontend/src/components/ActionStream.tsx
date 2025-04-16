@@ -1,7 +1,13 @@
 import React from "react";
 import styled from "styled-components";
 import { Theme } from "../theme";
-import { useActions, Action } from "../context/ActionContext";
+import { 
+    AggregatedAction, 
+    NoteData, 
+    FollowUpData, 
+    PrescriptionData 
+} from "../types/actions";
+import { useActions } from "../context/ActionContext";
 import { format } from "date-fns";
 
 type ThemedProps = { theme: Theme };
@@ -56,6 +62,23 @@ const ActionContent = styled.p<ThemedProps>`
     font-size: ${({ theme }) => theme.typography.sizes.base};
 `;
 
+const ActionDetails = styled.ul<ThemedProps>`
+    list-style: none;
+    padding-left: 0;
+    margin-top: ${({ theme }) => theme.spacing.sm};
+    margin-bottom: 0;
+`;
+
+const ActionDetailItem = styled.li<ThemedProps>`
+    font-size: ${({ theme }) => theme.typography.sizes.sm};
+    color: ${({ theme }) => theme.colors.text.secondary};
+    margin-bottom: ${({ theme }) => theme.spacing.xs};
+    
+    strong {
+        color: ${({ theme }) => theme.colors.text.primary}B3;
+    }
+`;
+
 const EmptyState = styled.div<ThemedProps>`
     color: ${({ theme }) => theme.colors.text.muted};
     font-style: italic;
@@ -81,11 +104,74 @@ const ErrorState = styled(EmptyState)`
     border-color: ${({ theme }) => theme.colors.status.error}60;
 `;
 
-const ActionItemComponent: React.FC<{ action: Action }> = ({ action }) => {
-    const icon = action.type === 'note' ? '📝' : '📅';
-    const title = action.type === 'note' ? 'Note' : 'Follow-up';
+function isNoteData(data: any): data is NoteData {
+  return typeof data?.content === 'string';
+}
+
+function isFollowUpData(data: any): data is FollowUpData {
+  return typeof data?.duration === 'number' && typeof data?.unit === 'string';
+}
+
+function isPrescriptionData(data: any): data is PrescriptionData {
+  return typeof data?.medicationName === 'string' && 
+         typeof data?.dosage === 'string' && 
+         typeof data?.frequency === 'string';
+}
+
+const ActionItemComponent: React.FC<{ action: AggregatedAction }> = ({ action }) => {
+    let icon = '❓';
+    let title = 'Unknown Action';
+    let content = null;
+
+    switch (action.type) {
+        case 'note':
+            icon = '📝';
+            title = 'Note';
+            if (isNoteData(action.data)) {
+                content = <ActionContent>{action.data.content}</ActionContent>;
+            }
+            break;
+        case 'followup':
+            icon = '📅';
+            title = 'Follow-up';
+            if (isFollowUpData(action.data)) {
+                const scheduledDate = action.data.scheduledFor ? new Date(action.data.scheduledFor) : null;
+                let scheduledText = "";
+                if (scheduledDate && !isNaN(scheduledDate.getTime())) {
+                    scheduledText = ` (Scheduled: ${format(scheduledDate, 'MMM d, yyyy')})`;
+                }
+                content = (
+                    <>
+                        <ActionContent>
+                            Follow up in {action.data.duration} {action.data.unit}{action.data.duration !== 1 ? 's' : ''}{scheduledText}.
+                        </ActionContent>
+                        {action.data.details && (
+                             <ActionDetails>
+                                <ActionDetailItem><strong>Details:</strong> {action.data.details}</ActionDetailItem>
+                            </ActionDetails>
+                        )}
+                    </>
+                );
+            }
+            break;
+        case 'prescription':
+            icon = '💊';
+            title = 'Prescription';
+            if (isPrescriptionData(action.data)) {
+                content = (
+                    <ActionDetails>
+                        <ActionDetailItem><strong>Medication:</strong> {action.data.medicationName}</ActionDetailItem>
+                        <ActionDetailItem><strong>Dosage:</strong> {action.data.dosage}</ActionDetailItem>
+                        <ActionDetailItem><strong>Frequency:</strong> {action.data.frequency}</ActionDetailItem>
+                        {action.data.details && (
+                             <ActionDetailItem><strong>Details:</strong> {action.data.details}</ActionDetailItem>
+                        )}
+                    </ActionDetails>
+                );
+            }
+            break;
+    }
     
-    // Try to parse the date, provide fallback if invalid
     const dateObject = new Date(action.createdAt);
     let formattedTime = "Invalid Date";
     if (!isNaN(dateObject.getTime())) {
@@ -99,10 +185,7 @@ const ActionItemComponent: React.FC<{ action: Action }> = ({ action }) => {
                 {title}
                 <ActionTime>{formattedTime}</ActionTime>
             </ActionTitle>
-            <ActionContent>
-                {action.type === 'note' && action.content}
-                {action.type === 'followup' && `Follow up in ${action.duration} ${action.unit}${action.duration !== 1 ? 's' : ''}`}
-            </ActionContent>
+            {content} 
         </ActionItem>
     );
 };
