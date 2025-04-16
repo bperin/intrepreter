@@ -223,6 +223,8 @@ const base64ToArrayBuffer = (base64: string): ArrayBuffer | null => {
 
 // Helper to convert backend Message to DisplayMessage
 const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
+    console.log('🔄 [convertToDisplayMessage] Converting message:', JSON.stringify(msg, null, 2)); // Log input
+
     // Check if the input is a valid message object expected from backend
     if (!msg || typeof msg.originalText !== 'string' || typeof msg.senderType !== 'string') {
         console.warn('⚠️ [convertToDisplayMessage] Invalid message structure received:', msg);
@@ -273,6 +275,7 @@ const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
 };
 
 const ChatInterface: React.FC = () => {
+    console.log('[ChatInterface] Component Rendered.'); // Log component render
     const { isConnected, lastMessage, sendMessage } = useWebSocket();
     const { showError } = useError();
     const {
@@ -368,16 +371,33 @@ const ChatInterface: React.FC = () => {
         }
     }, [showError]);
 
+    // Effect to handle incoming WebSocket messages (message_list, new_message, etc.)
     useEffect(() => {
+        // **** Log right at the start of the effect ****
+        console.log('[ChatInterface] useEffect[lastMessage] running. lastMessage:', JSON.stringify(lastMessage)); // Stringify for clarity
+
         if (lastMessage && isBackendMessage(lastMessage)) {
             const message = lastMessage;
+            console.log('[ChatInterface] useEffect[lastMessage] - Processing message type:', message.type); // Log type
 
-            if (message.type === 'message_list' && message.messages && message.conversationId === selectedConversationId) {
-                console.log(`[ChatInterface] Received message list for conv ${message.conversationId}:`, message.messages);
-                const newDisplayMessages = message.messages
-                    .map(convertToDisplayMessage)
+            // Check payload for message_list data
+            if (message.type === 'message_list' && message.payload && message.payload.messages && message.payload.conversationId === selectedConversationId) {
+                console.log(`[ChatInterface] Received message list for conv ${message.payload.conversationId}:`, message.payload.messages);
+
+                // Explicitly cast the messages array
+                const messagesArray = message.payload.messages as Message[];
+
+                // Define the mapping function with explicit type
+                const mapMessageToDisplay = (msg: Message): DisplayMessage | null => {
+                    return convertToDisplayMessage(msg);
+                };
+
+                const newDisplayMessages = messagesArray // Use the casted array
+                    .map(mapMessageToDisplay) // Use the defined function
                     .filter((msg): msg is DisplayMessage => msg !== null);
+                console.log(`[ChatInterface] Converted historical messages:`, newDisplayMessages); // Log converted array
                 setDisplayMessages(newDisplayMessages);
+                console.log(`[ChatInterface] Called setDisplayMessages with ${newDisplayMessages.length} historical messages.`); // Log after set state
             }
 
             else if (message.type === 'new_message' && message.payload && message.conversationId === selectedConversationId) {
@@ -438,8 +458,10 @@ const ChatInterface: React.FC = () => {
                  };
                  setDisplayMessages(prev => [...prev, sessionEndMsg]);
             }
+        } else {
+            console.log('[ChatInterface] useEffect[lastMessage] - lastMessage is null or not a BackendMessage.');
         }
-    }, [lastMessage, selectedConversationId, showError, playAudio, endCurrentSession]);
+    }, [lastMessage, selectedConversationId, showError, playAudio, endCurrentSession]); // Dependencies
 
     useEffect(() => {
         scrollToBottom();
@@ -476,9 +498,9 @@ const ChatInterface: React.FC = () => {
     // Effect to fetch historical messages when conversation changes
     useEffect(() => {
         if (selectedConversationId) {
-            console.log(`🚀 [ChatInterface] Conversation selected: ${selectedConversationId}. Fetching messages...`);
+            console.log(`🚀 [ChatInterface] useEffect[selectedConversationId] - RUNNING for ID: ${selectedConversationId}. Fetching messages...`);
             // Clear messages from previous conversation
-            console.log('🧹 [ChatInterface] Clearing previous messages.');
+            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - Clearing previous messages.');
             setDisplayMessages([]); 
             
             // Send request via control channel WebSocket
@@ -488,8 +510,8 @@ const ChatInterface: React.FC = () => {
                 payload: { conversationId: selectedConversationId }
             });
         } else {
-             console.log('🧹 [ChatInterface] No conversation selected. Clearing messages.');
-             setDisplayMessages([]); // Clear messages if no conversation is selected
+            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - RUNNING for null ID. Clearing messages.');
+            setDisplayMessages([]); // Clear messages if no conversation is selected
         }
     }, [selectedConversationId, sendMessage]); // Depend on selection and sendMessage function
 
@@ -522,16 +544,23 @@ const ChatInterface: React.FC = () => {
                  {displayMessages.length === 0 && isSessionActive && (
                     <NoSessionText>Session active. Start speaking or wait for messages.</NoSessionText>
                 )}
-                {displayMessages.map((msg, index) => (
-                    <MessageGroup key={msg.id || index} $isSender={msg.sender === "user"}>
-                        <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
-                            {msg.text}
-                            {msg.sender === 'translation' && msg.originalText && (
-                                <MessageMeta>Original: {msg.originalText}</MessageMeta>
-                            )}
-                        </Bubble>
-                    </MessageGroup>
-                ))}
+                {(() => { // Wrap log in an IIFE or similar structure
+                    console.log('[ChatInterface] About to map messages. Count:', displayMessages.length, 'Value:', JSON.stringify(displayMessages)); // Stringify for better logging
+                    return null; // Return null so nothing renders here
+                })()}
+                {displayMessages.map((msg, index) => {
+                    console.log(`[ChatInterface] Rendering message ${index + 1}/${displayMessages.length}:`, msg);
+                    return (
+                        <MessageGroup key={msg.id || index} $isSender={msg.sender === "user"}>
+                            <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
+                                {msg.text}
+                                {msg.sender === 'translation' && msg.originalText && (
+                                    <MessageMeta>Original: {msg.originalText}</MessageMeta>
+                                )}
+                            </Bubble>
+                        </MessageGroup>
+                    );
+                })}
                  {isRecording && transcript && (
                       <MessageGroup key="live-transcript">
                           <Bubble $type="system">
