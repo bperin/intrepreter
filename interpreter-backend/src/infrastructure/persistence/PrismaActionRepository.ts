@@ -6,7 +6,7 @@ import { injectable, inject } from "tsyringe";
 export class PrismaActionRepository implements IActionRepository {
     private prisma: PrismaClient;
 
-    constructor(@inject(PrismaClient) prismaClient: PrismaClient) {
+    constructor(@inject("PrismaClient") prismaClient: PrismaClient) {
         this.prisma = prismaClient;
     }
 
@@ -38,4 +38,32 @@ export class PrismaActionRepository implements IActionRepository {
             },
         });
     }
+
+    // +++ Implement specific action creation methods +++
+    async createNoteAction(conversationId: string, content: string): Promise<Action> {
+        console.log(`[PrismaActionRepository] Creating NOTE action for conversation ${conversationId}`);
+        return this.prisma.action.create({
+            data: {
+                conversationId: conversationId,
+                type: 'NOTE', // Assuming 'NOTE' is a valid type in your schema
+                status: 'PENDING', // Default status
+                metadata: { content: content }, // Use 'metadata' field from schema
+                detectedAt: new Date() // Add detection timestamp
+            },
+        });
+    }
+
+    async createFollowUpAction(conversationId: string, duration: number, unit: string): Promise<Action> {
+        console.log(`[PrismaActionRepository] Creating FOLLOW_UP action for conversation ${conversationId}`);
+        return this.prisma.action.create({
+            data: {
+                conversationId: conversationId,
+                type: 'FOLLOW_UP', // Assuming 'FOLLOW_UP' is a valid type
+                status: 'PENDING',
+                metadata: { duration: duration, unit: unit }, // Use 'metadata' field from schema
+                detectedAt: new Date()
+            },
+        });
+    }
+    // ++++++++++++++++++++++++++++++++++++++++++++++++
 }

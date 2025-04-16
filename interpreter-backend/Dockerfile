@@ -31,7 +31,8 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/src/generated/prisma ./src/generated/prisma # Copy generated client
+# Copy the generated client from the correct location in the builder stage
+COPY --from=builder /app/src/generated/prisma ./src/generated/prisma
 COPY package*.json ./
 
 # Expose the application port (ensure it matches .env or default)
