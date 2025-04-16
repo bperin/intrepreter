@@ -1,10 +1,39 @@
-# Node.js
-node_modules/
+# Secrets - DO NOT COMMIT
+deploy.secrets.env
+interpreter-backend/.env
 .env
-*.log
+*.env
+
+# IDE configuration files
+.idea/
+.vscode/
+
+# Build outputs
+/dist
+/build
+
+# Node.js dependencies
+node_modules/
 npm-debug.log*
-yarn-debug.log*
 yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Environment specific files
+.env.*
+!.env.example
+
+# Prisma files
+/prisma/dev.db
+/prisma/dev.db-journal
 
 # TypeScript
 *.tsbuildinfo
@@ -14,11 +43,6 @@ prisma/migrations/
 
 # React
 build/
-.DS_Store
-
-# General
-.idea/
-.vscode/
 *.sublime-workspace
 *.sublime-project
 docker-compose.yml

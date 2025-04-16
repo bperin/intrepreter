@@ -10,17 +10,13 @@ services:
     container_name: interpreter_backend
     # depends_on removed as db service is gone
     environment:
-      # Use the Cloud SQL connection string
-      DATABASE_URL: "postgresql://db_user:C8D7gsHJiv5LXBL35kHsrQ==@34.46.226.55:5432/interpreter_db?schema=public" # Provide via .env or secrets
+      # Variables from env_file will be loaded here automatically
       PORT: 8080 # Make sure this matches the EXPOSE in backend Dockerfile
-      # Add any other necessary backend environment variables here
-      # Load JWT_SECRET and OPENAI_API_KEY from .env or set them here directly
-      # Example: Load from an env_file (ensure .env exists at runtime context)
-      # env_file:
-      #  - ./interpreter-backend/.env
-      # Or set directly (less secure for secrets):
-      JWT_SECRET: "k9+a+sPm9aw8BkdyMabTODJ3MVawLaIsvqQ98ZuSSZI=" # Provide via .env or secrets
-      OPENAI_API_KEY: "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" # Provide via .env or secrets
+      # Add any other necessary backend environment variables here (non-secret)
+      JWT_ISSUER: "interpreter-backend-issuer" # Example non-secret
+    env_file:
+      # Load secrets from this file (relative to docker-compose.yml)
+      - ./interpreter-backend/.env
     ports:
       - "8080:8080"
     volumes:
