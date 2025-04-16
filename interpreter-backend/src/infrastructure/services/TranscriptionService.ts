@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { injectable } from 'tsyringe';
+import { injectable, inject } from 'tsyringe';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as child_process from 'child_process';
@@ -7,6 +7,7 @@ import * as os from 'os';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { IMessageService, IMessageService as IMessageServiceToken } from '../../domain/services/IMessageService';
 
 // Set the path for fluent-ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -59,7 +60,9 @@ export class TranscriptionService {
   private clientConnections: Map<string, Set<WebSocket>> = new Map();
   // --------------------------------------------------
 
-  constructor() {}
+  constructor(
+      @inject(IMessageServiceToken) private messageService: IMessageService
+  ) {}
 
   /**
    * Handle a new client WebSocket connection for transcription
@@ -255,17 +258,60 @@ export class TranscriptionService {
           // --------------------------------------------------------
 
           if (targetConversationId) {
-               if (message.type !== 'transcription_session.created') { // Don't broadcast session created
-                   console.warn(`[TranscriptionService] Routing OpenAI message (${message.type}) to first client: ${targetConversationId} (Limitation: Assumes single active user)`);
-                   this.broadcastToClients(targetConversationId, message);
+               if (message.type === 'transcription_session.created') {
+                   // Don't broadcast session created message to client
+                   console.log(`[TranscriptionService] OpenAI session created for ${targetConversationId}.`);
                }
-          } else {
-               console.warn(`[TranscriptionService] Received OpenAI message (${message.type}) but no clients connected to route to.`);
-          }
+               else if (message.type === 'conversation.item.input_audio_transcription.completed') {
+                   const completedText = message.transcript || '';
+                   const detectedLanguage = message.language || 'unknown'; // Extract language or default
+                   const sender = 'assistant'; // Determine sender (e.g., based on session context, default to assistant for now)
 
-          if (message.type === 'error') {
-            console.error('[TranscriptionService] OpenAI Error:', JSON.stringify(message, null, 2));
-          }
+                   console.log(`[TranscriptionService] Received completed transcription for ${targetConversationId}. Text: "${completedText.substring(0,50)}...", Lang: ${detectedLanguage}`);
+
+                   if (completedText) { // Only save if there is text
+                       try {
+                           console.log(`[TranscriptionService] Calling messageService.createMessage for ${targetConversationId}...`);
+                           const savedMessage = await this.messageService.createMessage(
+                               targetConversationId,
+                               completedText,
+                               sender,
+                               detectedLanguage
+                           );
+                           console.log(`[TranscriptionService] Message saved (ID: ${savedMessage.id}). Broadcasting 'new_message' event.`);
+
+                           // Broadcast the newly saved message object to clients
+                           this.broadcastToClients(targetConversationId, {
+                               type: 'new_message',
+                               payload: savedMessage
+                           });
+
+                       } catch (saveError) {
+                           console.error(`[TranscriptionService] Failed to save or broadcast message for ${targetConversationId}:`, saveError);
+                           // Optionally broadcast an error back to the client
+                           this.broadcastToClients(targetConversationId, { 
+                               type: 'error', 
+                               message: 'Failed to save transcription.' 
+                           });
+                       }
+                   } else {
+                        console.log(`[TranscriptionService] Skipping save for empty completed transcription for ${targetConversationId}.`);
+                   }
+               } else if (message.type === 'error') {
+                    console.error('[TranscriptionService] OpenAI Error:', JSON.stringify(message, null, 2));
+                    // Optionally broadcast a generic error to the client
+                    this.broadcastToClients(targetConversationId, { type: 'error', message: 'OpenAI processing error.' });
+               } else {
+                   // Handle other message types from OpenAI if necessary
+                   // Currently, we primarily care about .completed for saving and potentially errors.
+                   // Deltas are handled client-side based on the raw forward.
+                   console.log(`[TranscriptionService] Received unhandled OpenAI message type: ${message.type} for ${targetConversationId}`);
+                   // Optionally forward other message types if the frontend needs them:
+                   // this.broadcastToClients(targetConversationId, message);
+               }
+           } else {
+                console.warn(`[TranscriptionService] Received OpenAI message (${message.type}) but no clients connected to route to.`);
+            }
         } catch (err) {
           console.error('[TranscriptionService] Error handling OpenAI message:', err, `Raw Data: ${rawMessage}`);
         }
