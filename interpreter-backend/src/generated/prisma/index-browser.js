@@ -121,10 +121,10 @@ exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
   username: 'username',
   hashedPassword: 'hashedPassword',
-  refreshToken: 'refreshToken',
-  refreshTokenExpiry: 'refreshTokenExpiry',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  refreshToken: 'refreshToken',
+  refreshTokenExpiry: 'refreshTokenExpiry'
 };
 
 exports.Prisma.PatientScalarFieldEnum = {
@@ -142,10 +142,24 @@ exports.Prisma.ConversationScalarFieldEnum = {
   patientId: 'patientId',
   startTime: 'startTime',
   endTime: 'endTime',
-  summary: 'summary',
   status: 'status',
-  preferredLanguage: 'preferredLanguage',
   patientLanguage: 'patientLanguage',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MedicalHistoryScalarFieldEnum = {
+  id: 'id',
+  content: 'content',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  conversationId: 'conversationId'
+};
+
+exports.Prisma.SummaryScalarFieldEnum = {
+  id: 'id',
+  content: 'content',
+  conversationId: 'conversationId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -203,6 +217,8 @@ exports.Prisma.ModelName = {
   User: 'User',
   Patient: 'Patient',
   Conversation: 'Conversation',
+  MedicalHistory: 'MedicalHistory',
+  Summary: 'Summary',
   Message: 'Message',
   Action: 'Action'
 };
