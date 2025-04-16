@@ -1,11 +1,6 @@
 import { injectable, inject } from "tsyringe";
 import axios from "axios";
 import { PrismaClient, Patient, MedicalHistory } from "../../generated/prisma";
-import dotenv from 'dotenv';
-import path from 'path';
-
-// Load environment variables specifically for OpenAI API Key
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') }); // Adjust path as needed relative to compiled JS output
 
 // Interface for OpenAI Chat Completion response (can be shared or defined locally)
 interface OpenAIChatCompletionResponse {

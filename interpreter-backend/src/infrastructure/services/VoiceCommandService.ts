@@ -1,11 +1,10 @@
 import { injectable, inject } from 'tsyringe';
 import axios from 'axios';
-import dotenv from 'dotenv';
-import path from 'path';
 import { IActionService } from '../../domain/services/IActionService';
-
-// Load environment variables relative to the backend root
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') }); 
+import { PrismaClient, Action } from "../../generated/prisma";
+import { IActionRepository } from "../../domain/repositories/IActionRepository";
+import { INotificationService } from "../../domain/services/INotificationService";
+import { ActionPayload } from "../../domain/models/Action";
 
 // Interface for the Chat Completion API response when using tools
 interface OpenAIChatCompletionToolResponse {
@@ -91,7 +90,10 @@ export class VoiceCommandService {
     private readonly tools: any[];
 
     constructor(
-        @inject("IActionService") private actionService: IActionService
+        @inject("IActionService") private actionService: IActionService,
+        @inject("PrismaClient") private prisma: PrismaClient,
+        @inject("IActionRepository") private actionRepository: IActionRepository,
+        @inject("INotificationService") private notificationService: INotificationService
     ) {
         this.openaiApiKey = process.env.OPENAI_API_KEY || '';
         if (!this.openaiApiKey) {
@@ -289,6 +291,109 @@ export class VoiceCommandService {
         }
         
         console.log('=== Voice Command Processing Completed ===\n');
+    }
+
+    /**
+     * Handles a detected tool call from the CommandDetectionService.
+     * Creates an Action record in the database based on the tool name and arguments.
+     * @param toolName The name of the tool/function called (e.g., 'take_note', 'schedule_follow_up').
+     * @param args The arguments object extracted by OpenAI.
+     * @param conversationId The ID of the current conversation.
+     */
+    async handleToolCall(toolName: string, args: any, conversationId: string): Promise<Action | null> {
+        console.log(`[VoiceCommandService] Handling tool call: ${toolName} for conversation ${conversationId} with args:`, args);
+
+        let actionType: string | null = null;
+        let actionMetadata: any = {};
+
+        try {
+            switch (toolName) {
+                case "take_note":
+                    actionType = "note";
+                    // Validate required arguments
+                    if (!args || typeof args.note_content !== 'string' || args.note_content.trim() === '') {
+                         console.error(`[VoiceCommandService] Invalid arguments for take_note:`, args);
+                         throw new Error("Missing or invalid note_content for take_note command.");
+                    }
+                    actionMetadata = { content: args.note_content };
+                    break;
+
+                case "schedule_follow_up":
+                    actionType = "followup";
+                    // Validate required arguments
+                     if (!args || typeof args.follow_up_details !== 'string' || args.follow_up_details.trim() === '') {
+                         console.error(`[VoiceCommandService] Invalid arguments for schedule_follow_up:`, args);
+                         throw new Error("Missing or invalid follow_up_details for schedule_follow_up command.");
+                    }
+                    // For now, store the raw details. Could be parsed further later.
+                    actionMetadata = { details: args.follow_up_details }; 
+                    break;
+
+                case "write_prescription":
+                    actionType = "prescription";
+                    // Validate required arguments
+                    if (!args || 
+                        typeof args.medication_name !== 'string' || args.medication_name.trim() === '' ||
+                        typeof args.dosage !== 'string' || args.dosage.trim() === '' ||
+                        typeof args.frequency !== 'string' || args.frequency.trim() === ''
+                       ) {
+                         console.error(`[VoiceCommandService] Invalid arguments for write_prescription:`, args);
+                         throw new Error("Missing or invalid medication_name, dosage, or frequency for write_prescription command.");
+                    }
+                    actionMetadata = {
+                        medication: args.medication_name,
+                        dosage: args.dosage,
+                        frequency: args.frequency
+                    };
+                    // Consider setting status to 'pending_review' explicitly?
+                    break;
+
+                default:
+                    console.warn(`[VoiceCommandService] Received unhandled tool name: ${toolName}`);
+                    return null; // Don't create an action for unhandled tools
+            }
+
+            // Create the Action record
+            const newAction = await this.actionRepository.create({
+                conversationId: conversationId,
+                type: actionType,
+                status: 'detected', // Default status
+                metadata: actionMetadata,
+                // detectedAt is handled by default in schema
+            });
+
+            console.log(`[VoiceCommandService] Action record created: ID=${newAction.id}, Type=${newAction.type}`);
+
+            // Notify frontend about the new action
+            // Construct the ActionPayload required by the notification service
+            // Fetch userId from conversation (assuming actionRepository doesn't return it)
+            const conversation = await this.prisma.conversation.findUnique({ 
+                where: { id: conversationId }, 
+                select: { userId: true }
+            });
+            if (!conversation) {
+                 console.error(`[VoiceCommandService] Failed to fetch conversation ${conversationId} to get userId for notification.`);
+                 // Continue without notification, or handle error differently?
+            } else {
+                 const actionPayload: ActionPayload = {
+                     id: newAction.id,
+                     type: newAction.type,
+                     conversationId: newAction.conversationId,
+                     userId: conversation.userId, // <-- Fetch user ID
+                     createdAt: newAction.detectedAt, // <-- Assign Date object directly
+                     data: newAction.metadata as any, // Assuming metadata structure matches payload data
+                     // Add other fields if ActionPayload requires them
+                 };
+                 this.notificationService.notifyActionCreated(conversationId, actionPayload);
+            }
+
+            return newAction;
+
+        } catch (error: unknown) {
+            console.error(`[VoiceCommandService] Error processing tool call ${toolName} for conversation ${conversationId}:`, error);
+            // Optionally notify frontend of the error?
+            return null; // Indicate failure
+        }
     }
 
     // TODO: Add methods to interact with database (likely needs repository injection)
