@@ -20,6 +20,8 @@ import { LoginUserCommand } from "./application/commands/LoginUserCommand";
 import { TranscriptionService } from './infrastructure/services/TranscriptionService';
 import { IMessageService, IMessageService as IMessageServiceToken } from "./domain/services/IMessageService";
 import { MessageService } from "./infrastructure/services/MessageService";
+import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken } from "./domain/services/ITextToSpeechService";
+import { TextToSpeechService } from "./infrastructure/services/TextToSpeechService";
 
 dotenv.config();
 
@@ -37,6 +39,9 @@ app.use(
 
 // Register MessageService implementation for IMessageService
 container.register<IMessageService>(IMessageServiceToken, { useClass: MessageService });
+
+// Register TextToSpeechService implementation for ITextToSpeechService
+container.register<ITextToSpeechService>(ITextToSpeechServiceToken, { useClass: TextToSpeechService });
 
 const authAppService = container.resolve(AuthApplicationService);
 const authService = container.resolve<IAuthService>("IAuthService");
