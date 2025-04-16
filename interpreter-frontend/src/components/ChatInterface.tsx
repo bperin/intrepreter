@@ -252,10 +252,12 @@ function isBackendMessage(obj: any): obj is BackendMessage {
     return typeof obj === "object" && obj !== null && typeof obj.type === "string";
 }
 
-// Helper function to convert Base64 Data URL to ArrayBuffer
+// --- Helper function to convert Base64 Data URL to ArrayBuffer ---
+// (Ensure this function is outside the component or memoized if inside)
 const base64ToArrayBuffer = (base64: string): ArrayBuffer | null => {
+    // Corrected log statement syntax
+    console.log('[Base64Decode] Attempting to decode base64 string (first 50 chars):', base64.substring(0, 50));
     try {
-        // Remove data URL prefix if present (e.g., "data:audio/mpeg;base64,")
         const base64String = base64.split(",")[1] || base64;
         const binaryString = window.atob(base64String);
         const len = binaryString.length;
@@ -263,9 +265,10 @@ const base64ToArrayBuffer = (base64: string): ArrayBuffer | null => {
         for (let i = 0; i < len; i++) {
             bytes[i] = binaryString.charCodeAt(i);
         }
+        console.log('[Base64Decode] Decoded successfully. Byte length:', bytes.buffer.byteLength);
         return bytes.buffer;
     } catch (error) {
-        console.error("Error decoding Base64 string:", error);
+        console.error("[Base64Decode] Error decoding Base64 string:", error);
         return null;
     }
 };
@@ -381,7 +384,7 @@ const ChatInterface: React.FC = () => {
         stopRecording,
         pauseRecording,
         resumeRecording,
-    } = useSpeechToTextBackend(selectedConversationId, handleNewMessage);
+    } = useSpeechToTextBackend(selectedConversationId, handleNewMessage, playAudio);
 
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
@@ -395,44 +398,62 @@ const ChatInterface: React.FC = () => {
     const getAudioContext = (): AudioContext | null => {
         if (!audioContextRef.current) {
             try {
+                console.log('[AudioContext] Creating new AudioContext...');
                 audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+                console.log('[AudioContext] AudioContext created, state:', audioContextRef.current.state);
             } catch (e) {
-                console.error("Web Audio API is not supported in this browser", e);
+                console.error("[AudioContext] Web Audio API is not supported in this browser", e);
                 showError("Audio playback not supported in this browser.", "error");
                 return null;
             }
         }
         if (audioContextRef.current.state === "suspended") {
-            audioContextRef.current.resume().catch((err) => console.error("Error resuming AudioContext:", err));
+            console.log('[AudioContext] Resuming suspended AudioContext...');
+            audioContextRef.current.resume().then(() => {
+                console.log('[AudioContext] AudioContext resumed successfully.');
+            }).catch((err) => console.error("[AudioContext] Error resuming AudioContext:", err));
         }
         return audioContextRef.current;
     };
 
     const playAudio = useCallback(async (audioData: ArrayBuffer) => {
+        console.log('[PlayAudio] Attempting to play audio buffer, size:', audioData.byteLength);
         const context = getAudioContext();
-        if (!context) return;
+        if (!context) {
+            console.error('[PlayAudio] Cannot play audio, AudioContext not available.');
+            showError("Audio context not available for playback.", "error");
+            return;
+        }
+        if (context.state !== 'running') {
+             console.warn(`[PlayAudio] AudioContext state is ${context.state}. Playback might require user interaction.`);
+             // Attempt to resume again just in case
+             context.resume(); 
+        }
 
         try {
+            console.log('[PlayAudio] Decoding audio data...');
             const audioBuffer = await context.decodeAudioData(audioData);
+            console.log('[PlayAudio] Audio data decoded successfully. Duration:', audioBuffer.duration);
             const source = context.createBufferSource();
             source.buffer = audioBuffer;
             source.connect(context.destination);
+            console.log('[PlayAudio] Starting playback...');
             source.start(0);
-            console.log("Playing received audio...");
+            source.onended = () => {
+                 console.log('[PlayAudio] Playback finished.');
+            };
         } catch (error) {
-            console.error("Error decoding or playing audio data:", error);
+            console.error("[PlayAudio] Error decoding or playing audio data:", error);
             showError("Failed to play received audio.", "error");
         }
     }, [showError]);
 
     // Effect to handle incoming WebSocket messages (message_list, new_message, etc.)
     useEffect(() => {
-        // **** Log right at the start of the effect ****
-        console.log('[ChatInterface] useEffect[lastMessage] running. lastMessage:', JSON.stringify(lastMessage)); // Stringify for clarity
-
+        console.log('[WS Effect] Running. lastMessage:', JSON.stringify(lastMessage));
         if (lastMessage && isBackendMessage(lastMessage)) {
             const message = lastMessage;
-            console.log('[ChatInterface] useEffect[lastMessage] - Processing message type:', message.type); // Log type
+            console.log('[WS Effect] Processing type:', message.type);
 
             // Check payload for message_list data
             if (message.type === 'message_list' && message.payload && message.payload.messages && message.payload.conversationId === selectedConversationId) {
@@ -500,20 +521,23 @@ const ChatInterface: React.FC = () => {
             }
 
             else if (message.type === 'tts_audio' && message.payload) {
+                console.log('[WS Effect] Received tts_audio message:', message.payload);
                 const audioBase64 = message.payload.audioBase64;
-                console.log(`[ChatInterface] Received tts_audio. Base64 length: ${audioBase64?.length}`);
+                const originalMsgId = message.payload.originalMessageId;
+                console.log(`[WS Effect] TTS Audio for original message ID: ${originalMsgId}. Base64 length: ${audioBase64?.length}`);
 
                 if (audioBase64 && typeof audioBase64 === 'string') {
+                    console.log('[WS Effect] Decoding Base64 audio data...');
                     const audioBuffer = base64ToArrayBuffer(audioBase64);
                     if (audioBuffer) {
-                        console.log('[ChatInterface] Decoded TTS audio buffer, attempting playback...');
-                        playAudio(audioBuffer);
+                        console.log('[WS Effect] Base64 decoded successfully, buffer size:', audioBuffer.byteLength);
+                        playAudio(audioBuffer); // Call playAudio function
                     } else {
-                        console.error("[ChatInterface] Failed to decode Base64 TTS audio data.");
+                        console.error("[WS Effect] Failed to decode Base64 TTS audio data.");
                         showError("Failed to process received TTS audio.", "error");
                     }
                 } else {
-                    console.error("[ChatInterface] Received tts_audio message without valid audioBase64 payload.", message);
+                    console.error("[WS Effect] Received tts_audio message without valid audioBase64 payload.", message);
                     showError("Received invalid TTS audio data from server.", "warning");
                 }
             }
@@ -532,9 +556,9 @@ const ChatInterface: React.FC = () => {
                  setDisplayMessages(prev => [...prev, sessionEndMsg]);
             }
         } else {
-            console.log('[ChatInterface] useEffect[lastMessage] - lastMessage is null or not a BackendMessage.');
+            console.log('[WS Effect] lastMessage is null or not a BackendMessage.');
         }
-    }, [lastMessage, selectedConversationId, showError, playAudio, endCurrentSession]); // Dependencies
+    }, [lastMessage, selectedConversationId, showError, playAudio, endCurrentSession, handleNewMessage, sendMessage]); // Added missing dependencies
 
     useEffect(() => {
         scrollToBottom();
