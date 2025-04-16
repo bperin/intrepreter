@@ -7,8 +7,13 @@ import * as os from 'os';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import axios from 'axios';
 import { IMessageService, IMessageService as IMessageServiceToken } from '../../domain/services/IMessageService';
 import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken } from '../../domain/services/ITextToSpeechService';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file in the parent directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Set the path for fluent-ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -44,6 +49,18 @@ interface OpenAITranscriptionMessage {
   [key: string]: any;
 }
 
+// Interface for the expected OpenAI Chat Completion response structure
+interface OpenAIChatCompletionResponse {
+    choices?: [
+        {
+            message?: {
+                content?: string;
+            };
+        }
+    ];
+    // other potential fields...
+}
+
 @injectable()
 export class TranscriptionService {
   // --- Single Shared OpenAI Connection State ---
@@ -61,10 +78,17 @@ export class TranscriptionService {
   private clientConnections: Map<string, Set<WebSocket>> = new Map();
   // --------------------------------------------------
 
+  private readonly openaiApiKey: string;
+
   constructor(
       @inject(IMessageServiceToken) private messageService: IMessageService,
       @inject(ITextToSpeechServiceToken) private ttsService: ITextToSpeechService
-  ) {}
+  ) {
+      this.openaiApiKey = process.env.OPENAI_API_KEY || '';
+      if (!this.openaiApiKey) {
+          console.error('[TranscriptionService] OPENAI_API_KEY is not set! Language detection and other features may fail.');
+      }
+  }
 
   /**
    * Handle a new client WebSocket connection for transcription
@@ -213,10 +237,10 @@ export class TranscriptionService {
           session: { // Nested structure, NO ID inside
             // NO id: currentSessionId here
             input_audio_transcription: {
-              model: "whisper-1", 
-              language: "en",
-              prompt: "Transcribe speech to text in English."
+              model: "whisper-1",
+              prompt: "Transcribe the input audo to text"
             },
+          
             turn_detection: {
               type: "server_vad",
               silence_duration_ms: 500,
@@ -225,7 +249,8 @@ export class TranscriptionService {
             },
             include: [
               // Use the include value confirmed to work, or omit/empty if not needed
-              "item.input_audio_transcription.logprobs" 
+              "item.input_audio_transcription.logprobs" ,
+            
             ]
           }
         };
@@ -266,33 +291,38 @@ export class TranscriptionService {
                }
                else if (message.type === 'conversation.item.input_audio_transcription.completed') {
                    const completedText = message.transcript || '';
-                   const detectedLanguage = message.language || 'unknown'; // Extract language or default
-                   const sender = 'assistant'; // Determine sender (e.g., based on session context, default to assistant for now)
+                   // const sender = 'user'; // REMOVED: We will determine sender based on language
 
-                   console.log(`[TranscriptionService] Received completed transcription for ${targetConversationId}. Text: "${completedText.substring(0,50)}...", Lang: ${detectedLanguage}`);
+                   console.log(`[TranscriptionService] Received completed transcription for ${targetConversationId}. Text: "${completedText.substring(0,50)}..."`);
 
-                   if (completedText) { // Only save if there is text
+                   if (completedText) { 
+                       const detectedLanguage = await this.detectLanguage(completedText); 
+                       
+                       // --- ADDED: Determine sender based on language --- 
+                       const sender = (detectedLanguage !== 'en' && detectedLanguage !== 'unknown') ? 'patient' : 'user';
+                       // -------------------------------------------------
+                       
                        try {
-                           console.log(`[TranscriptionService] Calling messageService.createMessage for ${targetConversationId}...`);
+                           console.log(`[TranscriptionService] Calling messageService.createMessage for ${targetConversationId}. Sender: ${sender}, Lang: ${detectedLanguage}...`);
                            const savedMessage = await this.messageService.createMessage(
                                targetConversationId,
                                completedText,
-                               sender,
-                               detectedLanguage
+                               sender, // Use determined sender
+                               detectedLanguage 
                            );
                            console.log(`[TranscriptionService] Message saved (ID: ${savedMessage.id}). Broadcasting 'new_message' and triggering TTS.`);
 
-                           // Broadcast the newly saved message object to clients
+                           // Broadcast the newly saved message object
                            this.broadcastToClients(targetConversationId, {
                                type: 'new_message',
                                payload: savedMessage
                            });
 
-                           // --- Trigger TTS Synthesis --- 
+                           // --- Trigger TTS --- 
                            try {
                                console.log(`[TranscriptionService] Synthesizing speech for message ID: ${savedMessage.id}`);
-                               // TODO: Determine target language/voice based on conversation/user settings?
-                               const audioBuffer = await this.ttsService.synthesizeSpeech(completedText); // Use default voice for now
+                               // Use the completed text (which is what was transcribed)
+                               const audioBuffer = await this.ttsService.synthesizeSpeech(completedText); 
                                
                                if (audioBuffer && audioBuffer.length > 0) {
                                    const audioBase64 = audioBuffer.toString('base64');
@@ -302,8 +332,8 @@ export class TranscriptionService {
                                        type: 'tts_audio',
                                        payload: {
                                            audioBase64: audioBase64,
-                                           format: 'audio/mpeg', // OpenAI default is MP3
-                                           originalMessageId: savedMessage.id // Link TTS to original message
+                                           format: 'audio/mpeg', 
+                                           originalMessageId: savedMessage.id 
                                        }
                                    });
                                } else {
@@ -311,13 +341,11 @@ export class TranscriptionService {
                                }
                            } catch (ttsError) {
                                 console.error(`[TranscriptionService] Failed to synthesize or broadcast TTS for message ${savedMessage.id}:`, ttsError);
-                                // Don't broadcast TTS error to client? Or maybe a specific notification?
                            }
                            // --- End TTS --- 
 
                        } catch (saveError) {
                            console.error(`[TranscriptionService] Failed to save or broadcast message for ${targetConversationId}:`, saveError);
-                           // Optionally broadcast an error back to the client
                            this.broadcastToClients(targetConversationId, { 
                                type: 'error', 
                                message: 'Failed to save transcription.' 
@@ -330,6 +358,10 @@ export class TranscriptionService {
                     console.error('[TranscriptionService] OpenAI Error:', JSON.stringify(message, null, 2));
                     // Optionally broadcast a generic error to the client
                     this.broadcastToClients(targetConversationId, { type: 'error', message: 'OpenAI processing error.' });
+               } else if (message.type === 'transcription.text.delta') {
+                   console.log(`>>> Transcription DELTA: [Lang: ${message.language || 'N/A'}] "${message.text || ''}"`);
+               } else if (message.type === 'transcription.text.final') {
+                   console.log(`>>> Transcription FINAL: [Lang: ${message.language || 'N/A'}] "${message.text || ''}"`);
                } else {
                    // Handle other message types from OpenAI if necessary
                    // Currently, we primarily care about .completed for saving and potentially errors.
@@ -567,5 +599,79 @@ export class TranscriptionService {
     } catch (e) {
       return false;
     }
+  }
+
+  /**
+   * Detects the language of a given text using a secondary OpenAI API call.
+   * @param text The text to detect the language for.
+   * @returns A promise resolving to the ISO 639-1 language code (e.g., 'en', 'es') or 'unknown'.
+   */
+  private async detectLanguage(text: string): Promise<string> {
+      if (!this.openaiApiKey) {
+          console.warn('[TranscriptionService] Cannot detect language: OPENAI_API_KEY not set.');
+          return 'unknown';
+      }
+      if (!text || text.trim().length === 0) {
+          return 'unknown'; // No text to detect
+      }
+
+      const languageDetectionUrl = 'https://api.openai.com/v1/chat/completions';
+      const prompt = `Identify the predominant language of the following text and return only its two-letter ISO 639-1 code (e.g., en, es, fr, ja). Text: "${text}"`;
+
+      console.log(`[TranscriptionService] Detecting language for text (first 50 chars): "${text.substring(0, 50)}..."`);
+
+      try {
+          const response = await axios.post<OpenAIChatCompletionResponse>(
+              languageDetectionUrl,
+              {
+                  model: 'gpt-4o-mini',
+                  messages: [{ role: 'user', content: prompt }],
+                  max_tokens: 5,
+                  temperature: 0.1,
+              },
+              {
+                  headers: {
+                      'Authorization': `Bearer ${this.openaiApiKey}`,
+                      'Content-Type': 'application/json',
+                  },
+              }
+          );
+
+          const detectedLang = response.data?.choices?.[0]?.message?.content?.trim().toLowerCase();
+          
+          if (detectedLang && /^[a-z]{2}$/.test(detectedLang)) {
+               console.log(`[TranscriptionService] Detected language: ${detectedLang}`);
+               return detectedLang;
+          } else {
+               console.warn(`[TranscriptionService] Language detection returned unexpected result: '${detectedLang}'. Defaulting to 'unknown'. Full response:`, JSON.stringify(response.data));
+               return 'unknown'; 
+          }
+
+      } catch (error) {
+          console.error('[TranscriptionService] Error calling OpenAI Language Detection API:');
+          // Replace the type guard
+          if (error && typeof error === 'object' && 'isAxiosError' in error && error.isAxiosError) {
+              // Now we assume it's an AxiosError, but cast to access specific props safely
+              const axiosError = error as { response?: { status?: number; data?: any } }; 
+              console.error('Status:', axiosError.response?.status);
+              // Try to parse error data if it exists
+              if (axiosError.response?.data) {
+                  try {
+                      // Assuming error data might be JSON
+                      console.error('Data:', JSON.stringify(axiosError.response.data)); 
+                  } catch (parseError) {
+                      // If not JSON, log as is (might be ArrayBuffer or string)
+                      console.error('Data (raw):', axiosError.response.data);
+                  }
+              } else {
+                  console.error('No response data received.');
+              }
+          } else if (error instanceof Error) {
+               console.error(error.message);
+          } else {
+               console.error('An unknown error occurred:', String(error));
+          }
+          return 'unknown'; // Default on error
+      }
   }
 }
