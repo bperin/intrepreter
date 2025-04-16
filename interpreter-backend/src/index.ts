@@ -18,6 +18,8 @@ import { AuthApplicationService } from "./application/services/AuthApplicationSe
 import { RegisterUserCommand } from "./application/commands/RegisterUserCommand";
 import { LoginUserCommand } from "./application/commands/LoginUserCommand";
 import { TranscriptionService } from './infrastructure/services/TranscriptionService';
+import { IMessageService, IMessageService as IMessageServiceToken } from "./domain/services/IMessageService";
+import { MessageService } from "./infrastructure/services/MessageService";
 
 dotenv.config();
 
@@ -33,12 +35,16 @@ app.use(
     })
 );
 
+// Register MessageService implementation for IMessageService
+container.register<IMessageService>(IMessageServiceToken, { useClass: MessageService });
+
 const authAppService = container.resolve(AuthApplicationService);
 const authService = container.resolve<IAuthService>("IAuthService");
 const conversationService = container.resolve<IConversationService>("IConversationService");
 const audioProcessingService = container.resolve<IAudioProcessingService>("IAudioProcessingService");
 const conversationRepository = container.resolve<IConversationRepository>("IConversationRepository");
 const transcriptionService = container.resolve<TranscriptionService>('TranscriptionService');
+const messageService = container.resolve<IMessageService>(IMessageServiceToken);
 
 app.use(express.json());
 
