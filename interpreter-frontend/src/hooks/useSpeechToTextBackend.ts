@@ -378,10 +378,18 @@ export const useSpeechToTextBackend = (
       };
 
       const timeslice = 500; // Send data approx every 500ms
-      logDebug(`Starting MediaRecorder with timeslice: ${timeslice}ms`);
-      // --- Restore immediate start --- 
-      mediaRecorderRef.current.start(timeslice);
-      // ---------------------------
+      // --- Delay MediaRecorder start slightly --- 
+      const startDelay = 200; // Delay in milliseconds (adjust if needed)
+      logDebug(`MediaRecorder configured. Starting after ${startDelay}ms delay...`);
+      setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
+               logDebug(`Starting MediaRecorder now (after ${startDelay}ms delay). Timeslice: ${timeslice}ms`);
+               mediaRecorderRef.current.start(timeslice);
+          } else {
+              logDebug(`Delay ended, but MediaRecorder ref is missing or state is not inactive (${mediaRecorderRef.current?.state}). Not starting.`);
+          }
+      }, startDelay);
+      // ------------------------------------
 
     } catch (err) {
       logError('Error starting recording', err);
