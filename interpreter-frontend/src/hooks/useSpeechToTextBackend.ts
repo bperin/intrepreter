@@ -35,11 +35,33 @@ interface SpeechToTextResult {
   transcript: string | null;
   isProcessing: boolean;
   language: string | null;
+  isPaused: boolean;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<void>;
   pauseRecording: () => void;
   resumeRecording: () => void;
 }
+
+// Get the host-accessible backend URL (e.g., http://localhost:8080) from build-time env var
+const rawBackendUrl = import.meta.env.VITE_APP_BACKEND_URL;
+
+if (!rawBackendUrl) {
+  throw new Error("Configuration Error: VITE_APP_BACKEND_URL environment variable is not set.");
+}
+
+// Function to derive the host-accessible transcription WS URL
+const getTranscriptionWsUrl = (baseUrl: string, conversationId: string | null): string | null => {
+  if (!conversationId) return null;
+  try {
+    const url = new URL(baseUrl); // e.g., http://localhost:8080
+    const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Use the host and port from the baseUrl (which is localhost:8080)
+    return `${protocol}//${url.host}/transcription?conversationId=${conversationId}`; // e.g., ws://localhost:8080/transcription?...
+  } catch (e) {
+    console.error("Failed to parse VITE_APP_BACKEND_URL to derive transcription WebSocket URL:", baseUrl, e);
+    throw new Error(`Configuration Error: Invalid VITE_APP_BACKEND_URL format for transcription WebSocket: ${baseUrl}`);
+  }
+};
 
 /**
  * Hook for speech-to-text functionality using backend as a proxy to OpenAI.
@@ -76,15 +98,8 @@ export const useSpeechToTextBackend = (
 
   // Constants for WebSocket connection
   const getBackendWsUrl = useCallback(() => {
-    console.log(`[useSpeechToTextBackend] getBackendWsUrl called. Conversation ID: ${conversationId}`);
-    if (!conversationId) return null;
-    
-    // Use secure WebSocket if on HTTPS
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = "localhost:8080"
-    
-    // Construct the WebSocket URL with query params
-    return `${protocol}//${host}/transcription?conversationId=${conversationId}`;
+    console.log(`[useSpeechToTextBackend] Constructing transcription WS URL. Base URL: ${rawBackendUrl}, Conversation ID: ${conversationId}`);
+    return getTranscriptionWsUrl(rawBackendUrl, conversationId);
   }, [conversationId]);
   
   // Logging utility functions
@@ -179,8 +194,14 @@ export const useSpeechToTextBackend = (
 
       ws.onmessage = (event) => {
         try {
+          // *** Added Debug Logging: Raw message ***
+          console.log('[WS Debug] Raw message received:', event.data);
+
           const data = JSON.parse(event.data);
           logDebug("Received WebSocket message from backend", data);
+ 
+          // *** Added Debug Logging: Parsed message type ***
+          console.log(`[WS Debug] Parsed message type: ${data.type}`);
 
           if (data.type === 'error') {
             logError("Received error from backend", data);
@@ -245,13 +266,16 @@ export const useSpeechToTextBackend = (
           }
           // +++ Handle TTS Audio +++
           else if (data.type === 'tts_audio') {
+              // *** Added Debug Logging: Entered tts_audio block ***
+              console.log('[WS Debug] Entered tts_audio handler.');
               logDebug('Received tts_audio message', data.payload);
               const audioBase64 = data.payload?.audioBase64;
               if (onTtsAudio && audioBase64 && typeof audioBase64 === 'string') {
                   logDebug('Decoding base64 audio before calling callback...');
                   const audioBuffer = base64ToArrayBuffer(audioBase64);
                   if (audioBuffer) {
-                      logDebug('Audio decoded, calling onTtsAudio callback...');
+                      // *** Added Debug Logging: About to call onTtsAudio ***
+                      console.log('[WS Debug] Audio decoded, about to call onTtsAudio callback...');
                       onTtsAudio(audioBuffer); // Pass the ArrayBuffer
                   } else {
                        logError('Failed to decode base64 audio for TTS.');
@@ -299,7 +323,7 @@ export const useSpeechToTextBackend = (
     try {
       // Convert blob to base64
       const base64Audio = await blobToBase64(audioBlob);
-      // logDebug(`[useSpeechToTextBackend] Sending audio chunk (Base64 size: ${base64Audio.length})`);
+      logDebug(`[sendAudioChunk] Sending audio chunk (Base64 size: ${base64Audio.length})`);
       
       // Send audio data
       const audioMessage = {
@@ -383,7 +407,7 @@ export const useSpeechToTextBackend = (
               // Send chunk immediately if not paused
               try {
                    const base64Audio = await blobToBase64(event.data);
-                  //  logDebug(`[ondataavailable] Sending chunk. Base64 Start: ${base64Audio.substring(0, 50)}...`);
+                   logDebug(`[ondataavailable] Sending chunk. Base64 Start: ${base64Audio.substring(0, 50)}...`);
                    // Send via WebSocket (assuming sendAudioChunk handles base64 conversion if needed or is adapted)
                    // Based on review, sendAudioChunk expects a Blob, let's keep it that way or adapt it.
                    // Let's assume sendAudioChunk handles the blob correctly as per previous code review.
@@ -576,6 +600,7 @@ export const useSpeechToTextBackend = (
     transcript,
     isProcessing,
     language,
+    isPaused,
     startRecording,
     stopRecording,
     pauseRecording,

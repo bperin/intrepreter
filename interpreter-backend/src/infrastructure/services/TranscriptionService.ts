@@ -11,6 +11,8 @@ import axios from 'axios';
 import { IMessageService, IMessageService as IMessageServiceToken } from '../../domain/services/IMessageService';
 import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken } from '../../domain/services/ITextToSpeechService';
 import dotenv from 'dotenv';
+import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
+import { VoiceCommandService } from './VoiceCommandService';
 
 // Load environment variables from .env file in the parent directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -61,18 +63,24 @@ interface OpenAIChatCompletionResponse {
     // other potential fields...
 }
 
+// --- NEW: Interface for Per-Conversation State ---
+interface ConversationState {
+    openaiConnection: WebSocket | null;
+    ffmpegProcess: ChildProcessWithoutNullStreams | null;
+    isOpenAIConnected: boolean;
+    isConnecting: boolean;
+    openaiConnectionCooldownUntil: number;
+    openaiReconnectionAttempts: number;
+    ffmpegStdinEnded: boolean;
+    // Add any other state that needs to be per-conversation
+}
+// ---------------------------------------------
+
 @injectable()
 export class TranscriptionService {
-  // --- Single Shared OpenAI Connection State ---
-  private openaiConnection: WebSocket | null = null;
-  private isOpenAIConnected: boolean = false;
-  private isConnecting: boolean = false; // Prevent multiple connection attempts
-  private openaiConnectionCooldownUntil: number = 0;
-  private openaiReconnectionAttempts: number = 0;
-  // --- Persistent FFmpeg Process State ---
-  private ffmpegProcess: ChildProcessWithoutNullStreams | null = null;
-  private ffmpegStdinEnded: boolean = false; // Flag to track if we've ended stdin
-  // ---------------------------------------------
+  // --- NEW: Per-Conversation State Management ---
+  private conversationStates: Map<string, ConversationState> = new Map();
+  // -------------------------------------------
 
   // --- Client Management State (per conversation) ---
   private clientConnections: Map<string, Set<WebSocket>> = new Map();
@@ -82,7 +90,9 @@ export class TranscriptionService {
 
   constructor(
       @inject(IMessageServiceToken) private messageService: IMessageService,
-      @inject(ITextToSpeechServiceToken) private ttsService: ITextToSpeechService
+      @inject(ITextToSpeechServiceToken) private ttsService: ITextToSpeechService,
+      @inject('IConversationRepository') private conversationRepository: IConversationRepository,
+      @inject(VoiceCommandService) private voiceCommandService: VoiceCommandService
   ) {
       this.openaiApiKey = process.env.OPENAI_API_KEY || '';
       if (!this.openaiApiKey) {
@@ -96,15 +106,30 @@ export class TranscriptionService {
   public handleConnection(clientWs: WebSocket, conversationId: string): void {
     console.log(`[TranscriptionService][${conversationId}] New client connection.`);
     
+    // Initialize conversation state if it's the first client for this conversation
+    if (!this.conversationStates.has(conversationId)) {
+        console.log(`[TranscriptionService][${conversationId}] Initializing state for new conversation.`);
+        this.conversationStates.set(conversationId, {
+            openaiConnection: null,
+            ffmpegProcess: null,
+            isOpenAIConnected: false,
+            isConnecting: false,
+            openaiConnectionCooldownUntil: 0,
+            openaiReconnectionAttempts: 0,
+            ffmpegStdinEnded: false,
+        });
+    }
+    const conversationState = this.conversationStates.get(conversationId)!; // Assert non-null as we just set it
+
     // Add client for this conversation
     if (!this.clientConnections.has(conversationId)) {
       this.clientConnections.set(conversationId, new Set());
     }
     this.clientConnections.get(conversationId)?.add(clientWs);
     
-    // --- Initiate Shared OpenAI Connection (if needed) ---
-    this.connectToOpenAI(); 
-    // -----------------------------------------------------
+    // --- Ensure OpenAI Connection & FFmpeg are initiated for this conversation ---
+    this._ensureConversationResources(conversationId);
+    // ----------------------------------------------------------------------------
 
     clientWs.on('close', (code, reason) => {
       console.log(`[TranscriptionService][${conversationId}] Client disconnected. Code: ${code}, Reason: ${reason?.toString()}`);
@@ -112,21 +137,24 @@ export class TranscriptionService {
       clients?.delete(clientWs);
       if (clients?.size === 0) {
           this.clientConnections.delete(conversationId);
-          console.log(`[TranscriptionService] Last client for conversation ${conversationId} disconnected.`);
-      }
-      
-      // Optional: Consider closing shared OpenAI connection if *all* clients across *all* conversations disconnect
-      if (this.isClientMapEmpty()) {
-           console.log('[TranscriptionService] All clients disconnected. Closing shared OpenAI connection and FFmpeg.');
-           this.closeOpenAIConnection(); // This will also trigger ffmpeg kill
+          console.log(`[TranscriptionService][${conversationId}] Last client disconnected. Cleaning up resources.`);
+          this._cleanupConversationResources(conversationId); // Clean up specific conversation resources
       }
     });
 
     clientWs.on('message', async (message) => {
-      // Ensure FFmpeg process is running before piping data
-      if (!this.ffmpegProcess || !this.ffmpegProcess.stdin || this.ffmpegProcess.stdin.destroyed || this.ffmpegStdinEnded) {
-          //  console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed, cannot process audio chunk.`);
-           // Maybe retry or drop? For now, just log.
+      // TODO: Refactor this message handler to use conversationState
+      const convState = this.conversationStates.get(conversationId);
+      if (!convState || !convState.ffmpegProcess || !convState.ffmpegProcess.stdin || convState.ffmpegProcess.stdin.destroyed || convState.ffmpegStdinEnded) {
+          console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed for this conversation, cannot process audio chunk.`);
+          return;
+      }
+      const currentFfmpegProcess = convState.ffmpegProcess; // Use the specific ffmpeg process
+      const currentFfmpegStdinEnded = convState.ffmpegStdinEnded; // Use the specific flag
+
+      // --- TEMPORARY - Keep old logic structure but use conversation-specific vars ---
+      if (!currentFfmpegProcess || !currentFfmpegProcess.stdin || currentFfmpegProcess.stdin.destroyed || currentFfmpegStdinEnded) {
+           console.warn(`[TranscriptionService][${conversationId}] FFmpeg process not ready or stdin closed, cannot process audio chunk.`);
            return;
       }
 
@@ -136,13 +164,10 @@ export class TranscriptionService {
         if (data.type === 'input_audio_buffer.append' && data.audio) {
           try {
             const inputChunkBuffer = Buffer.from(data.audio, 'base64');
-            // Write the raw WebM/Opus chunk to the persistent FFmpeg process
-            this.ffmpegProcess.stdin.write(inputChunkBuffer, (error) => {
+            // Write the raw WebM/Opus chunk to the CONVERSATION'S FFmpeg process
+            currentFfmpegProcess.stdin.write(inputChunkBuffer, (error) => {
                  if (error) {
                      console.error(`[TranscriptionService][${conversationId}] Error writing chunk to FFmpeg stdin:`, error);
-                     // Handle error - maybe kill ffmpeg? Depends on error type
-                 } else {
-                     // console.log(`[TranscriptionService][${conversationId}] Wrote chunk (${inputChunkBuffer.length} bytes) to FFmpeg stdin.`); // Verbose
                  }
             });
           } catch (decodeOrWriteError) {
@@ -153,11 +178,10 @@ export class TranscriptionService {
         } else if (data.type === 'input_audio_buffer.finalize') {
           console.log(`[TranscriptionService][${conversationId}] Finalize received. Ending FFmpeg stdin stream.`);
           try {
-            if (this.ffmpegProcess && this.ffmpegProcess.stdin && !this.ffmpegProcess.stdin.destroyed) {
-               this.ffmpegProcess.stdin.end(); // Signal end of input to FFmpeg
-               this.ffmpegStdinEnded = true; // Mark that we've ended input
+            if (currentFfmpegProcess && currentFfmpegProcess.stdin && !currentFfmpegProcess.stdin.destroyed) {
+               currentFfmpegProcess.stdin.end(); // Signal end of input to FFmpeg
+               convState.ffmpegStdinEnded = true; // Mark that we've ended input FOR THIS CONVERSATION
                console.log(`[TranscriptionService][${conversationId}] FFmpeg stdin stream ended.`);
-               // NOTE: We now need to wait for FFmpeg stdout to end before sending OpenAI commit
             } else {
                  console.warn(`[TranscriptionService][${conversationId}] Cannot end FFmpeg stdin: Process not running or stdin destroyed.`);
             }
@@ -174,447 +198,650 @@ export class TranscriptionService {
 
     clientWs.on('error', (error) => {
       console.error(`[TranscriptionService][${conversationId}] Client WebSocket error:`, error);
+      // Consider cleaning up resources if a client connection errors out significantly
+      // this._cleanupConversationResources(conversationId);
     });
 
-    // Send confirmation to this specific client
-    clientWs.send(JSON.stringify({ 
+    // Send confirmation to this specific client, reflecting the conversation's state
+    clientWs.send(JSON.stringify({
       type: 'backend_connected',
       message: 'Connected to backend service.',
-      status: this.isOpenAIConnected ? 'openai_connected' : (this.isConnecting ? 'openai_connecting' : 'openai_disconnected')
+      status: conversationState.isOpenAIConnected ? 'openai_connected' : (conversationState.isConnecting ? 'openai_connecting' : 'openai_disconnected')
     }));
   }
 
+  // --- NEW Conversation Resource Management Methods ---
   /**
-   * Establish THE SHARED WebSocket connection to OpenAI and start FFmpeg
+   * Ensures OpenAI connection and FFmpeg process are running for a specific conversation.
+   * Initiates connection/process if they don't exist.
    */
-  private connectToOpenAI(): void {
-    if (this.openaiConnection || this.isConnecting) return;
-    
-    const now = Date.now();
-    if (now < this.openaiConnectionCooldownUntil) {
-       const waitTimeSeconds = Math.ceil((this.openaiConnectionCooldownUntil - now) / 1000);
-       console.log(`[TranscriptionService] OpenAI connection attempt skipped due to cooldown. Retrying in ${waitTimeSeconds}s.`);
-       // Schedule a single retry attempt after cooldown
-       setTimeout(() => this.connectToOpenAI(), this.openaiConnectionCooldownUntil - now + 50); // Add small buffer
-       return;
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.error("[TranscriptionService] OPENAI_API_KEY not set! Cannot connect.");
-      // Broadcast error to all connected clients? 
-      this.broadcastToAll({ type: 'error', message: 'Backend service cannot connect to OpenAI (config missing).' });
+  private _ensureConversationResources(conversationId: string): void {
+    const conversationState = this.conversationStates.get(conversationId);
+    if (!conversationState) {
+      console.error(`[TranscriptionService][${conversationId}] Attempted to ensure resources for non-existent state.`);
       return;
     }
 
-    console.log('[TranscriptionService] Attempting connection to OpenAI...');
-    this.isConnecting = true;
-    this.isOpenAIConnected = false;
-    this.killFFmpegProcess(); // Ensure any old process is gone
-    
+    // Check if already connected or connecting
+    if (conversationState.openaiConnection || conversationState.isConnecting) {
+        console.log(`[TranscriptionService][${conversationId}] Resources already ensured or in progress.`);
+        // Optionally check ffmpeg process state here too if needed
+        return;
+    }
+
+    console.log(`[TranscriptionService][${conversationId}] Ensuring resources: Initiating OpenAI connection...`);
+    this._connectOpenAIForConversation(conversationId);
+    // FFmpeg start is triggered within the OpenAI 'open' event handler
+  }
+
+  /**
+   * Cleans up resources (OpenAI connection, FFmpeg process) for a specific conversation.
+   * Called when the last client disconnects or a fatal error occurs.
+   */
+  private _cleanupConversationResources(conversationId: string): void {
+    const conversationState = this.conversationStates.get(conversationId);
+    if (!conversationState) {
+      console.warn(`[TranscriptionService][${conversationId}] Attempted to clean up resources for already removed state.`);
+      return;
+    }
+
+    console.log(`[TranscriptionService][${conversationId}] Cleaning up resources...`);
+
+    this._killFFmpegForConversation(conversationId); // Kill FFmpeg first
+    this._closeOpenAIConnectionForConversation(conversationId); // Then close WebSocket
+
+    // Remove the state from the map AFTER cleanup attempts
+    this.conversationStates.delete(conversationId);
+    console.log(`[TranscriptionService][${conversationId}] Conversation state removed.`);
+  }
+
+  /**
+   * Establishes a WebSocket connection to OpenAI for a SPECIFIC conversation.
+   * Manages the connection lifecycle and associated FFmpeg process for that conversation.
+   */
+  private _connectOpenAIForConversation(conversationId: string): void {
+    const conversationState = this.conversationStates.get(conversationId);
+    if (!conversationState || conversationState.openaiConnection || conversationState.isConnecting) {
+      console.log(`[TranscriptionService][${conversationId}] OpenAI connection attempt skipped (already connected, connecting, or state missing).`);
+      return;
+    }
+
+    const now = Date.now();
+    if (now < conversationState.openaiConnectionCooldownUntil) {
+      const waitTimeSeconds = Math.ceil((conversationState.openaiConnectionCooldownUntil - now) / 1000);
+      console.log(`[TranscriptionService][${conversationId}] OpenAI connection attempt skipped due to cooldown. Retrying in ${waitTimeSeconds}s.`);
+      setTimeout(() => this._connectOpenAIForConversation(conversationId), conversationState.openaiConnectionCooldownUntil - now + 50);
+      return;
+    }
+
+    if (!this.openaiApiKey) {
+      console.error(`[TranscriptionService][${conversationId}] OPENAI_API_KEY not set! Cannot connect.`);
+      this.broadcastToClients(conversationId, { type: 'error', message: 'Backend service cannot connect to OpenAI (config missing).' });
+      // Maybe remove conversation state here?
+      return;
+    }
+
+    console.log(`[TranscriptionService][${conversationId}] Attempting connection to OpenAI...`);
+    conversationState.isConnecting = true;
+    conversationState.isOpenAIConnected = false;
+    this._killFFmpegForConversation(conversationId); // Ensure any old process for THIS convo is gone
+
     try {
       const newWs = new WebSocket('wss://api.openai.com/v1/realtime?intent=transcription', {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${this.openaiApiKey}`,
           'OpenAI-Beta': 'realtime=v1'
         }
       });
-      
-      newWs.on('open', () => { 
-        console.log('[TranscriptionService] OpenAI connection established.');
-        this.openaiConnection = newWs;
-        this.isOpenAIConnected = true;
-        this.isConnecting = false;
-        this.openaiReconnectionAttempts = 0;
-        
-        // Start Persistent FFmpeg Process FIRST
-        this.startFFmpegProcess();
-        
-        // Now, send the working update configuration
-        console.log('[TranscriptionService] Sending configuration update to OpenAI...');
+
+      conversationState.openaiConnection = newWs; // Store the WS temporarily even before open
+
+      newWs.on('open', () => {
+        console.log(`[TranscriptionService][${conversationId}] OpenAI connection established.`);
+        // Update state for this specific conversation
+        conversationState.isOpenAIConnected = true;
+        conversationState.isConnecting = false;
+        conversationState.openaiReconnectionAttempts = 0;
+
+        // Start FFmpeg process specific to this conversation
+        this._startFFmpegForConversation(conversationId);
+
+        console.log(`[TranscriptionService][${conversationId}] Sending configuration update to OpenAI...`);
         const updateConfig = {
           type: "transcription_session.update",
-          session: { // Nested structure, NO ID inside
-            // NO id: currentSessionId here
+          session: {
             input_audio_transcription: {
               model: "whisper-1",
-              prompt: "Transcribe the input audo to text"
+              prompt: "Transcribe the input audio to text"
             },
-          
             turn_detection: {
               type: "server_vad",
               silence_duration_ms: 500,
               prefix_padding_ms: 300,
               threshold: 0.5
             },
-            include: [
-              // Use the include value confirmed to work, or omit/empty if not needed
-              "item.input_audio_transcription.logprobs" ,
-            
-            ]
+            include: ["item.input_audio_transcription.logprobs"]
           }
         };
-        
+
         try {
-           // Use the synchronous sendToOpenAI as connection is guaranteed open here
-           this.sendToOpenAI(JSON.stringify(updateConfig));
-           console.log('[TranscriptionService] Configuration update sent successfully.');
+          this._sendToOpenAIForConversation(conversationId, JSON.stringify(updateConfig));
+          console.log(`[TranscriptionService][${conversationId}] Configuration update sent successfully.`);
         } catch (configError) {
-           console.error('[TranscriptionService] Error sending configuration update:', configError);
-           // Decide if this is fatal - maybe close connection?
-           // For now, just log it. The connection is open, but config failed.
+          console.error(`[TranscriptionService][${conversationId}] Error sending configuration update:`, configError);
+          // Close this specific connection if config fails?
+          // this._cleanupConversationResources(conversationId);
         }
-        
-        this.broadcastToAll({ type: 'openai_connected', message: 'Ready for audio' });
+
+        this.broadcastToClients(conversationId, { type: 'openai_connected', message: 'Ready for audio' });
       });
-      
+
       newWs.on('message', async (data) => {
-        // Log raw message from OpenAI for debugging
+        // TODO: Refactor the message processing logic here
         const rawMessage = data.toString();
-        console.log(`[TranscriptionService] Raw message from OpenAI: ${rawMessage}`); 
+        // console.log(`[TranscriptionService][${conversationId}] Raw message from OpenAI: ${rawMessage.substring(0, 100)}...`); // Can be verbose
 
-        // Handle incoming messages - Route based on heuristic (first client)
         try {
-          const message: OpenAITranscriptionMessage = JSON.parse(rawMessage);
-          
-          // --- Simple Routing Logic (Assumes Single Active User) ---
-          let targetConversationId: string | undefined = undefined;
-          if (this.clientConnections.size > 0) {
-               targetConversationId = this.clientConnections.keys().next().value;
-          }
-          // --------------------------------------------------------
+            const message: OpenAITranscriptionMessage = JSON.parse(rawMessage);
 
-          if (targetConversationId) {
-               if (message.type === 'transcription_session.created') {
-                   // Don't broadcast session created message to client
-                   console.log(`[TranscriptionService] OpenAI session created for ${targetConversationId}.`);
-               }
-               else if (message.type === 'conversation.item.input_audio_transcription.completed') {
-                   const completedText = message.transcript || '';
-                   if (!completedText) {
-                       console.log(`[TranscriptionService] Skipping empty completed transcription.`);
-                       return; // Exit if no text
-                   }
-                   
-                   console.log(`[TranscriptionService] Received completed transcription for ${targetConversationId}. Text: "${completedText.substring(0,50)}..."`);
-                   const detectedLanguage = await this.detectLanguage(completedText);
-                   
-                   // Determine sender based on corrected roles
-                   const sender = (detectedLanguage === 'en' || detectedLanguage === 'unknown') ? 'user' : 'patient';
-                   
-                   let textForTTS: string = completedText; // Default TTS text
-                   let savedOriginalMessageId: string | undefined = undefined;
+            if (message.type === 'transcription_session.created') {
+                console.log(`[TranscriptionService][${conversationId}] OpenAI session created.`);
+            } else if (message.type === 'conversation.item.input_audio_transcription.completed') {
+                // --- Start of Moved Processing Logic ---
+                const completedText = message.transcript || '';
+                if (!completedText) {
+                    console.log(`[TranscriptionService][${conversationId}] Skipping empty completed transcription.`);
+                    return; // Exit if no text
+                }
 
-                   // 1. Save the original message
-                   try {
-                       console.log(`[TranscriptionService] Saving original message. Sender: ${sender}, Lang: ${detectedLanguage}...`);
-                       const savedMessage = await this.messageService.createMessage(
-                           targetConversationId,
-                           completedText,
-                           sender, 
-                           detectedLanguage
-                       );
-                       savedOriginalMessageId = savedMessage.id; 
-                       console.log(`[TranscriptionService] Original message saved (ID: ${savedOriginalMessageId}). Broadcasting.`);
-                       this.broadcastToClients(targetConversationId, { type: 'new_message', payload: savedMessage });
-                   } catch (saveError) {
-                       console.error(`[TranscriptionService] Failed to save original message:`, saveError);
-                       this.broadcastToClients(targetConversationId, { type: 'error', message: 'Failed to save transcription.' });
-                       return; 
-                   }
+                console.log(`[TranscriptionService][${conversationId}] Processing completed transcription: "${completedText.substring(0, 50)}..."`);
 
-                   // 2. Handle Translation & Determine TTS Text
-                   let translatedText: string | null = null;
-                   let targetTranslationLang: string | null = null;
-                   let translationSenderType: string = 'translation'; // Default for saved translations
+                const detectedLanguage = await this.detectLanguage(completedText);
+                const sender = (detectedLanguage === 'en' || detectedLanguage === 'unknown') ? 'user' : 'patient'; // user=clinician, patient=patient
 
-                   if (sender === 'patient' && detectedLanguage !== 'en' && detectedLanguage !== 'unknown') {
-                       // Patient spoke Non-English -> Translate to English for Clinician TTS
-                       console.log(`[Translation Logic] Patient spoke ${detectedLanguage}. Translating to English for Clinician.`);
-                       targetTranslationLang = 'en';
-                       translatedText = await this.translateText(completedText, detectedLanguage, targetTranslationLang);
-                       if (translatedText) {
-                           textForTTS = translatedText; // Clinician hears English
-                       } else {
-                           console.warn(`[Translation Logic] Failed to translate ${detectedLanguage} -> en. Clinician TTS will use original text.`);
-                           // textForTTS remains original non-English
-                       }
-                   
-                   } else if (sender === 'user') {
-                       // Clinician spoke English -> Translate to Patient's language for Patient TTS
-                       // <<< Placeholder: Determine Patient's actual language dynamically >>>
-                       const patientTargetLang = 'es'; // Using 'es' for now
-                       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                       console.log(`[Translation Logic] Clinician spoke English. Translating to ${patientTargetLang} for Patient.`);
-                       targetTranslationLang = patientTargetLang;
-                       translatedText = await this.translateText(completedText, 'en', patientTargetLang);
-                       if (translatedText) {
-                           textForTTS = translatedText; // Patient hears their language
-                       } else {
-                           console.warn(`[Translation Logic] Failed to translate en -> ${patientTargetLang}. Patient TTS will use original English text.`);
-                           // textForTTS remains original English
-                       }
-                    } else { 
-                          // Patient spoke English (sender === 'patient' && detectedLanguage === 'en')
-                          console.log(`[Translation Logic] Patient spoke English. No translation needed for TTS.`);
-                          // textForTTS remains original English, no translation message to save
+                let textForTTS: string = completedText; // Default TTS text
+                let savedOriginalMessageId: string | undefined = undefined;
+                let translationToSave: string | null = null; // Text of the translation to be saved
+                let translationLangToSave: string | null = null; // Language of the translation to be saved
+                let currentPatientLanguage: string = 'es'; // Default assumption
+                let isVoiceCommand: boolean = false; // Flag to track if this is a voice command
+
+                // --- Fetch current conversation state --- 
+                let conversation;
+                try {
+                     conversation = await this.conversationRepository.findById(conversationId);
+                     if (!conversation) {
+                         console.error(`[TranscriptionService][${conversationId}] CRITICAL: Conversation not found! Cannot proceed.`);
+                         // Maybe cleanup resources? this._cleanupConversationResources(conversationId);
+                         return;
                      }
+                     currentPatientLanguage = conversation.patientLanguage; // Get actual patient language
+                     console.log(`[TranscriptionService][${conversationId}] Fetched conversation. Current patientLanguage: ${currentPatientLanguage}`);
+                } catch (fetchErr) {
+                    console.error(`[TranscriptionService][${conversationId}] Error fetching conversation:`, fetchErr);
+                    // Maybe cleanup? return;
+                    return; // Stop if we can't fetch conversation
+                }
+                // --------------------------------------
 
-                   // 3. Save Translation if one was generated
-                   if (translatedText && targetTranslationLang) {
-                       try {
-                           console.log(`[TranscriptionService] Saving translated (${targetTranslationLang}) message...`);
-                           const savedTranslation = await this.messageService.createMessage(
-                               targetConversationId,
-                               translatedText, 
-                               translationSenderType, // Use 'translation' sender type
-                               targetTranslationLang, // Language of the translation           
-                               savedOriginalMessageId 
-                           );
-                           console.log(`[TranscriptionService] Translated (${targetTranslationLang}) message saved (ID: ${savedTranslation.id}). Broadcasting.`);
-                           this.broadcastToClients(targetConversationId, { type: 'new_message', payload: savedTranslation });
-                       } catch (saveTranslationError) {
-                           console.error(`[TranscriptionService] Failed to save translated (${targetTranslationLang}) message:`, saveTranslationError);
-                           this.broadcastToClients(targetConversationId, { type: 'error', message: `Failed to save ${targetTranslationLang} translation.` });
-                       }
-                   }
+                // +++ Voice Command Check (Clinician Only) - BEFORE MESSAGE SAVING +++
+                if (sender === 'user') {
+                    console.log(`[Voice Command Debug][${conversationId}] Checking for voice command in text: "${completedText}"`);
+                    const lowerCaseText = completedText.toLowerCase().trim();
+                    // Using first word as trigger for flexibility
+                    const triggerWords = ["clara","claira","claire","clairea", "c"]; // Added "c"
+                    const firstWordMatch = lowerCaseText.match(/^([a-z]+)/i);
+                    const firstWord = firstWordMatch ? firstWordMatch[1].toLowerCase() : '';
 
-                   // 4. Trigger TTS with the final determined text
-                   if (textForTTS) { 
-                        try {
-                            console.log(`[TranscriptionService] Synthesizing speech linked to original message ID: ${savedOriginalMessageId}. Using text (first 50): "${textForTTS.substring(0, 50)}..."`);
-                            // <<< Placeholder: Pass appropriate voice/language to TTS service if needed >>>
-                            const audioBuffer = await this.ttsService.synthesizeSpeech(textForTTS); 
-                            // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                            if (audioBuffer && audioBuffer.length > 0) {
-                                const audioBase64 = audioBuffer.toString('base64');
-                                console.log(`[TranscriptionService] Speech synthesized (${audioBuffer.length} bytes). Broadcasting 'tts_audio' event linked to original message ID: ${savedOriginalMessageId}.`);
-                                this.broadcastToClients(targetConversationId, {
-                                    type: 'tts_audio',
-                                    payload: {
-                                        audioBase64: audioBase64,
-                                        format: 'audio/mpeg',
-                                        originalMessageId: savedOriginalMessageId 
-                                    }
-                                });
-                            } else {
-                                console.log('[TranscriptionService] TTS returned empty buffer, skipping broadcast.');
-                            }
-                        } catch (ttsError) {
-                            console.error(`[TranscriptionService] Failed to synthesize or broadcast TTS for original message ${savedOriginalMessageId}:`, ttsError);
+                    console.log(`[Voice Command Debug][${conversationId}] First word extracted: "${firstWord}"`);
+                    console.log(`[Voice Command Debug][${conversationId}] Checking against trigger words:`, triggerWords);
+
+                    const hasCommand = triggerWords.includes(firstWord);
+
+                    console.log(`[Voice Command Debug][${conversationId}] Has command: ${hasCommand}`);
+
+                    if (hasCommand) {
+                        isVoiceCommand = true; // Set flag to skip message saving/translation/TTS
+                        // Extract everything after the first word and any punctuation
+                        const commandText = lowerCaseText.replace(/^[a-z]+[.,!?;:\s]*/i, '').trim(); // Improved regex to handle punctuation
+                        console.log(`[Voice Command Debug][${conversationId}] Extracted command text: "${commandText}"`);
+
+                        console.log(`[Voice Command][${conversationId}] Detected command attempt from clinician: "${commandText}"`);
+
+                        // Process structured commands (Note, Follow-up) via VoiceCommandService
+                        if (commandText.startsWith("take a note") ||
+                            commandText.startsWith("note") ||
+                            commandText.startsWith("follow up") ||
+                            commandText.startsWith("schedule follow up")) {
+                            console.log(`[Voice Command][${conversationId}] Routing structured command to VoiceCommandService: "${commandText}"`);
+                            // Pass the *original* text for context if needed by the service
+                            this.voiceCommandService.processCommand(completedText, conversationId)
+                                .then(() => console.log(`[Voice Command][${conversationId}] VoiceCommandService processed structured command.`))
+                                .catch(err => console.error(`[TranscriptionService][${conversationId}] Error processing command via VoiceCommandService:`, err));
+                            // Don't proceed further with this message
+                            return;
                         }
-                   } else {
-                        console.log('[TranscriptionService] Skipping TTS as textForTTS is empty.');
-                   }
-               } else if (message.type === 'error') {
-                    console.error('[TranscriptionService] OpenAI Error:', JSON.stringify(message, null, 2));
-                    // Optionally broadcast a generic error to the client
-                    this.broadcastToClients(targetConversationId, { type: 'error', message: 'OpenAI processing error.' });
-               } else if (message.type === 'transcription.text.delta') {
-                   console.log(`>>> Transcription DELTA: [Lang: ${message.language || 'N/A'}] "${message.text || ''}"`);
-               } else if (message.type === 'transcription.text.final') {
-                   console.log(`>>> Transcription FINAL: [Lang: ${message.language || 'N/A'}] "${message.text || ''}"`);
-               } else {
-                   // Handle other message types from OpenAI if necessary
-                   // Currently, we primarily care about .completed for saving and potentially errors.
-                   // Deltas are handled client-side based on the raw forward.
-                   console.log(`[TranscriptionService] Received unhandled OpenAI message type: ${message.type} for ${targetConversationId}`);
-                   // Optionally forward other message types if the frontend needs them:
-                   // this.broadcastToClients(targetConversationId, message);
-               }
-           } else {
-                console.warn(`[TranscriptionService] Received OpenAI message (${message.type}) but no clients connected to route to.`);
+
+                        // --- Handle Simple Phrase Matching Commands Directly --- 
+                        switch (commandText) {
+                            case "pause session":
+                                console.log(`[Voice Command][${conversationId}] Recognized: Pause Session`);
+                                // TODO: Implement pause logic (e.g., emit event, call service)
+                                this.broadcastToClients(conversationId, { type: 'session_paused' });
+                                break;
+                            case "resume session":
+                                console.log(`[Voice Command][${conversationId}] Recognized: Resume Session`);
+                                // TODO: Implement resume logic
+                                this.broadcastToClients(conversationId, { type: 'session_resumed' });
+                                break;
+                            case "end session":
+                                console.log(`[Voice Command][${conversationId}] Recognized: End Session`);
+                                // TODO: Implement end logic (e.g., call conversationService.endAndSummarizeConversation)
+                                this.broadcastToClients(conversationId, { type: 'session_ended' }); // Example event
+                                // Consider cleanup: this._cleanupConversationResources(conversationId);
+                                break;
+                            case "repeat that":
+                            case "say again":
+                                console.log(`[Voice Command][${conversationId}] Recognized: Repeat Last Utterance`);
+                                // TODO: Implement repeat logic (needs access to last TTS content - complex)
+                                this.broadcastToClients(conversationId, { type: 'repeat_last_tts_request' });
+                                break;
+                            case "show summary":
+                                console.log(`[Voice Command][${conversationId}] Recognized: Show Summary`);
+                                this.broadcastToClients(conversationId, { type: 'ui_command', payload: { command: 'show_summary' } });
+                                break;
+                            case "list actions":
+                                console.log(`[Voice Command][${conversationId}] Recognized: List Actions`);
+                                this.broadcastToClients(conversationId, { type: 'ui_command', payload: { command: 'list_actions' } });
+                                break;
+                            default:
+                                console.log(`[Voice Command][${conversationId}] Command "${commandText}" not recognized.`);
+                                // Optionally send a feedback message to the user?
+                                // this.broadcastToClients(conversationId, { type: 'command_not_recognized', payload: { command: commandText } });
+                                break;
+                        }
+                        // Skip the rest of the processing (saving, translation, TTS) for *all* voice commands
+                        return;
+                    }
+                }
+                // +++ End Voice Command Check +++
+
+                // +++ Send transcription_started event +++
+                this.broadcastToClients(conversationId, { type: 'transcription_started' });
+                // ++++++++++++++++++++++++++++++++++++++++
+
+                // 1. Save the original message (only if NOT a voice command)
+                // isVoiceCommand flag ensures this doesn't run for commands
+                try {
+                    if (!completedText || completedText.trim() === '') {
+                        console.log(`[TranscriptionService][${conversationId}] Skipping save for empty original message.`);
+                    } else {
+                        console.log(`[TranscriptionService][${conversationId}] Saving original message. Sender: ${sender}, Lang: ${detectedLanguage}...`);
+                        const savedMessage = await this.messageService.createMessage(
+                            conversationId,
+                            completedText,
+                            sender,
+                            detectedLanguage
+                        );
+                        savedOriginalMessageId = savedMessage.id;
+                        console.log(`[TranscriptionService][${conversationId}] Original message saved (ID: ${savedOriginalMessageId}). Broadcasting.`);
+                        this.broadcastToClients(conversationId, { type: 'new_message', payload: savedMessage });
+                    }
+                } catch (saveError) {
+                    console.error(`[TranscriptionService][${conversationId}] Failed to save original message:`, saveError);
+                    this.broadcastToClients(conversationId, { type: 'error', message: 'Failed to save transcription.' });
+                    return; // Don't proceed if saving failed
+                }
+
+
+                // 2. Handle Translation, Patient Language Update, and Determine TTS Text
+                if (sender === 'patient' && detectedLanguage !== 'en' && detectedLanguage !== 'unknown') {
+                    // --- Patient spoke Non-English --- 
+                    console.log(`[Translation Logic][${conversationId}] Patient spoke ${detectedLanguage}. Current patient lang: ${currentPatientLanguage}`);
+
+                    if (detectedLanguage !== currentPatientLanguage) {
+                        console.log(`[Translation Logic][${conversationId}] Detected language ${detectedLanguage} differs from stored ${currentPatientLanguage}. Updating conversation...`);
+                        try {
+                            await this.conversationRepository.update(conversationId, { patientLanguage: detectedLanguage });
+                            console.log(`[Translation Logic][${conversationId}] Conversation patientLanguage updated to ${detectedLanguage}.`);
+                            currentPatientLanguage = detectedLanguage; // Update local variable
+                        } catch (updateErr) {
+                             console.error(`[Translation Logic][${conversationId}] Failed to update patient language:`, updateErr);
+                             // Continue, but log the error
+                        }
+                    }
+
+                    console.log(`[Translation Logic][${conversationId}] Translating ${detectedLanguage} -> English for Clinician.`);
+                    this.broadcastToClients(conversationId, { type: 'translation_started' });
+                    translationToSave = await this.translateText(completedText, detectedLanguage, 'en');
+                    if (translationToSave) {
+                        textForTTS = translationToSave; // Clinician hears English
+                        translationLangToSave = 'en';
+                        console.log(`[Translation Logic][${conversationId}] English translation successful.`);
+                    } else {
+                        console.warn(`[Translation Logic][${conversationId}] Failed to translate ${detectedLanguage} -> en. Clinician TTS will use original text.`);
+                        textForTTS = completedText; // Fallback to original if translation fails
+                    }
+
+                } else if (sender === 'user') {
+                    // --- Clinician spoke English --- 
+                    const patientTargetLang = currentPatientLanguage; // Use fetched patient language
+                    if (patientTargetLang && patientTargetLang !== 'en') { // Only translate if patient lang is set and not English
+                        console.log(`[Translation Logic][${conversationId}] Clinician spoke English. Translating to Patient language (${patientTargetLang}).`);
+                        this.broadcastToClients(conversationId, { type: 'translation_started' });
+                        translationToSave = await this.translateText(completedText, 'en', patientTargetLang);
+                        if (translationToSave) {
+                            textForTTS = translationToSave; // Patient hears their language
+                            translationLangToSave = patientTargetLang;
+                            console.log(`[Translation Logic][${conversationId}] Translation to ${patientTargetLang} successful.`);
+                        } else {
+                            console.warn(`[Translation Logic][${conversationId}] Failed to translate en -> ${patientTargetLang}. Patient TTS will use original English text.`);
+                            textForTTS = completedText; // Fallback to original
+                        }
+                    } else {
+                        console.log(`[Translation Logic][${conversationId}] Clinician spoke English, Patient language is English or unset. No translation needed.`);
+                        textForTTS = completedText; // No translation needed
+                    }
+                 } else {
+                       // --- Patient spoke English (or detected as unknown/en) ---
+                       console.log(`[Translation Logic][${conversationId}] Patient spoke English/Unknown. No translation needed.`);
+                       textForTTS = completedText;
+                  }
+
+                // 3. Save Translation if one was generated
+                if (translationToSave && translationLangToSave && savedOriginalMessageId) { // Also ensure original was saved
+                    try {
+                        if (translationToSave.trim() === '') {
+                            console.log(`[TranscriptionService][${conversationId}] Skipping save for empty translation message.`);
+                        } else {
+                            console.log(`[TranscriptionService][${conversationId}] Saving translated (${translationLangToSave}) message...`);
+                            const savedTranslation = await this.messageService.createMessage(
+                                conversationId,
+                                translationToSave,
+                                'translation',
+                                translationLangToSave,
+                                savedOriginalMessageId // Link to original message
+                            );
+                            console.log(`[TranscriptionService][${conversationId}] Translated (${translationLangToSave}) message saved (ID: ${savedTranslation.id}). Broadcasting.`);
+                            this.broadcastToClients(conversationId, { type: 'new_message', payload: savedTranslation });
+                        }
+                    } catch (saveTranslationError) {
+                        console.error(`[TranscriptionService][${conversationId}] Failed to save translated (${translationLangToSave}) message:`, saveTranslationError);
+                        this.broadcastToClients(conversationId, { type: 'error', message: `Failed to save ${translationLangToSave} translation.` });
+                        // Continue with TTS even if translation saving fails?
+                    }
+                }
+
+                // 4. Trigger TTS with the final determined text (if original message was saved)
+                if (textForTTS && savedOriginalMessageId) {
+                     try {
+                         console.log(`[TranscriptionService][${conversationId}] Synthesizing speech linked to original message ID: ${savedOriginalMessageId}. Using text (first 50): "${textForTTS.substring(0, 50)}..."`);
+                         // Determine language/voice for TTS based on who is speaking and target language
+                         // This might need more sophisticated logic based on detectedLanguage, translationLangToSave, etc.
+                         const ttsLang = translationLangToSave || detectedLanguage; // Simplified: Use translation lang if available, else detected lang
+                         const audioBuffer = await this.ttsService.synthesizeSpeech(textForTTS, ttsLang); // Pass language if your TTS service supports it
+
+                         if (audioBuffer && audioBuffer.length > 0) {
+                             const audioBase64 = audioBuffer.toString('base64');
+                             console.log(`[TranscriptionService][${conversationId}] Speech synthesized (${audioBuffer.length} bytes). Broadcasting 'tts_audio' event linked to original message ID: ${savedOriginalMessageId}.`);
+                             
+                             // *** Added Backend Debug Logging: Before Broadcast ***
+                             const ttsPayload = {
+                                 type: 'tts_audio',
+                                 payload: {
+                                     audioBase64: audioBase64.substring(0, 50) + '...', // Log only snippet
+                                     format: 'audio/mpeg',
+                                     originalMessageId: savedOriginalMessageId
+                                 }
+                             };
+                             console.log(`[Backend TTS Debug][${conversationId}] Broadcasting payload:`, JSON.stringify(ttsPayload));
+                             // *** End Backend Debug Logging ***
+
+                             // *** Check the broadcast call ***
+                             this.broadcastToClients(conversationId, {
+                                 type: 'tts_audio', // Correct type? YES
+                                 payload: {
+                                     audioBase64: audioBase64,
+                                     format: 'audio/mpeg', // Assuming TTS service returns mp3
+                                     originalMessageId: savedOriginalMessageId
+                                 }
+                             });
+                         } else {
+                             console.log(`[TranscriptionService][${conversationId}] TTS returned empty buffer, skipping broadcast.`);
+                         }
+                     } catch (ttsError) {
+                         console.error(`[TranscriptionService][${conversationId}] Failed to synthesize or broadcast TTS for original message ${savedOriginalMessageId}:`, ttsError);
+                     }
+                } else {
+                     console.log(`[TranscriptionService][${conversationId}] Skipping TTS as textForTTS is empty or original message wasn't saved.`);
+                }
+
+                // +++ Send processing_completed event +++
+                this.broadcastToClients(conversationId, { type: 'processing_completed' });
+                // ++++++++++++++++++++++++++++++++++++++++
+                // --- End of Moved Processing Logic ---
+
+            } else if (message.type === 'error') {
+                console.error(`[TranscriptionService][${conversationId}] OpenAI Error:`, JSON.stringify(message, null, 2));
+                this.broadcastToClients(conversationId, { type: 'error', message: 'OpenAI processing error.' });
+            } else {
+                console.log(`[TranscriptionService][${conversationId}] Received unhandled OpenAI message type: ${message.type}`);
+                // Optionally forward other types if needed
+                // this.broadcastToClients(conversationId, message);
             }
         } catch (err) {
-          console.error('[TranscriptionService] Error handling OpenAI message:', err, `Raw Data: ${rawMessage}`);
+            console.error(`[TranscriptionService][${conversationId}] Error handling OpenAI message:`, err, `Raw Data: ${rawMessage.substring(0, 100)}...`);
         }
       });
-      
+
       newWs.on('close', (code, reason) => {
-        console.log(`[TranscriptionService] OpenAI connection closed. Code: ${code}, Reason: ${reason?.toString()}`);
-        this.openaiConnection = null;
-        this.isOpenAIConnected = false;
-        this.isConnecting = false;
-        this.killFFmpegProcess(); // Kill FFmpeg when OpenAI disconnects
-        
-        // Handle reconnection attempt with backoff
-        this.openaiReconnectionAttempts++;
-        const cooldownMs = Math.min(30000, Math.pow(2, this.openaiReconnectionAttempts) * 1000);
-        this.openaiConnectionCooldownUntil = Date.now() + cooldownMs;
-        console.log(`[TranscriptionService] Setting OpenAI reconnect cooldown for ${cooldownMs}ms.`);
-        this.broadcastToAll({ type: 'openai_disconnected', message: 'Disconnected. Attempting reconnect...' });
-        
-        // Attempt reconnect after cooldown if clients are still connected
-        if (!this.isClientMapEmpty()) { 
-             setTimeout(() => this.connectToOpenAI(), cooldownMs);
+        console.log(`[TranscriptionService][${conversationId}] OpenAI connection closed. Code: ${code}, Reason: ${reason?.toString()}`);
+        // Update state for this conversation only
+        conversationState.openaiConnection = null;
+        conversationState.isOpenAIConnected = false;
+        conversationState.isConnecting = false;
+        this._killFFmpegForConversation(conversationId); // Ensure FFmpeg is killed
+
+        // Handle reconnection attempt for this conversation
+        conversationState.openaiReconnectionAttempts++;
+        const cooldownMs = Math.min(30000, Math.pow(2, conversationState.openaiReconnectionAttempts) * 1000);
+        conversationState.openaiConnectionCooldownUntil = Date.now() + cooldownMs;
+        console.log(`[TranscriptionService][${conversationId}] Setting OpenAI reconnect cooldown for ${cooldownMs}ms.`);
+        this.broadcastToClients(conversationId, { type: 'openai_disconnected', message: 'Disconnected. Attempting reconnect...' });
+
+        // Attempt reconnect only if clients are still connected for this conversation
+        if (this.clientConnections.has(conversationId) && (this.clientConnections.get(conversationId)?.size || 0) > 0) {
+          setTimeout(() => this._connectOpenAIForConversation(conversationId), cooldownMs);
         }
       });
-      
+
       newWs.on('error', (error) => {
-        console.error('[TranscriptionService] OpenAI WebSocket error:', error);
-        this.isConnecting = false; 
-        this.killFFmpegProcess(); // Kill FFmpeg on OpenAI error too
+        console.error(`[TranscriptionService][${conversationId}] OpenAI WebSocket error:`, error);
+        conversationState.isConnecting = false;
         // Let the 'close' event handle state changes and reconnection attempt
+        // Consider immediate cleanup if error is severe: this._cleanupConversationResources(conversationId);
       });
 
     } catch (err) {
-      console.error('[TranscriptionService] Error initiating OpenAI connection:', err);
-      this.isConnecting = false;
-      this.isOpenAIConnected = false;
-      this.killFFmpegProcess(); // Ensure FFmpeg is killed on connection init error
-      this.broadcastToAll({ type: 'error', message: `Failed to connect to OpenAI: ${err instanceof Error ? err.message : String(err)}` });
+      console.error(`[TranscriptionService][${conversationId}] Error initiating OpenAI connection:`, err);
+      conversationState.isConnecting = false;
+      conversationState.isOpenAIConnected = false;
+      this._killFFmpegForConversation(conversationId); // Ensure FFmpeg is killed
+      this.broadcastToClients(conversationId, { type: 'error', message: `Failed to connect to OpenAI: ${err instanceof Error ? err.message : String(err)}` });
+      // Consider removing the state entirely
+      // this.conversationStates.delete(conversationId);
     }
   }
 
-  /** Starts the persistent FFmpeg process */
-  private startFFmpegProcess(): void {
-      if (this.ffmpegProcess) {
-          console.warn('[TranscriptionService] Attempted to start FFmpeg process, but one already exists.');
-          return;
-      }
-      console.log('[TranscriptionService] Starting persistent FFmpeg process...');
-      this.ffmpegStdinEnded = false; // Reset flag
+  /** Starts the FFmpeg process for a SPECIFIC conversation */
+  private _startFFmpegForConversation(conversationId: string): void {
+    const conversationState = this.conversationStates.get(conversationId);
+    if (!conversationState) {
+        console.error(`[TranscriptionService][${conversationId}] Cannot start FFmpeg: State not found.`);
+        return;
+    }
+    if (conversationState.ffmpegProcess) {
+        console.warn(`[TranscriptionService][${conversationId}] Attempted to start FFmpeg process, but one already exists.`);
+        return;
+    }
+    console.log(`[TranscriptionService][${conversationId}] Starting FFmpeg process...`);
+    conversationState.ffmpegStdinEnded = false; // Reset flag
 
-      const ffmpegPath = ffmpegInstaller.path;
-      const ffmpegArgs = [
-          '-i', 'pipe:0',      
-          '-f', 's16le',        
-          '-acodec', 'pcm_s16le',
-          '-ar', '24000',      
-          '-ac', '1',          
-          'pipe:1'            
-      ];
+    const ffmpegPath = ffmpegInstaller.path;
+    const ffmpegArgs = [
+        '-i', 'pipe:0',
+        '-f', 's16le',
+        '-acodec', 'pcm_s16le',
+        '-ar', '24000',
+        '-ac', '1',
+        'pipe:1'
+    ];
 
-      try {
-          this.ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
-          console.log(`[TranscriptionService] FFmpeg process spawned with PID: ${this.ffmpegProcess.pid}`);
-          let pcmChunkCounter = 0; // Counter for debugging file names
+    try {
+        const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
+        conversationState.ffmpegProcess = ffmpegProcess; // Store in conversation state
+        console.log(`[TranscriptionService][${conversationId}] FFmpeg process spawned with PID: ${ffmpegProcess.pid}`);
 
-          // Handle PCM data coming out of FFmpeg
-          this.ffmpegProcess.stdout.on('data', (chunk: Buffer) => {
-              // console.log(`[TranscriptionService] Received PCM chunk from FFmpeg stdout (Length: ${chunk.length})`); // Commented out: Verbose
-              
-              // --- DEBUG: Save raw PCM chunk --- 
-              /* // Commented out: Verbose debug file saving
-              const tempDir = os.tmpdir();
-              const pcmFileName = `ffmpeg_output_${Date.now()}_${pcmChunkCounter++}.raw`;
-              const pcmFilePath = path.join(tempDir, pcmFileName);
-              try {
-                   fs.writeFileSync(pcmFilePath, chunk);
-                   console.log(`[TranscriptionService] DEBUG: Saved raw PCM chunk to ${pcmFilePath}`);
-              } catch (writeErr) {
-                   console.error(`[TranscriptionService] DEBUG: Error saving PCM chunk:`, writeErr);
-              }
-              */
-              // --- END DEBUG --- 
+        // Handle PCM data coming out of FFmpeg
+        ffmpegProcess.stdout.on('data', (chunk: Buffer) => {
+             const currentState = this.conversationStates.get(conversationId);
+            if (currentState && currentState.isOpenAIConnected) {
+                try {
+                    const pcmBase64 = chunk.toString('base64');
+                    this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.append", audio: pcmBase64 }));
+                } catch (err) {
+                    console.error(`[TranscriptionService][${conversationId}] Error sending PCM chunk to OpenAI:`, err);
+                    // Maybe close this conversation? this._cleanupConversationResources(conversationId);
+                }
+            } else {
+                console.warn(`[TranscriptionService][${conversationId}] Received FFmpeg stdout data, but OpenAI not connected. Discarding.`);
+            }
+        });
 
-              if (this.isOpenAIConnected) {
-                  try {
-                      const pcmBase64 = chunk.toString('base64');
-                      this.sendToOpenAI(JSON.stringify({ type: "input_audio_buffer.append", audio: pcmBase64 }));
-                  } catch (err) {
-                      console.error('[TranscriptionService] Error sending PCM chunk to OpenAI:', err);
-                  }
-              } else {
-                  console.warn('[TranscriptionService] Received FFmpeg stdout data, but OpenAI not connected. Discarding.');
-              }
-          });
+        // Handle FFmpeg stderr (for debugging)
+        ffmpegProcess.stderr.on('data', (chunk: Buffer) => {
+            // console.error(`[TranscriptionService][${conversationId}] FFmpeg stderr: ${chunk.toString()}`); // Keep commented unless debugging
+        });
 
-          // Handle FFmpeg stderr (for debugging)
-          this.ffmpegProcess.stderr.on('data', (chunk: Buffer) => {
-              // console.error(`[TranscriptionService] FFmpeg stderr: ${chunk.toString()}`); // Commented out: Can be very verbose
-          });
+        // Handle FFmpeg process errors
+        ffmpegProcess.on('error', (error) => {
+            console.error(`[TranscriptionService][${conversationId}] FFmpeg process error:`, error);
+            this._killFFmpegForConversation(conversationId); // Clean up on error
+            this.broadcastToClients(conversationId, { type: 'error', message: 'Internal audio processing error.'});
+        });
 
-          // Handle FFmpeg process errors
-          this.ffmpegProcess.on('error', (error) => {
-              console.error('[TranscriptionService] Persistent FFmpeg process error:', error);
-              this.killFFmpegProcess(); // Clean up on error
-              // Potentially try to restart? Or signal fatal error?
-          });
+        // Handle FFmpeg process exit
+        ffmpegProcess.on('close', (code, signal) => {
+            console.log(`[TranscriptionService][${conversationId}] FFmpeg process exited with code ${code}, signal ${signal}.`);
+            const currentState = this.conversationStates.get(conversationId);
+            // If stdin was ended gracefully, send commit
+            if (currentState && currentState.ffmpegStdinEnded && code === 0) {
+                 console.log(`[TranscriptionService][${conversationId}] FFmpeg finished after stdin ended. Sending commit to OpenAI.`);
+                 try {
+                      this._sendToOpenAIForConversation(conversationId, JSON.stringify({ type: "input_audio_buffer.commit" }));
+                 } catch (commitErr) {
+                      console.error(`[TranscriptionService][${conversationId}] Error sending final commit to OpenAI after FFmpeg exit:`, commitErr);
+                 }
+            } else if (code !== 0 && code !== null) {
+                 console.error(`[TranscriptionService][${conversationId}] FFmpeg exited unexpectedly.`);
+                 // Maybe signal error to clients
+            }
+            // Clear the handle in the state, even if exit was ok
+            if(currentState) {
+                 currentState.ffmpegProcess = null;
+            }
+        });
 
-          // Handle FFmpeg process exit
-          this.ffmpegProcess.on('close', (code, signal) => {
-              console.log(`[TranscriptionService] Persistent FFmpeg process exited with code ${code}, signal ${signal}.`);
-              // If stdin was ended, this exit might be expected - send OpenAI commit
-              if (this.ffmpegStdinEnded && code === 0) {
-                   console.log('[TranscriptionService] FFmpeg finished after stdin ended. Sending commit to OpenAI.');
-                   try {
-                        this.sendToOpenAI(JSON.stringify({ type: "input_audio_buffer.commit" }));
-                   } catch (commitErr) {
-                        console.error('[TranscriptionService] Error sending final commit to OpenAI after FFmpeg exit:', commitErr);
-                   }
-              } else if (code !== 0 && code !== null) {
-                   // Unexpected exit
-                   console.error('[TranscriptionService] FFmpeg exited unexpectedly.');
-                   // Maybe signal error to clients or attempt restart?
-              }
-              this.ffmpegProcess = null; // Clear the handle
-          });
+        // Handle FFmpeg stdin errors (like EPIPE)
+        ffmpegProcess.stdin.on('error', (error: NodeJS.ErrnoException) => {
+             console.error(`[TranscriptionService][${conversationId}] FFmpeg stdin error:`, error);
+             this._killFFmpegForConversation(conversationId); // Ensure it's cleaned up
+        });
 
-          // Handle FFmpeg stdin errors (like EPIPE)
-          this.ffmpegProcess.stdin.on('error', (error: NodeJS.ErrnoException) => {
-               console.error(`[TranscriptionService] Persistent FFmpeg stdin error:`, error);
-               // This often means FFmpeg exited prematurely
-               this.killFFmpegProcess(); // Ensure it's cleaned up
-          });
-
-      } catch (spawnError) {
-           console.error('[TranscriptionService] Failed to spawn persistent FFmpeg process:', spawnError);
-           this.ffmpegProcess = null; 
-           // Signal error to clients?
-      }
+    } catch (spawnError) {
+         console.error(`[TranscriptionService][${conversationId}] Failed to spawn FFmpeg process:`, spawnError);
+         if (conversationState) {
+             conversationState.ffmpegProcess = null;
+         }
+         this.broadcastToClients(conversationId, { type: 'error', message: 'Failed to start internal audio processing.'});
+    }
   }
 
-  /** Kills the persistent FFmpeg process if it's running */
-  private killFFmpegProcess(): void {
-      if (this.ffmpegProcess && !this.ffmpegProcess.killed) {
-          console.log(`[TranscriptionService] Killing persistent FFmpeg process (PID: ${this.ffmpegProcess.pid})...`);
-          this.ffmpegProcess.kill('SIGTERM'); // Send termination signal
-          this.ffmpegProcess = null;
-          this.ffmpegStdinEnded = false; // Reset flag
+  /** Kills the FFmpeg process for a SPECIFIC conversation */
+  private _killFFmpegForConversation(conversationId: string): void {
+      const conversationState = this.conversationStates.get(conversationId);
+      if (conversationState && conversationState.ffmpegProcess && !conversationState.ffmpegProcess.killed) {
+          console.log(`[TranscriptionService][${conversationId}] Killing FFmpeg process (PID: ${conversationState.ffmpegProcess.pid})...`);
+          conversationState.ffmpegProcess.kill('SIGTERM');
+          conversationState.ffmpegProcess = null;
+          conversationState.ffmpegStdinEnded = false; // Reset flag
       }
   }
 
   /**
-   * Send a message over THE SHARED OpenAI connection (Synchronous check).
+   * Send a message over the OpenAI connection for a SPECIFIC conversation.
    */
-  private sendToOpenAI(message: string): void {
-    // Synchronous check if connection is ready
-    if (this.openaiConnection && this.isOpenAIConnected && this.openaiConnection.readyState === WebSocket.OPEN) {
+  private _sendToOpenAIForConversation(conversationId: string, message: string): void {
+    const conversationState = this.conversationStates.get(conversationId);
+    if (conversationState && conversationState.openaiConnection && conversationState.isOpenAIConnected && conversationState.openaiConnection.readyState === WebSocket.OPEN) {
       try {
-         this.openaiConnection.send(message);
+        conversationState.openaiConnection.send(message);
       } catch (sendError) {
-           console.error('[TranscriptionService] sendToOpenAI Error during send:', sendError);
-           throw sendError; // Re-throw send error
+        console.error(`[TranscriptionService][${conversationId}] _sendToOpenAIForConversation Error during send:`, sendError);
+        // Consider cleaning up this conversation's resources on send error
+        // this._cleanupConversationResources(conversationId);
+        throw sendError; // Re-throw send error
       }
     } else {
-      const errMsg = `[TranscriptionService] sendToOpenAI: Cannot send, OpenAI WebSocket not ready. State: ${this.openaiConnection?.readyState}, ConnectedFlag: ${this.isOpenAIConnected}`; 
+      const stateDetails = conversationState
+        ? `State: ${conversationState.openaiConnection?.readyState}, ConnectedFlag: ${conversationState.isOpenAIConnected}`
+        : 'State not found';
+      const errMsg = `[TranscriptionService][${conversationId}] _sendToOpenAIForConversation: Cannot send, OpenAI WebSocket not ready or state missing. ${stateDetails}`;
       console.error(errMsg);
-      throw new Error('OpenAI WebSocket not ready');
+      throw new Error('OpenAI WebSocket not ready for conversation');
     }
   }
 
   // BroadcastToClients (per conversation) remains the same
   private broadcastToClients(conversationId: string, message: any): void {
+    // *** Added Broadcast Debug Logging ***
+    console.log(`[Broadcast Debug][${conversationId}] Attempting broadcast. Type: ${message?.type}`);
+
     const clients = this.clientConnections.get(conversationId);
-    if (clients) {
-      const messageStr = JSON.stringify(message);
-      clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          try { client.send(messageStr); } catch (e) { console.error(`Error sending to client ${conversationId}:`, e); }
-        }
-      });
+    if (clients && clients.size > 0) {
+        console.log(`[Broadcast Debug][${conversationId}] Found ${clients.size} client(s) in map.`);
+        const messageStr = JSON.stringify(message);
+        clients.forEach(client => {
+            console.log(`[Broadcast Debug][${conversationId}] Checking client. ReadyState: ${client.readyState === WebSocket.OPEN ? 'OPEN' : client.readyState}`);
+            if (client.readyState === WebSocket.OPEN) {
+                try { 
+                    console.log(`[Broadcast Debug][${conversationId}] Sending message to client.`);
+                    client.send(messageStr); 
+                } catch (e) { 
+                    console.error(`Error sending to client ${conversationId}:`, e); 
+                }
+            } else {
+                console.warn(`[Broadcast Debug][${conversationId}] Skipping send, client not OPEN.`);
+            }
+        });
+    } else {
+        console.warn(`[Broadcast Debug][${conversationId}] No clients found in map for broadcast. Message type: ${message?.type}`);
     }
+    // *** End Broadcast Debug Logging ***
   }
   
   // --- Helper Methods ---
-  /** Broadcast a message to ALL connected clients across ALL conversations */
+  /** Broadcast a message to ALL connected clients across ALL conversations - **TO BE REFACTORED or REMOVED** */
   private broadcastToAll(message: any): void {
+      // This method might need rethinking. Do we need truly global broadcasts anymore?
+      // If so, iterate over conversationStates map AND clientConnections map.
+      console.warn("[TranscriptionService] broadcastToAll() called - Review its necessity/implementation.");
       const messageStr = JSON.stringify(message);
-      this.clientConnections.forEach(clientSet => {
+      this.clientConnections.forEach((clientSet, conversationId) => {
+          console.log(`[Broadcasting All] Sending to clients of conversation ${conversationId}`);
           clientSet.forEach(client => {
                if (client.readyState === WebSocket.OPEN) {
-                   try { client.send(messageStr); } catch (e) { console.error('Error broadcasting to client:', e); }
+                   try { client.send(messageStr); } catch (e) { console.error(`Error broadcasting to client in ${conversationId}:`, e); }
                }
           });
       });
@@ -622,26 +849,25 @@ export class TranscriptionService {
   
   /** Check if any clients are connected */
   private isClientMapEmpty(): boolean {
-       for (const clientSet of this.clientConnections.values()) {
-           if (clientSet.size > 0) {
-               return false;
-           }
-       }
-       return true;
+       // NOTE: This method now only checks if *any* conversation has clients.
+       // It doesn't reflect the shared resource state anymore.
+       return this.clientConnections.size === 0;
   }
 
-  /** Close the shared OpenAI connection and kill FFmpeg */
-  private closeOpenAIConnection(): void {
-    this.killFFmpegProcess(); // Kill FFmpeg first
-    if (this.openaiConnection) {
-         console.log('[TranscriptionService] Closing shared OpenAI connection.');
-         this.openaiConnection.close();
-         this.openaiConnection = null;
-         this.isOpenAIConnected = false;
-         this.isConnecting = false; 
+  /** Closes the OpenAI connection for a SPECIFIC conversation */
+  private _closeOpenAIConnectionForConversation(conversationId: string): void {
+    const conversationState = this.conversationStates.get(conversationId);
+    if (conversationState && conversationState.openaiConnection) {
+      console.log(`[TranscriptionService][${conversationId}] Closing OpenAI connection.`);
+      // Remove listeners before closing to prevent potential issues during cleanup
+      conversationState.openaiConnection.removeAllListeners(); 
+      conversationState.openaiConnection.close();
+      conversationState.openaiConnection = null;
+      conversationState.isOpenAIConnected = false;
+      conversationState.isConnecting = false;
     }
   }
-  
+
   /**
    * Check if a string is likely to be Base64 encoded
    */
