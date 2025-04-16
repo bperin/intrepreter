@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import styled, { css } from "styled-components";
 import { Theme } from "../theme";
 import { useWebSocket } from "../hooks/useWebSocket";
@@ -7,7 +7,7 @@ import { useConversation } from "../context/ConversationContext";
 // import useSpeechToText, { SttStatus } from "../hooks/useSpeechToText";
 import useSpeechToTextBackend from "../hooks/useSpeechToTextBackend";
 // import useTranslation from "../hooks/useTranslation";
-// import { useAuth } from '../context/AuthContext'; // Removed unused import
+import { useAuth } from '../context/AuthContext'; // <-- Import useAuth
 // import Button from './common/Button'; // TODO: Fix Button import path issue
 
 // Extend Window interface to include our custom property
@@ -370,14 +370,19 @@ const ChatInterface: React.FC = () => {
         selectedConversationId,
         isSessionActive,
         endCurrentSession,
+        currentConversation, // <-- Get currentConversation from context
     } = useConversation();
+    const { user } = useAuth(); // <-- Get user from AuthContext
     const messageAreaRef = useRef<HTMLDivElement>(null);
     const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([]);
     const audioContextRef = useRef<AudioContext | null>(null);
     const [activeTab, setActiveTab] = useState<'chat' | 'summary'>('chat');
     const [currentSummary, setCurrentSummary] = useState<string | null>(null);
-    const [patientLanguage, setPatientLanguage] = useState<string | null>(null);
     const [processingStatus, setProcessingStatus] = useState<'idle' | 'transcribing' | 'translating'>('idle');
+
+    // Extract patientName and clinicianUsername once
+    const patientName = useMemo(() => currentConversation?.patient?.firstName || 'Patient', [currentConversation]);
+    const clinicianUsername = useMemo(() => user?.username || 'Clinician', [user]);
 
     // Define getAudioContext FIRST
     const getAudioContext = (): AudioContext | null => {
@@ -623,7 +628,6 @@ const ChatInterface: React.FC = () => {
                 console.log(`[WS Effect] Received Summary data type: ${typeof summary}, value:`, summary); // Log summary details
                 console.log(`[WS Effect] Received Patient Language: ${lang}`);
                 setCurrentSummary(summary || null);
-                setPatientLanguage(lang || null);
                 setActiveTab('chat');
             }
             // --- End updated handler ---
@@ -682,8 +686,6 @@ const ChatInterface: React.FC = () => {
     useEffect(() => {
         console.log('[Effect selectedConversationId] Resetting summary and language for new/no selection.');
         setCurrentSummary(null);
-        setPatientLanguage(null);
-        setProcessingStatus('idle');
         setActiveTab('chat');
         
         if (selectedConversationId) {
@@ -757,8 +759,6 @@ const ChatInterface: React.FC = () => {
                     <SttStatusDisplay $status={status}>
                          {/* Optional: Add an icon based on status */} 
                         Mic: {status} {hookIsPaused && '⏸️'} {isProcessing && '...'}
-                        {patientLanguage && ` (Lang: ${patientLanguage})`}
-                        {/* {error ? `(${error.message})` : ''} */}
                     </SttStatusDisplay>
                 )}
             </TopStatusContainer>
@@ -789,29 +789,24 @@ const ChatInterface: React.FC = () => {
                         {displayMessages.map((msg, index) => {
                             console.log(`[ChatInterface] Rendering message ${index + 1}/${displayMessages.length}:`, msg);
                             
-                            // --- Determine Sender Label & Translation Status --- 
+                            // --- Determine Sender Label --- 
                             let senderLabel: string | null = null;
-                            let isTranslated = !!msg.originalMessageId; // Check if this message is a translation
-                            let originalSenderType = msg.backendSenderType;
-                            
-                            // If it's a translation, find the original message's sender type
+                            const isTranslated = !!msg.originalMessageId; // Check if this message is a translation
+                            const messageLanguage = msg.language?.toLowerCase() || 'unknown'; // Get message language
+
                             if (isTranslated) {
-                                const originalMsg = displayMessages.find(m => m.id === msg.originalMessageId);
-                                if (originalMsg) {
-                                    originalSenderType = originalMsg.backendSenderType;
+                                // If it's a translation, always label it as System
+                                senderLabel = 'System';
+                            } else {
+                                // If it's NOT a translation, apply original logic
+                                if (messageLanguage === 'en') {
+                                    // Original English message -> Use clinician's name
+                                    senderLabel = clinicianUsername;
+                                } else if (messageLanguage !== 'unknown' && msg.sender !== 'system' && msg.sender !== 'error') {
+                                    // Original Non-English message (and not system/error) -> Use the static label "Patient"
+                                    senderLabel = 'Patient';
                                 }
-                            }
-                            
-                            // Map backend type to display label
-                            if (originalSenderType?.toUpperCase() === 'CLINICIAN') {
-                                senderLabel = 'Clinician';
-                            } else if (originalSenderType?.toUpperCase() === 'PATIENT') {
-                                senderLabel = 'Patient';
-                            }
-                            
-                            // Append translation status if applicable
-                            if (senderLabel && isTranslated) {
-                                senderLabel += ' (Translated)';
+                                // Original System/Error messages will have senderLabel = null and won't render the SenderLabel component
                             }
                             // --- End Determine Sender Label --- 
                             
@@ -825,21 +820,30 @@ const ChatInterface: React.FC = () => {
                             }
                             // --- End Time Formatting ---
 
+                            // --- Determine Alignment ---
+                            // Align right ('user') if the message is English, otherwise left ('other')
+                            const alignmentSender: DisplayMessage["sender"] = (messageLanguage === 'en') ? "user" : "other";
+                            // Override for system/error messages to always be left-aligned
+                            const finalAlignmentSender = (msg.sender === 'system' || msg.sender === 'error') ? 'other' : alignmentSender;
+                            // --- End Determine Alignment ---
+
                             return (
-                                <MessageGroup key={msg.id || index} $isSender={msg.sender === "user"}>
-                                    {/* Render Sender Label (possibly with translation indicator) */}
+                                <MessageGroup key={msg.id || index} $isSender={finalAlignmentSender === "user"}>
+                                    {/* Render Sender Label (if determined) */}
                                     {senderLabel && (
-                                        <SenderLabel $isSender={msg.sender === "user"}>
+                                        <SenderLabel $isSender={finalAlignmentSender === "user"}>
                                             {senderLabel}
                                         </SenderLabel>
                                     )}
                             
-                                    <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
+                                    <Bubble $isSender={finalAlignmentSender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
                                         {msg.text}
                                     </Bubble>
                                     
-                                    {/* Message Meta: Only show timestamp now */}
-                                    <MessageMeta>{formattedTime}</MessageMeta>
+                                    {/* Message Meta: Show language, translation status, and timestamp */}
+                                    <MessageMeta>
+                                        {`[${messageLanguage}]`}{isTranslated ? ' (Translated)' : ''} {formattedTime}
+                                    </MessageMeta>
                                 </MessageGroup>
                             );
                         })}
