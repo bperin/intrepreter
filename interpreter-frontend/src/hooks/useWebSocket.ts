@@ -32,9 +32,10 @@ interface WebSocketHook {
 }
 
 export const useWebSocket = (): WebSocketHook => {
-    const { accessToken } = useAuth();
+    // const { accessToken } = useAuth(); // Removed: Get token from localStorage
+    const { isAuthenticated } = useAuth(); // Keep for triggering effect
     const [isConnected, setIsConnected] = useState(false);
-    const [lastMessage, setLastMessage] = useState<any | null>(null); // Change type
+    const [lastMessage, setLastMessage] = useState<any | null>(null);
     const [error, setError] = useState<Error | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
     // Use number for browser setTimeout/clearTimeout return type
@@ -69,14 +70,14 @@ export const useWebSocket = (): WebSocketHook => {
     }, []);
 
     const connectWebSocket = useCallback(() => {
-        // Don't cleanup if already connecting/open (avoids infinite loops on rapid calls)
         if (webSocketRef.current?.readyState === WebSocket.OPEN || webSocketRef.current?.readyState === WebSocket.CONNECTING) {
             return;
         }
 
-        disconnectCleanup(); // Clean up previous state before attempting connection
+        disconnectCleanup();
 
-        if (!accessToken) {
+        const token = localStorage.getItem('accessToken'); // Get token directly
+        if (!token) {
             console.log("WebSocket: No access token, connection aborted.");
             setError(new Error("Authentication token is missing."));
             setIsConnected(false);
@@ -84,7 +85,7 @@ export const useWebSocket = (): WebSocketHook => {
         }
 
         console.log(`WebSocket: Attempting to connect to ${WS_URL}...`);
-        const wsWithTokenUrl = `${WS_URL}?token=${accessToken}`;
+        const wsWithTokenUrl = `${WS_URL}?token=${token}`; // Use the retrieved token
 
         try {
             webSocketRef.current = new WebSocket(wsWithTokenUrl);
@@ -177,7 +178,7 @@ export const useWebSocket = (): WebSocketHook => {
                 scheduleReconnect();
             }
         };
-    }, [accessToken, disconnectCleanup]);
+    }, [disconnectCleanup]); // Removed accessToken from dependencies
 
     const scheduleReconnect = useCallback(() => {
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -193,16 +194,17 @@ export const useWebSocket = (): WebSocketHook => {
     }, [connectWebSocket]);
 
     useEffect(() => {
-        if (accessToken) {
-            // Only attempt connection if token exists
+        const token = localStorage.getItem('accessToken'); // Check token here too
+        if (token && isAuthenticated) { // Connect if authenticated and token exists
             connectWebSocket();
         }
         return () => {
-            console.log("WebSocket: Cleaning up connection on unmount/token change...");
-            reconnectAttemptsRef.current = maxReconnectAttempts; // Prevent reconnect attempts during cleanup
-            disconnectCleanup(true); // Mark as intentional closure
+            console.log("WebSocket: Cleaning up connection on unmount/auth change...");
+            reconnectAttemptsRef.current = maxReconnectAttempts;
+            disconnectCleanup(true);
         };
-    }, [accessToken, connectWebSocket, disconnectCleanup]); // Rerun if token changes
+    // Trigger connection attempt when authentication status changes
+    }, [isAuthenticated, connectWebSocket, disconnectCleanup]);
 
     const sendMessage = useCallback((message: string | object | Blob) => {
         if (webSocketRef.current && webSocketRef.current.readyState === WebSocket.OPEN) {

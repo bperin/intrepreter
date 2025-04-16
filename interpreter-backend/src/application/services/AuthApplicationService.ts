@@ -3,6 +3,7 @@ import { IUserRepository } from "../../domain/repositories/IUserRepository";
 import { IAuthService, LoginResult, RefreshResult } from "../../domain/services/IAuthService";
 import { RegisterUserCommand, RegisterUserResult } from "../commands/RegisterUserCommand";
 import { LoginUserCommand } from "../commands/LoginUserCommand";
+import * as bcrypt from 'bcrypt';
 
 @injectable()
 export class AuthApplicationService {
@@ -23,7 +24,7 @@ export class AuthApplicationService {
             console.log(`[AuthService] User ${command.username} does not exist. Proceeding...`);
 
             console.log(`[AuthService] Hashing password for user ${command.username}...`);
-            const hashedPassword = await this.authService.hashPassword(command.password);
+            const hashedPassword = await bcrypt.hash(command.password, 10);
             console.log(`[AuthService] Password hashed successfully.`);
 
             const userData = { username: command.username, hashedPassword };
@@ -54,7 +55,18 @@ export class AuthApplicationService {
     }
 
     async refreshAccessToken(refreshToken: string): Promise<RefreshResult> {
-        return this.authService.refreshToken(refreshToken);
+        try {
+            // IAuthService.refreshToken returns RefreshResult { success, token?, refreshToken?, error? }
+            const serviceResult = await this.authService.refreshToken(refreshToken);
+            
+            // Simply return the result from the service layer
+            return serviceResult; 
+            
+        } catch (error: any) {
+            console.error("Error during token refresh in AppService:", error);
+            // Ensure the returned error format matches RefreshResult
+            return { success: false, error: error.message || "Token refresh failed" };
+        }
     }
 }
 
