@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { Theme } from "../theme";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useError } from "../context/ErrorContext";
@@ -331,6 +331,59 @@ const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
     };
 };
 
+// --- Added for Tabs ---
+const TabContainer = styled.div<ThemedProps>`
+    display: flex;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
+    padding: 0 ${({ theme }) => theme.spacing.lg};
+    background-color: ${({ theme }) => theme.colors.background.secondary};
+`;
+
+const TabButton = styled.button<{ $isActive: boolean } & ThemedProps>`
+    padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
+    border: none;
+    background-color: transparent;
+    color: ${({ theme, $isActive }) => $isActive ? theme.colors.text.primary : theme.colors.text.secondary};
+    cursor: pointer;
+    font-size: ${({ theme }) => theme.typography.sizes.sm};
+    position: relative;
+    font-weight: ${({ theme, $isActive }) => $isActive ? theme.typography.weights.bold : theme.typography.weights.normal};
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -1px; // Align with the container border
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: ${({ theme }) => theme.colors.text.primary};
+        transform: scaleX(${({ $isActive }) => $isActive ? 1 : 0});
+        transition: transform 0.2s ease-in-out;
+    }
+
+    &:hover {
+        color: ${({ theme }) => theme.colors.text.primary};
+    }
+`;
+
+const ContentArea = styled.div`
+    flex: 1;
+    display: flex; // Make it flex to contain MessageArea/SummaryArea
+    flex-direction: column;
+    overflow: hidden; // Prevent content overflow
+`;
+
+const SummaryArea = styled.div<ThemedProps>`
+    flex: 1;
+    overflow-y: auto;
+    padding: ${({ theme }) => theme.spacing.xl};
+    white-space: pre-wrap; // Preserve formatting
+    line-height: 1.6;
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-family: ${({ theme }) => theme.typography.fontFamily};
+`;
+// --- End Tabs ---
+
 const ChatInterface: React.FC = () => {
     console.log('[ChatInterface] Component Rendered.'); // Log component render
     const { isConnected, lastMessage, sendMessage } = useWebSocket();
@@ -343,6 +396,9 @@ const ChatInterface: React.FC = () => {
     const messageAreaRef = useRef<HTMLDivElement>(null);
     const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([]);
     const audioContextRef = useRef<AudioContext | null>(null);
+    const [activeTab, setActiveTab] = useState<'chat' | 'summary'>('chat');
+    const [currentSummary, setCurrentSummary] = useState<string | null>(null);
+    const [currentConvStatus, setCurrentConvStatus] = useState<string | null>(null);
 
     // Define getAudioContext FIRST
     const getAudioContext = (): AudioContext | null => {
@@ -481,27 +537,37 @@ const ChatInterface: React.FC = () => {
         }
     }, [status]);
 
-    // --- Re-add Effect to automatically start/stop recording on session change --- 
+    // Effect to automatically start/stop recording on session change
     useEffect(() => {
+        console.log(`[Effect Auto Mic] Running. SelectedID: ${selectedConversationId}, SessionActive: ${isSessionActive}, STT Status: ${status}, ConvStatus: ${currentConvStatus}`);
         // Only act if a conversation is selected and the session is marked active
         if (selectedConversationId && isSessionActive) {
+            // <<< ADDED CHECK >>>: Don't auto-start if conversation is already finished
+            if (currentConvStatus === 'summarized' || currentConvStatus === 'ended' || currentConvStatus === 'ended_error') {
+                 console.log(`[Effect Auto Mic] Conversation ${selectedConversationId} has status ${currentConvStatus}. Preventing auto-start.`);
+                 // If STT is somehow running, stop it
+                 if (status === 'connected' || status === 'connecting') {
+                     console.log(`[Effect Auto Mic] Stopping STT for finished conversation.`);
+                     stopRecording();
+                 }
+                 return; // Do not proceed to start recording
+            }
+            // <<<<<<<<<<<<<<<<<<
+
             // Start recording only if STT is currently idle or closed
             if (status === 'idle' || status === 'closed') {
-                console.log(`[ChatInterface] Session active (${selectedConversationId}), auto-starting STT recording...`);
+                console.log(`[Effect Auto Mic] Session active (${selectedConversationId}), auto-starting STT recording...`);
                 startRecording(); 
-                // We might not need local isRecording state if UI doesn't depend on it directly anymore
             }
         } else {
             // Stop recording if no conversation is selected or session is inactive
-            // Check status to avoid stopping if already stopped/idle
             if (status === 'connected' || status === 'connecting') { 
-                console.log(`[ChatInterface] Session inactive or deselected, stopping STT recording.`);
+                console.log(`[Effect Auto Mic] Session inactive or deselected, stopping STT recording.`);
                 stopRecording();
             }
         }
-        // Ensure start/stop recording functions from the hook are stable (useCallback) 
-        // and include them if their identity can change. Status is needed to prevent restart loops.
-    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording]);
+    // Add currentConvStatus to dependencies
+    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording, currentConvStatus]);
 
     // Effect to fetch historical messages when conversation changes
     useEffect(() => {
@@ -522,21 +588,6 @@ const ChatInterface: React.FC = () => {
             setDisplayMessages([]); // Clear messages if no conversation is selected
         }
     }, [selectedConversationId, sendMessage]); // Depend on selection and sendMessage function
-
-    const handleEndSession = () => {
-        if (selectedConversationId) {
-            console.log(`[ChatInterface] User initiated end session for ${selectedConversationId}`);
-            sendMessage({ type: 'end_session', payload: { conversationId: selectedConversationId } });
-            if (isRecording) {
-                stopRecording();
-                setIsRecording(false);
-                setIsPaused(false);
-            }
-        } else {
-            console.warn("[ChatInterface] Cannot end session: No conversation selected.");
-            showError("No active session to end.", "warning");
-        }
-    };
 
     // Effect to handle incoming WebSocket messages
     useEffect(() => {
@@ -574,12 +625,54 @@ const ChatInterface: React.FC = () => {
                 }
             }
 
-            // ... other message type handling ...
+            // --- Updated conversation_selected handler ---
+            else if (message.type === 'conversation_selected') {
+                console.log('[WS Effect] Handling conversation_selected:', message.payload);
+                const { status, summary } = message.payload || {};
+                setCurrentConvStatus(status || null);
+                setCurrentSummary(summary || null);
+                 // Reset to chat tab when selecting a conversation
+                setActiveTab('chat');
+            }
+            // --- End updated handler ---
+
+            // --- Added session_ended_and_summarized handler ---
+            else if (message.type === 'session_ended_and_summarized') {
+                console.log('[WS Effect] Handling session_ended_and_summarized:', message.payload);
+                const { status, summary } = message.payload || {};
+                setCurrentConvStatus(status || 'summarized'); // Assume summarized if message received
+                setCurrentSummary(summary || null);
+                // Optionally switch to summary tab automatically
+                if (summary) {
+                     setActiveTab('summary');
+                }
+            }
+            // --- End added handler ---
+
+            else if (message.type === 'new_message') {
+                // ... (existing new_message handling)
+            }
+
+            // ... (rest of message handlers: tts_audio, error, etc.)
 
         } else {
             // console.log('[WS Effect] lastMessage is null or not a BackendMessage.');
         }
     }, [lastMessage, selectedConversationId, showError, endCurrentSession, sendMessage]);
+
+    // Effect to reset summary/status when conversation changes
+    useEffect(() => {
+        console.log('[Effect selectedConversationId] Resetting summary and status for new/no selection.');
+        setCurrentSummary(null);
+        setCurrentConvStatus(null);
+        setActiveTab('chat'); // Reset tab
+        // Fetch messages logic remains here...
+        if (selectedConversationId) {
+           // ... fetch messages ...
+        } else {
+            setDisplayMessages([]);
+        }
+    }, [selectedConversationId, sendMessage]); // Only depends on these
 
     // Effect to scroll message area
     useEffect(() => {
@@ -619,6 +712,18 @@ const ChatInterface: React.FC = () => {
         }
     }, [status]);
 
+    const handleEndSession = () => {
+        if (selectedConversationId) {
+            console.log(`[ChatInterface] User initiated end session for ${selectedConversationId}`);
+            // Optional: Add UI feedback like disabling button, showing spinner
+            sendMessage({ type: 'end_session', payload: { conversationId: selectedConversationId } });
+        }
+        // ... (rest of handler)
+    };
+
+    // Determine if Tabs should be shown
+    const showTabs = currentConvStatus === 'summarized' || currentConvStatus === 'ended_error';
+
     return (
         <ChatContainer>
             <TopStatusContainer>
@@ -635,42 +740,61 @@ const ChatInterface: React.FC = () => {
                 )}
             </TopStatusContainer>
 
-            <MessageArea ref={messageAreaRef}>
-                {displayMessages.length === 0 && !isSessionActive && (
-                    <NoSessionText>Select or start a new conversation to begin.</NoSessionText>
+            {/* Conditionally render Tabs */} 
+            {showTabs && (
+                <TabContainer>
+                    <TabButton $isActive={activeTab === 'chat'} onClick={() => setActiveTab('chat')}>Chat</TabButton>
+                    <TabButton $isActive={activeTab === 'summary'} onClick={() => setActiveTab('summary')}>Summary</TabButton>
+                </TabContainer>
+            )}
+            
+            {/* Content Area: Switches between Chat and Summary */} 
+            <ContentArea>
+                {(!showTabs || activeTab === 'chat') && (
+                     <MessageArea ref={messageAreaRef}>
+                         {displayMessages.length === 0 && !isSessionActive && (
+                            <NoSessionText>Select or start a new conversation to begin.</NoSessionText>
+                        )}
+                         {displayMessages.length === 0 && isSessionActive && (
+                            <NoSessionText>Session active. Start speaking or wait for messages.</NoSessionText>
+                        )}
+                        {(() => { // Wrap log in an IIFE or similar structure
+                            console.log('[ChatInterface] About to map messages. Count:', displayMessages.length, 'Value:', JSON.stringify(displayMessages)); // Stringify for better logging
+                            return null; // Return null so nothing renders here
+                        })()}
+                        {displayMessages.map((msg, index) => {
+                            console.log(`[ChatInterface] Rendering message ${index + 1}/${displayMessages.length}:`, msg);
+                            return (
+                                <MessageGroup key={msg.id || index} $isSender={msg.sender === "user"}>
+                                    <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
+                                        {msg.text}
+                                        {msg.sender === 'translation' && msg.originalText && (
+                                            <MessageMeta>Original: {msg.originalText}</MessageMeta>
+                                        )}
+                                    </Bubble>
+                                </MessageGroup>
+                            );
+                        })}
+                         {isRecording && transcript && (
+                              <MessageGroup key="live-transcript">
+                                  <Bubble $type="system">
+                                      <i>Live: {transcript}</i> {isProcessing ? '...' : ''} {language ? `(${language})` : ''}
+                                      {/* Debug info */}
+                                      <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                                          {displayMessages.length} messages in state
+                                      </div>
+                                  </Bubble>
+                              </MessageGroup>
+                         )}
+                    </MessageArea>
                 )}
-                 {displayMessages.length === 0 && isSessionActive && (
-                    <NoSessionText>Session active. Start speaking or wait for messages.</NoSessionText>
+                
+                {(showTabs && activeTab === 'summary') && (
+                    <SummaryArea>
+                        {currentSummary || 'Summary not available.'} 
+                    </SummaryArea>
                 )}
-                {(() => { // Wrap log in an IIFE or similar structure
-                    console.log('[ChatInterface] About to map messages. Count:', displayMessages.length, 'Value:', JSON.stringify(displayMessages)); // Stringify for better logging
-                    return null; // Return null so nothing renders here
-                })()}
-                {displayMessages.map((msg, index) => {
-                    console.log(`[ChatInterface] Rendering message ${index + 1}/${displayMessages.length}:`, msg);
-                    return (
-                        <MessageGroup key={msg.id || index} $isSender={msg.sender === "user"}>
-                            <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
-                                {msg.text}
-                                {msg.sender === 'translation' && msg.originalText && (
-                                    <MessageMeta>Original: {msg.originalText}</MessageMeta>
-                                )}
-                            </Bubble>
-                        </MessageGroup>
-                    );
-                })}
-                 {isRecording && transcript && (
-                      <MessageGroup key="live-transcript">
-                          <Bubble $type="system">
-                              <i>Live: {transcript}</i> {isProcessing ? '...' : ''} {language ? `(${language})` : ''}
-                              {/* Debug info */}
-                              <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
-                                  {displayMessages.length} messages in state
-                              </div>
-                          </Bubble>
-                      </MessageGroup>
-                 )}
-            </MessageArea>
+            </ContentArea>
 
             <ControlsArea>
                 {!isSessionActive ? (
