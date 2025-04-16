@@ -138,17 +138,6 @@ export const useSpeechToTextBackend = (
         logDebug("WebSocket connection to backend opened");
         isWsOpenRef.current = true;
         setStatus('connected');
-        
-        // --- Start MediaRecorder only AFTER WS is open --- 
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
-            logDebug("WebSocket open, starting MediaRecorder...");
-            // Use the timeslice defined in startRecording
-            const timeslice = 500; // Make sure this matches the value in startRecording
-            mediaRecorderRef.current.start(timeslice);
-        } else if (mediaRecorderRef.current) {
-             logDebug(`WebSocket open, but MediaRecorder state is: ${mediaRecorderRef.current.state}. Not starting.`);
-        }
-        // --------------------------------------------------
       };
 
       ws.onclose = (event) => {
@@ -390,12 +379,9 @@ export const useSpeechToTextBackend = (
 
       const timeslice = 500; // Send data approx every 500ms
       logDebug(`Starting MediaRecorder with timeslice: ${timeslice}ms`);
-      // ---- IMPORTANT: Do NOT start the recorder here anymore ----
-      // mediaRecorderRef.current.start(timeslice); 
-      // It will be started in the ws.onopen handler once the connection is ready.
-      logDebug("MediaRecorder configured. Waiting for WebSocket connection to open before starting...");
-      // We might need an intermediate status here if the UI needs to show 'Mic ready, connecting...'
-      // setStatus('mic_ready'); // Example intermediate status
+      // --- Restore immediate start --- 
+      mediaRecorderRef.current.start(timeslice);
+      // ---------------------------
 
     } catch (err) {
       logError('Error starting recording', err);
