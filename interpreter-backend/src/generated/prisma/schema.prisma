@@ -70,11 +70,19 @@ model Message {
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   timestamp      DateTime     @default(now())
-  senderType     String // 'clinician', 'patient', 'system'
+  senderType     String // 'clinician', 'patient', 'system', 'translation'
   originalText   String
   translatedText String? // Nullable if original is already in target language
   language       String // Language code of originalText (e.g., 'en', 'es')
   isFinal        Boolean      @default(false) // Flag for intermediate vs final transcription/translation
+
+  // --- Added for linking translations/derived messages ---
+  originalMessageId String? // Foreign key, optional
+  originalMessage   Message?  @relation("OriginalDerivedMessages", fields: [originalMessageId], references: [id], onDelete: Cascade) // Optional relation to the original
+  derivedMessages   Message[] @relation("OriginalDerivedMessages") // List of messages derived from this one (e.g., translations)
+  // -------------------------------------------------------
+
+  @@index([originalMessageId]) // Index the foreign key
 }
 
 model Action {
