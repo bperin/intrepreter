@@ -5,6 +5,8 @@ export type SttStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | '
 // Define the type for the new message callback function
 // Adjust the 'any' to match your actual message object structure from the backend
 type OnNewMessage = (message: any) => void; 
+// Define the type for the TTS audio callback function
+type OnTtsAudio = (audioBase64: string) => void;
 
 interface SpeechToTextResult {
   status: SttStatus;
@@ -24,10 +26,12 @@ interface SpeechToTextResult {
  * 
  * @param conversationId The ID of the current conversation.
  * @param onNewMessage Callback function triggered when the backend broadcasts a newly saved message.
+ * @param onTtsAudio Callback function triggered when the backend sends synthesized TTS audio.
  */
 export const useSpeechToTextBackend = (
   conversationId: string | null,
-  onNewMessage?: OnNewMessage // Add optional callback for new messages
+  onNewMessage?: OnNewMessage, 
+  onTtsAudio?: OnTtsAudio // Add new callback parameter
 ): SpeechToTextResult => {
   console.log(`[useSpeechToTextBackend] Hook initialized. Conversation ID: ${conversationId}`);
   const [status, setStatus] = useState<SttStatus>('idle');
@@ -218,7 +222,20 @@ export const useSpeechToTextBackend = (
               setTranscript(null); 
               console.log('🚀 [useSpeechToTextBackend] ====== NEW_MESSAGE HANDLING COMPLETE ======');
           }
-          // --- End NEW Event Handling ---
+          // +++ Add Handling for TTS Audio +++
+          else if (data.type === 'tts_audio') {
+              logDebug('Received tts_audio message', data.payload);
+              const audioBase64 = data.payload?.audioBase64;
+              if (onTtsAudio && audioBase64 && typeof audioBase64 === 'string') {
+                  logDebug('Calling onTtsAudio callback...');
+                  onTtsAudio(audioBase64);
+              } else if (!onTtsAudio) {
+                  logError('Received tts_audio but onTtsAudio callback is not provided!');
+              } else {
+                  logError('Received tts_audio message without valid audioBase64 payload', data.payload);
+              }
+          }
+          // +++ End TTS Audio Handling +++
           
           /* --- Remove OLD Event Handling ---
           // Handle transcription updates from OpenAI via backend
@@ -236,7 +253,7 @@ export const useSpeechToTextBackend = (
       setError(err instanceof Error ? err : new Error("Failed to initialize WebSocket"));
       setStatus('failed');
     }
-  }, [getBackendWsUrl, onNewMessage, language]); // Update dependency array
+  }, [getBackendWsUrl, onNewMessage, language, onTtsAudio]); // Update dependency array
 
   /**
    * Send audio data over WebSocket
@@ -255,7 +272,7 @@ export const useSpeechToTextBackend = (
     try {
       // Convert blob to base64
       const base64Audio = await blobToBase64(audioBlob);
-      logDebug(`[useSpeechToTextBackend] Sending audio chunk (Base64 size: ${base64Audio.length})`);
+      // logDebug(`[useSpeechToTextBackend] Sending audio chunk (Base64 size: ${base64Audio.length})`);
       
       // Send audio data
       const audioMessage = {
@@ -339,7 +356,7 @@ export const useSpeechToTextBackend = (
               // Send chunk immediately if not paused
               try {
                    const base64Audio = await blobToBase64(event.data);
-                   logDebug(`[ondataavailable] Sending chunk. Base64 Start: ${base64Audio.substring(0, 50)}...`);
+                  //  logDebug(`[ondataavailable] Sending chunk. Base64 Start: ${base64Audio.substring(0, 50)}...`);
                    // Send via WebSocket (assuming sendAudioChunk handles base64 conversion if needed or is adapted)
                    // Based on review, sendAudioChunk expects a Blob, let's keep it that way or adapt it.
                    // Let's assume sendAudioChunk handles the blob correctly as per previous code review.
