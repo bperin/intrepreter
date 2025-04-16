@@ -33,6 +33,7 @@ import { VoiceCommandService } from "./infrastructure/services/VoiceCommandServi
 import { ActionService } from "./infrastructure/services/ActionService";
 import { WebSocketNotificationService } from "./infrastructure/services/WebSocketNotificationService";
 import { MedicalHistoryService } from "./infrastructure/services/MedicalHistoryService";
+import { CommandDetectionService } from "./infrastructure/services/CommandDetectionService";
 
 // --- Configuration ---
 
@@ -61,6 +62,7 @@ container.register("INotificationService", { useClass: WebSocketNotificationServ
 // Register services that might depend on others (ensure correct order or use singleton for automatic resolution)
 container.registerSingleton(VoiceCommandService);
 container.registerSingleton(MedicalHistoryService);
+container.registerSingleton(CommandDetectionService);
 
 // Finally register TranscriptionService (it depends on VoiceCommandService)
 container.registerSingleton(TranscriptionService);
