@@ -227,7 +227,6 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
         // Attach message, close, error handlers for the authenticated control channel
         ws.on("message", async (messageData: WebSocket.Data, isBinary: boolean) => {
             // Existing control channel message handling logic...
-            // Ensure ws.userId check is still valid (it should be set above)
             if (!ws.userId) {
                  console.warn("[WebSocket Router] Control Channel: Message received but userId not set (should not happen).");
                  ws.close(4001, "Authentication state lost");
@@ -235,29 +234,33 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
             }
 
             let request: any = null;
+            let wsIdentifier = ws.username || 'unknown_user'; // Get identifier
+
             if (isBinary) {
-                console.log(`[WebSocket Router] Control Channel: Received unexpected binary data from ${ws.username}. Ignoring.`);
+                console.log(`[WebSocket Router] Control Channel: Received unexpected binary data from ${wsIdentifier}. Ignoring.`);
                 return; // Ignore binary data
-            } else {
-                const messageString = messageData.toString();
-                console.log(`[WebSocket Router] Control Channel: Received JSON from ${ws.username}:`, messageString);
-                try {
-                    request = JSON.parse(messageString);
-                } catch (e) {
-                    console.error(`[WebSocket Router] Control Channel: Invalid JSON from ${ws.username}: ${messageString}`);
-                    ws.send(JSON.stringify({ type: "error", text: "Invalid message format. Expected JSON." }));
-                    return;
-                }
+            } 
+            
+            const messageString = messageData.toString();
+            try {
+                request = JSON.parse(messageString);
+            } catch (e) {
+                console.error(`[WebSocket Router] Control Channel: Invalid JSON from ${wsIdentifier}: ${messageString}`);
+                ws.send(JSON.stringify({ type: "error", text: "Invalid message format. Expected JSON." }));
+                return;
             }
+            
+            console.log(`[WebSocket Router] Control Channel: Received message from ${wsIdentifier}:`, messageString); // Log full message once parsed
 
             console.log(`[WebSocket Router] Control Channel: Processing message type: ${request.type}`);
 
-            if (!request) {
-                console.error("[WebSocket Router] Control Channel: Logic error - message processing fall-through.");
+            if (!request || !request.type) {
+                console.error(`[WebSocket Router] Control Channel: Invalid request format (missing type) from ${wsIdentifier}.`);
+                ws.send(JSON.stringify({ type: "error", text: "Invalid message format: type is missing." }));
                 return;
             }
 
-            // --- Start of existing switch statement for control channel messages ---
+            // --- Start of switch statement for control channel messages ---
             switch (request.type) {
                 case "start_new_session":
                     try {
@@ -327,14 +330,15 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                             ws.currentConversationId = conversationIdToSelect;
                             console.log(`[WebSocket Router] Control Channel: User ${ws.username} selected conversation ${ws.currentConversationId}`);
                             
-                            // REMOVE OpenAI Key logic here
-                            const isActive = conversation.status === "active"; // Check status directly
-                            console.log(`[WebSocket Router] Control Channel: Sending conversation selection confirmation (isActive: ${isActive})`);
+                            // Send confirmation including status and summary
+                            console.log(`[WebSocket Router] Control Channel: Sending conversation selection confirmation. Status: ${conversation.status}, Summary Exists: ${!!conversation.summary}`);
                             ws.send(JSON.stringify({ 
                                 type: 'conversation_selected', 
                                 payload: { 
                                     conversationId: conversation.id,
-                                    isActive: isActive
+                                    isActive: conversation.status === "active", // Determine active based on status
+                                    status: conversation.status, // Send status
+                                    summary: conversation.summary // Send summary (will be null if none)
                                 } 
                             }));
 
@@ -366,13 +370,13 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                                     },
                                 })
                             );
-                            console.log(`[WebSocket Router] Control Channel: Sent ${messages.length} messages for conversation ${conversationIdToGet} to ${ws.username}`);
+                            console.log(`[WebSocket Router] Control Channel: Sent ${messages.length} messages for conversation ${conversationIdToGet} to ${wsIdentifier}`);
                         } catch (error: any) {
-                            console.error(`[WebSocket Router] Control Channel: Error fetching messages for ${ws.username} (conv: ${conversationIdToGet}):`, error);
+                            console.error(`[WebSocket Router] Control Channel: Error fetching messages for ${wsIdentifier} (conv: ${conversationIdToGet}):`, error);
                             ws.send(JSON.stringify({ type: "error", text: error.message || "Failed to fetch messages" }));
                         }
                     } else {
-                        console.warn(`[WebSocket Router] Control Channel: Invalid get_messages payload from ${ws.username}:`, request.payload);
+                        console.warn(`[WebSocket Router] Control Channel: Invalid get_messages payload from ${wsIdentifier}:`, request.payload);
                         ws.send(JSON.stringify({ type: "error", text: "Invalid payload for get_messages" }));
                     }
                     break;
@@ -380,7 +384,7 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                 case "get_conversations":
                     // ... (existing get_conversations logic - no key involved)
                      try {
-                        console.log(`[WebSocket Router] Control Channel: Received get_conversations request from ${ws.username}`);
+                        console.log(`[WebSocket Router] Control Channel: Received get_conversations request from ${wsIdentifier}`);
                         const conversations = await conversationRepository.findByUserId(ws.userId!); // userId is guaranteed here
                         ws.send(
                             JSON.stringify({
@@ -389,61 +393,93 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                             })
                         );
                     } catch (error: any) {
-                        console.error(`[WebSocket Router] Control Channel: Error fetching conversations for ${ws.username}:`, error);
+                        console.error(`[WebSocket Router] Control Channel: Error fetching conversations for ${wsIdentifier}:`, error);
                         ws.send(JSON.stringify({ type: "error", text: error.message || "Failed to fetch conversations" }));
                     }
                     break;
 
                 case "chat_message":
-                    // ... (existing chat_message logic - no key involved)
+                    // --- ADDED check here --- 
                     if (!ws.currentConversationId) {
-                        console.warn(`[WebSocket Router] Control Channel: Received chat_message from ${ws.username} but no active conversation set. Ignoring.`);
-                        ws.send(JSON.stringify({ type: "error", text: "No active session to send message to." }));
-                        return;
+                        console.warn(`[WebSocket Router] Control Channel: Received chat_message from ${wsIdentifier} but no active conversation set on this connection. Ignoring.`);
+                        ws.send(JSON.stringify({ type: "error", text: "No active session selected to send message to." }));
+                        break; // Use break instead of return to allow ws.on('close') etc.
                     }
+                    // -------------------------
                     try {
                         const text = request.payload?.text;
                         if (!text || typeof text !== "string") {
                             throw new Error("Missing or invalid text payload in chat_message");
                         }
-                        console.log(`[WebSocket Router] Control Channel: Processing chat_message with text: "${text.substring(0, 50)}..."`);
+                        console.log(`[WebSocket Router] Control Channel: Processing chat_message for active conv ${ws.currentConversationId}: "${text.substring(0, 50)}..."`);
+                        // TODO: Forward message to appropriate service/handler if needed, 
+                        // or just echo back for simple chat testing
                         const response = {
-                            type: "message_received",
-                            id: Date.now().toString(),
+                            type: "message_received", // Or maybe broadcast this?
+                            id: Date.now().toString(), 
                             text: text
                         };
                         ws.send(JSON.stringify(response));
                         
                     } catch (error: any) {
-                        console.error(`[WebSocket Router] Control Channel: Error processing chat_message for ${ws.username}:`, error);
+                        console.error(`[WebSocket Router] Control Channel: Error processing chat_message for ${wsIdentifier}:`, error);
                         ws.send(JSON.stringify({ type: "error", text: error.message || "Failed to process chat message" }));
                     }
                     break;
 
+                // --- REWRITTEN end_session Case --- 
                 case "end_session":
-                    // ... (existing end_session logic - no key involved)
-                    if (!ws.currentConversationId) {
-                        console.warn(`[WebSocket Router] Control Channel: Received end_session from ${ws.username} but no active conversation.`);
-                        return;
-                    }
-                    console.log(`[WebSocket Router] Control Channel: Received end_session from ${ws.username} for conversation ${ws.currentConversationId}`);
-                    try {
-                        // Assuming finalizeStream does not rely on OpenAI Key
-                        await audioProcessingService.finalizeStream(ws.currentConversationId, ws.userId!); 
-                        await conversationRepository.update(ws.currentConversationId, {
-                            status: "ENDED",
-                            endTime: new Date(),
-                        });
-                        ws.send(JSON.stringify({ type: "session_ended", payload: { conversationId: ws.currentConversationId } }));
-                        ws.currentConversationId = undefined; // Clear the active conversation ID for this connection
-                    } catch (error: any) {
-                        console.error(`[WebSocket Router] Control Channel: Error finalizing session for user ${ws.userId}:`, error);
-                        ws.send(JSON.stringify({ type: "error", text: error.message || "Failed to end session properly" }));
+                    console.log('[WebSocket Router] Control Channel: Entered end_session case.'); 
+                    const conversationIdToEnd = request.payload?.conversationId;
+                    console.log(`[WebSocket Router] Control Channel: Extracted conversationId: ${conversationIdToEnd}`);
+                    
+                    if (conversationIdToEnd && typeof conversationIdToEnd === 'string') {
+                        // Ensure conversationService is available (should be from container.resolve)
+                        if (!conversationService) { 
+                             console.error('[WebSocket Router] Control Channel: CRITICAL ERROR: conversationService is not available!');
+                             ws.send(JSON.stringify({ type: 'error', text: 'Server configuration error processing end_session.'}));
+                             break;
+                        }
+                        console.log(`[WebSocket Router] Control Channel: conversationService instance looks OK. Calling endAndSummarizeConversation for ${conversationIdToEnd}...`);
+
+                        try {
+                            // Call the ConversationService to handle ending and summarizing
+                            const updatedConversation = await conversationService.endAndSummarizeConversation(conversationIdToEnd);
+
+                            console.log(`[WebSocket Router] Control Channel: Conversation ${conversationIdToEnd} successfully ended and summarized. Status: ${updatedConversation.status}`);
+
+                            // Optional: Send confirmation back to the client on the control channel
+                            ws.send(JSON.stringify({
+                                type: 'session_ended_and_summarized',
+                                payload: {
+                                    conversationId: updatedConversation.id,
+                                    summary: updatedConversation.summary,
+                                    status: updatedConversation.status
+                                }
+                            }));
+                             // Clear the active conversation ID for this specific connection if it matches
+                             if (ws.currentConversationId === conversationIdToEnd) {
+                                 console.log(`[WebSocket Router] Control Channel: Clearing active conversation ID ${conversationIdToEnd} for connection ${wsIdentifier}.`);
+                                 ws.currentConversationId = undefined;
+                             }
+
+                        } catch (error) {
+                            console.error(`[WebSocket Router] Control Channel: Error processing end_session for ${conversationIdToEnd}:`, error);
+                            // Optional: Send an error message back to the client
+                             ws.send(JSON.stringify({
+                                 type: 'error',
+                                 message: `Failed to end session ${conversationIdToEnd}: ${error instanceof Error ? error.message : String(error)}`
+                             }));
+                        }
+                    } else {
+                        console.error(`[WebSocket Router] Control Channel: Received end_session message from ${wsIdentifier} without valid conversationId.`);
+                         ws.send(JSON.stringify({ type: 'error', message: 'Invalid end_session message: missing conversationId.' }));
                     }
                     break;
+                // --- End REWRITTEN end_session Case ---
 
                 default:
-                    console.log(`[WebSocket Router] Control Channel: Received unknown message type from ${ws.username}:`, request.type);
+                    console.log(`[WebSocket Router] Control Channel: Received unknown message type from ${wsIdentifier}:`, request.type);
                     ws.send(JSON.stringify({ type: "error", text: `Unknown message type: ${request.type}` }));
             }
             // --- End of switch statement ---

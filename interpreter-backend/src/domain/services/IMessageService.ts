@@ -17,6 +17,13 @@ export interface IMessageService {
     language: string,
     originalMessageId?: string | null
   ): Promise<Message>;
+
+  /**
+   * Retrieves all messages for a given conversation, ordered by timestamp.
+   * @param conversationId The ID of the conversation.
+   * @returns A promise resolving to an array of Message objects.
+   */
+  getMessagesByConversationId(conversationId: string): Promise<Message[]>;
 }
 
 // Token for dependency injection
