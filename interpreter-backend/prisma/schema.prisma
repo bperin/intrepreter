@@ -25,8 +25,8 @@ model User {
   id             String          @id @default(uuid())
   username       String          @unique
   hashedPassword String
-  refreshToken   String?         @unique
-  refreshTokenExpiresAt DateTime?
+  refreshToken   String?
+  refreshTokenExpiry DateTime?
   conversations  Conversation[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
