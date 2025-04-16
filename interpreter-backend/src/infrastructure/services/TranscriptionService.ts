@@ -13,6 +13,7 @@ import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken
 import dotenv from 'dotenv';
 import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
 import { CommandDetectionService } from './CommandDetectionService';
+import { CommandExecutionService, CommandExecutionResult } from './CommandExecutionService';
 
 // Load environment variables from .env file in the parent directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -92,7 +93,8 @@ export class TranscriptionService {
       @inject(IMessageServiceToken) private messageService: IMessageService,
       @inject(ITextToSpeechServiceToken) private ttsService: ITextToSpeechService,
       @inject('IConversationRepository') private conversationRepository: IConversationRepository,
-      @inject(CommandDetectionService) private commandDetectionService: CommandDetectionService
+      @inject(CommandDetectionService) private commandDetectionService: CommandDetectionService,
+      @inject(CommandExecutionService) private commandExecutionService: CommandExecutionService
   ) {
       this.openaiApiKey = process.env.OPENAI_API_KEY || '';
       // --- DEBUG LOG ---
@@ -407,9 +409,26 @@ export class TranscriptionService {
                     this.commandDetectionService.detectCommand(completedText)
                         .then(commandResult => {
                             if (commandResult) {
-                                // Command detected! Log it for now.
-                                console.log(`[TranscriptionService][${conversationId}][Async] Command DETECTED by service: ${commandResult.toolName}. Args:`, commandResult.arguments);
-                               
+                                // Command detected! Execute it and handle the result.
+                                console.log(`[TranscriptionService][${conversationId}][Async] Command detected: ${commandResult.toolName}. Triggering execution...`);
+                                this.commandExecutionService.executeCommand(conversationId, commandResult.toolName, commandResult.arguments)
+                                    .then(executionResult => {
+                                        console.log(`[TranscriptionService][${conversationId}][Async] Command execution finished. Status: ${executionResult.status}`);
+                                        // Broadcast the execution result to clients
+                                        this.broadcastToClients(conversationId, {
+                                            type: 'command_executed',
+                                            payload: executionResult // Send the whole result object
+                                        });
+                                    })
+                                    .catch(execError => {
+                                        // Catch errors specifically from the executeCommand promise itself (should be rare if it always returns a result object)
+                                        console.error(`[TranscriptionService][${conversationId}][Async] CRITICAL ERROR during command execution promise:`, execError);
+                                        // Broadcast a generic error in this unlikely case
+                                        this.broadcastToClients(conversationId, {
+                                            type: 'command_executed',
+                                            payload: { status: 'error', name: commandResult.toolName, message: 'Internal error during command execution.' }
+                                        });
+                                    });
                             } else {
                                 // No command detected by the async check
                                 console.log(`[TranscriptionService][${conversationId}][Async] No command detected by service.`);
