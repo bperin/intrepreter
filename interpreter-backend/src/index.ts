@@ -122,11 +122,12 @@ app.post("/auth/refresh", (req: Request, res: Response, next: NextFunction) => {
                 return res.status(400).json({ message: "Refresh token is required" });
             }
 
-            const result: RefreshResult = await authAppService.refreshAccessToken(refreshToken);
+            const result = await authAppService.refreshAccessToken(refreshToken);
 
             if (result.success && result.token) {
                 res.status(200).json({
                     accessToken: result.token,
+                    ...(result.refreshToken && { refreshToken: result.refreshToken })
                 });
             } else {
                 res.status(403).json({ message: result.error || "Failed to refresh token" });
