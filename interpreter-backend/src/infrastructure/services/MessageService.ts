@@ -53,4 +53,20 @@ export class MessageService implements IMessageService {
       throw error;
     }
   }
+
+  // Implementation for getting messages
+  async getMessagesByConversationId(conversationId: string): Promise<Message[]> {
+    console.log(`[MessageService] Fetching messages for conversation ${conversationId}...`);
+    try {
+      const messages = await this.prisma.message.findMany({
+        where: { conversationId: conversationId },
+        orderBy: { timestamp: 'asc' }, // Order messages chronologically
+      });
+      console.log(`[MessageService] Found ${messages.length} messages for conversation ${conversationId}.`);
+      return messages;
+    } catch (error) {
+      console.error(`[MessageService] Error fetching messages for conversation ${conversationId}:`, error);
+      throw error; // Re-throw to be handled by caller
+    }
+  }
 } 

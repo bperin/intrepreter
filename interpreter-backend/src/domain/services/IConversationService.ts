@@ -24,7 +24,18 @@ export interface IConversationService {
      */
     startNewSession(input: StartSessionInput): Promise<StartSessionResult>;
 
+    /**
+     * Ends a conversation, generates a summary, and updates the database.
+     * @param conversationId The ID of the conversation to end and summarize.
+     * @returns A promise resolving to the updated Conversation object with the summary.
+     * @throws Error if the conversation is not found or summarization fails.
+     */
+    endAndSummarizeConversation(conversationId: string): Promise<Conversation>;
+
     // Add other conversation-related methods if needed later
     // e.g., endSession(conversationId: string): Promise<Conversation>;
     // e.g., getConversationDetails(conversationId: string): Promise<Conversation | null>;
 }
+
+// Token for dependency injection
+export const IConversationService = Symbol('IConversationService');
