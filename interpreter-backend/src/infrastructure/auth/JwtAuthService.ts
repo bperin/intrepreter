@@ -8,7 +8,7 @@ import { IAuthService, LoginResult, RefreshResult } from "../../domain/services/
 // TODO: Load salt rounds and JWT secret/options from config/env
 const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-replace-me";
-const JWT_EXPIRES_IN = "1h"; // Access token expiry
+const JWT_EXPIRES_IN = "6h"; // Access token expiry
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 
 @injectable()
@@ -20,23 +20,36 @@ export class JwtAuthService implements IAuthService {
         }
     }
 
-    async generateToken(user: Pick<User, "id" | "username">): Promise<string> {
-        return new Promise((resolve, reject) => {
-            jwt.sign(
-                { id: user.id, username: user.username },
-                JWT_SECRET,
-                { expiresIn: JWT_EXPIRES_IN },
-                (err, token) => {
-                    if (err || !token) {
-                        return reject(err || new Error("Access token generation failed"));
-                    }
-                    resolve(token);
-                }
+    // Corrected signature and implementation to be synchronous and match interface
+    generateToken(userId: string, username: string): string {
+        // Ensure JWT_SECRET is defined before proceeding
+        if (!JWT_SECRET) {
+            console.error("CRITICAL: JWT_SECRET is not defined. Check environment variables.");
+            throw new Error("JWT secret is missing, cannot generate token.");
+        }
+
+        try {
+            const token = jwt.sign(
+                { id: userId, username: username }, // Use userId and username directly
+                JWT_SECRET, // TypeScript knows JWT_SECRET is a string here
+                { expiresIn: JWT_EXPIRES_IN } 
             );
-        });
+            return token;
+        } catch (err) {
+            // Handle potential errors during signing (e.g., invalid secret)
+            console.error("Failed to generate JWT token:", err);
+            // Throwing an error here might be appropriate depending on how you want to handle failures
+            throw new Error("Access token generation failed"); 
+        }
     }
 
     async verifyToken(token: string): Promise<Pick<User, "id" | "username"> | null> {
+        // Ensure JWT_SECRET is defined for verification too
+        if (!JWT_SECRET) {
+             console.error("CRITICAL: JWT_SECRET is not defined. Cannot verify token.");
+             // Return null or throw, depending on desired behavior
+             return null; 
+        }
         return new Promise((resolve) => {
             jwt.verify(token, JWT_SECRET, (err, decoded) => {
                 if (err || !decoded || typeof decoded !== "object" || !decoded.id || !decoded.username) {
@@ -112,10 +125,18 @@ export class JwtAuthService implements IAuthService {
             return { success: false, error: "Invalid username or password." };
         }
 
-        const accessToken = await this.generateToken(user);
+        // Pass userId and username to the corrected generateToken
+        const accessToken = this.generateToken(user.id, user.username);
         const refreshToken = await this.generateRefreshToken(user);
 
-        return { success: true, token: accessToken, refreshToken: refreshToken };
+        // Add userId and username to the return object
+        return {
+            success: true, 
+            token: accessToken, 
+            refreshToken: refreshToken,
+            userId: user.id,         // Add userId
+            username: user.username  // Add username
+        };
     }
 
     async refreshToken(token: string): Promise<RefreshResult> {
@@ -129,7 +150,8 @@ export class JwtAuthService implements IAuthService {
             return { success: false, error: "User not found for refresh token" };
         }
 
-        const newAccessToken = await this.generateToken(user);
+        // Pass userId and username to the corrected generateToken
+        const newAccessToken = this.generateToken(user.id, user.username);
 
         return { success: true, token: newAccessToken };
     }
