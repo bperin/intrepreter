@@ -237,11 +237,12 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL",
-        "value": "postgresql://db_user:C8D7gsHJiv5LXBL35kHsrQ==@34.46.226.55:5432/interpreter_db?schema=public"
+        "value": null
       }
     }
   },

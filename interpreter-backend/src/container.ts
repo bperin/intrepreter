@@ -32,18 +32,19 @@ import { TextToSpeechService } from "./infrastructure/services/TextToSpeechServi
 import { VoiceCommandService } from "./infrastructure/services/VoiceCommandService";
 import { ActionService } from "./infrastructure/services/ActionService";
 import { WebSocketNotificationService } from "./infrastructure/services/WebSocketNotificationService";
+import { MedicalHistoryService } from "./infrastructure/services/MedicalHistoryService";
 
 // --- Configuration ---
 
 // First, register PrismaClient as a singleton with string token
 container.register("PrismaClient", { useValue: new PrismaClient() });
 
-// Then register repositories that depend on PrismaClient
-container.register("IActionRepository", { useClass: PrismaActionRepository });
-container.register("IUserRepository", { useClass: PrismaUserRepository });
-container.register("IConversationRepository", { useClass: PrismaConversationRepository });
-container.register("IPatientRepository", { useClass: PrismaPatientRepository });
-container.register("IMessageRepository", { useClass: PrismaMessageRepository });
+// Register repositories (usually singletons)
+container.registerSingleton("IUserRepository", PrismaUserRepository);
+container.registerSingleton("IPatientRepository", PrismaPatientRepository);
+container.registerSingleton("IConversationRepository", PrismaConversationRepository);
+container.registerSingleton("IActionRepository", PrismaActionRepository);
+container.registerSingleton("IMessageRepository", PrismaMessageRepository);
 
 // Register OpenAI client
 container.register("IOpenAIClient", { useClass: OpenAIClient });
@@ -54,13 +55,12 @@ container.register("IConversationService", { useClass: ConversationService });
 container.register("IAudioProcessingService", { useClass: AudioProcessingService });
 container.register("IMessageService", { useClass: MessageService });
 container.register("ITextToSpeechService", { useClass: TextToSpeechService });
+container.register("IActionService", { useClass: ActionService });
 container.register("INotificationService", { useClass: WebSocketNotificationService });
 
-// Register ActionService
-container.register<IActionService>("IActionService", { useClass: ActionService });
-
-// Register VoiceCommandService first (it depends on IActionRepository)
+// Register services that might depend on others (ensure correct order or use singleton for automatic resolution)
 container.registerSingleton(VoiceCommandService);
+container.registerSingleton(MedicalHistoryService);
 
 // Finally register TranscriptionService (it depends on VoiceCommandService)
 container.registerSingleton(TranscriptionService);
