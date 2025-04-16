@@ -147,7 +147,7 @@ const NewSessionModal: React.FC<NewSessionModalProps> = ({ isOpen, onClose, onSe
             setIsSubmitting(true);
             
             // Use the configured api instance instead of direct axios
-            const response = await api.post('/api/conversations', {
+            const response = await api.post('/conversations', {
                 firstName,
                 lastName,
                 dob,

@@ -10,7 +10,7 @@ import useSpeechToTextBackend from "../hooks/useSpeechToTextBackend";
 import { useAuth } from '../context/AuthContext'; // <-- Import useAuth
 // import Button from './common/Button'; // TODO: Fix Button import path issue
 import { getSummaryKey } from '../helpers/summaryKey';
-import { getMedicalHistory } from '../lib/api';
+import api, { getMedicalHistory } from '../lib/api'; // <-- Ensure api (default export) is imported if needed elsewhere
 
 // Extend Window interface to include our custom property
 declare global {
@@ -402,53 +402,39 @@ const MedicalHistoryArea = styled(SummaryArea)``; // Reuse SummaryArea styling f
 // --- End Tabs ---
 
 const ChatInterface: React.FC = () => {
-    console.log('[ChatInterface] Component Rendered.'); // Log component render
-    const { isConnected, lastMessage, sendMessage } = useWebSocket();
+    console.log('[ChatInterface] Component Rendered.');
+    const { user } = useAuth();
     const { showError } = useError();
-    const {
-        selectedConversationId,
+    const { 
+        selectedConversationId, 
+        currentConversation,
         isSessionActive,
-        endCurrentSession,
-        currentConversation, // <-- Get currentConversation from context
+        endCurrentSession
     } = useConversation();
-    const { user } = useAuth(); // <-- Get user from AuthContext
-    const messageAreaRef = useRef<HTMLDivElement>(null);
-    const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([]);
-    const audioContextRef = useRef<AudioContext | null>(null);
+    const [messages, setMessages] = useState<DisplayMessage[]>([]);
     const [activeTab, setActiveTab] = useState<'chat' | 'summary' | 'history'>('chat');
-    const [currentSummary, setCurrentSummary] = useState<string | null>(null);
-    const [currentMedicalHistory, setCurrentMedicalHistory] = useState<string | null>(null);
-    const [processingStatus, setProcessingStatus] = useState<'idle' | 'transcribing' | 'translating'>('idle');
-    const [renderedSummary, setRenderedSummary] = useState<string | null>(null);
-    const [summaryKey, setSummaryKey] = useState<string>(getSummaryKey());
+    const [summaryContent, setSummaryContent] = useState<string | null>(null);
+    const [medicalHistoryContent, setMedicalHistoryContent] = useState<string | null>(null);
+    const [actions, setActions] = useState<any[]>([]);
+    const [summaryRenderKey, setSummaryRenderKey] = useState<string>(getSummaryKey());
+    const messageAreaRef = useRef<HTMLDivElement>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
-    // Extract patientName and clinicianUsername once
-    const patientName = useMemo(() => currentConversation?.patient?.firstName || 'Patient', [currentConversation]);
+    const summaryCacheKey = useMemo(() => getSummaryKey(), []);
     const clinicianUsername = useMemo(() => user?.username || 'Clinician', [user]);
+    const patientName = useMemo(() => currentConversation?.patient?.firstName || 'Patient', [currentConversation]);
 
-    // Define getAudioContext FIRST
-    const getAudioContext = (): AudioContext | null => {
-        if (!audioContextRef.current) {
-            try {
-                console.log('[AudioContext] Creating new AudioContext...');
-                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-                console.log('[AudioContext] AudioContext created, state:', audioContextRef.current.state);
-            } catch (e) {
-                console.error("[AudioContext] Web Audio API is not supported in this browser", e);
-                showError("Audio playback not supported in this browser.", "error");
-                return null;
-            }
-        }
-        if (audioContextRef.current.state === "suspended") {
-            console.log('[AudioContext] Resuming suspended AudioContext...');
-            audioContextRef.current.resume().then(() => {
-                console.log('[AudioContext] AudioContext resumed successfully.');
-            }).catch((err) => console.error("[AudioContext] Error resuming AudioContext:", err));
-        }
-        return audioContextRef.current;
-    };
+    const { sendMessage, lastMessage, isConnected, error } = useWebSocket();
 
-    // Define playAudio SECOND (depends on getAudioContext)
+    const handleNewMessage = useCallback((messageData: Message) => {
+        console.log('🔵 [ChatInterface] STT handleNewMessage called with data:', JSON.stringify(messageData, null, 2));
+        const displayMsg = convertToDisplayMessage(messageData);
+        if (displayMsg) {
+            setMessages(prev => [...prev, displayMsg]);
+        }
+    }, []);
+
     const playAudio = useCallback(async (audioData: ArrayBuffer) => {
         console.log('[PlayAudio] Attempting to play audio buffer, size:', audioData.byteLength);
         const context = getAudioContext();
@@ -457,81 +443,32 @@ const ChatInterface: React.FC = () => {
             showError("Audio context not available for playback.", "error");
             return;
         }
+        // ... rest of playAudio logic ...
+    }, [showError]);
 
-        // *** Added Debug Logging ***
-        console.log(`[PlayAudio Debug] AudioContext state BEFORE decode: ${context.state}`);
-
-        if (context.state !== 'running') {
-             console.warn(`[PlayAudio] AudioContext state is ${context.state}. Playback might require user interaction.`);
-             context.resume(); // Attempt to resume if suspended
-        }
-
-        try {
-            console.log('[PlayAudio] Decoding audio data...');
-            const audioBuffer = await context.decodeAudioData(audioData);
-            console.log('[PlayAudio Debug] Audio data decoded successfully. Duration:', audioBuffer.duration);
-
-            const source = context.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(context.destination);
-
-            // *** Added Debug Logging ***
-            console.log(`[PlayAudio Debug] AudioContext state BEFORE source.start: ${context.state}`);
-
-            console.log('[PlayAudio] Starting playback...');
-            source.start(0);
-            source.onended = () => {
-                 console.log('[PlayAudio] Playback finished.');
-            };
-        } catch (error) {
-            console.error("[PlayAudio] Error decoding or playing audio data:", error);
-            showError("Failed to play received audio.", "error");
-        }
-    }, [showError]); // Dependency array only includes external dependencies like showError
-
-    // Define handleNewMessage THIRD (might be used by the hook)
-    const handleNewMessage = useCallback((messageData: any) => {
-        console.log('🔵 [ChatInterface] handleNewMessage called with data:', JSON.stringify(messageData, null, 2));
-        
-        // Check if the messageData is a valid Message object
-        if (!messageData || !messageData.id || !messageData.conversationId) {
-            console.warn('⚠️ [ChatInterface] Invalid message data received:', messageData);
-            return;
-        }
-
-        try {
-            const displayMsg = convertToDisplayMessage(messageData);
-            console.log('🔵 [ChatInterface] Converted to DisplayMessage:', displayMsg);
-            
-            if (displayMsg) {
-                console.log('✅ [ChatInterface] Adding new message to display:', displayMsg);
-                setDisplayMessages(prev => {
-                    console.log('📋 [ChatInterface] Current messages:', prev.length);
-                    const newMessages = [...prev, displayMsg];
-                    console.log('📋 [ChatInterface] New messages length:', newMessages.length);
-                    return newMessages;
-                });
-            } else {
-                console.warn('⚠️ [ChatInterface] convertToDisplayMessage returned null');
+    const getAudioContext = (): AudioContext | null => {
+        if (!audioContextRef.current) {
+            try {
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            } catch (e) {
+                showError("Audio playback not supported.", "error"); return null;
             }
-        } catch (error) {
-            console.error('❌ [ChatInterface] Error processing new message:', error);
         }
-    }, []); // Empty dependency array if it doesn't rely on changing component state/props
+        if (audioContextRef.current.state === "suspended") {
+            audioContextRef.current.resume();
+        }
+        return audioContextRef.current;
+    };
 
-    // Call useSpeechToTextBackend LAST (depends on handleNewMessage and playAudio)
     const { 
-        status, 
-        error, 
-        transcript, 
-        isProcessing,
-        language,
-        isPaused: hookIsPaused,
-        startRecording,
+        status: sttStatus, 
+        error: sttError, 
+        startRecording, 
         stopRecording, 
         pauseRecording, 
         resumeRecording, 
-    } = useSpeechToTextBackend(selectedConversationId, handleNewMessage, playAudio); // Correct types should now match
+        isPaused: hookIsPaused 
+    } = useSpeechToTextBackend(selectedConversationId);
 
     const scrollToBottom = useCallback(() => {
         if (messageAreaRef.current) {
@@ -541,230 +478,217 @@ const ChatInterface: React.FC = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [displayMessages, scrollToBottom]);
+    }, [messages, scrollToBottom]);
 
     useEffect(() => {
-        if (transcript !== null) {
-            console.log('📝 [ChatInterface] Transcript updated:', transcript);
-        }
-    }, [transcript]);
-
-    useEffect(() => {
-        if (error) {
-            console.error("[ChatInterface] STT Error:", error);
-            showError(`Speech-to-text error: ${error.message}`, "error");
+        if (sttError) {
+            console.error("[ChatInterface] STT Error:", sttError);
+            showError(`Speech-to-text error: ${sttError.message}`, "error");
             const sttErrorMsg: DisplayMessage = {
                 id: `stt-error-${Date.now()}`,
                 sender: 'error',
-                text: `STT Error: ${error.message}`,
+                text: `STT Error: ${sttError.message}`,
                 timestamp: new Date().toISOString(),
-                backendSenderType: 'SYSTEM', // Add default type for STT errors
+                backendSenderType: 'SYSTEM',
             };
-            setDisplayMessages(prev => [...prev, sttErrorMsg]);
+            setMessages(prev => [...prev, sttErrorMsg]);
         }
-    }, [error, showError]);
+    }, [sttError, showError]);
 
-    // Effect to react to STT status changes
     useEffect(() => {
-        console.log("[ChatInterface] STT Status:", status);
-        if (status === 'failed' || status === 'error') {
-        } else if (status === 'closed' || status === 'disconnected') {
-            // No local state to set anymore
-        }
-    }, [status]);
+        console.log("[ChatInterface] STT Status:", sttStatus);
+    }, [sttStatus]);
 
-    // Effect to update renderedSummary when currentSummary changes
     useEffect(() => {
-        console.log('[Effect currentSummary] Summary changed:', currentSummary);
-        setRenderedSummary(currentSummary);
-        
-        // Generate a new key to force a re-render when the summary changes
-        setSummaryKey(getSummaryKey());
-        
-        // If the summary changes while we're on the summary tab, ensure the UI updates
-        if (activeTab === 'summary') {
-            console.log('[Effect currentSummary] Currently on summary tab, ensuring UI refresh');
-        }
-    }, [currentSummary, activeTab]);
+        console.log('[Effect Summary Content] Summary changed:', summaryContent);
+        setSummaryRenderKey(getSummaryKey());
+    }, [summaryContent]);
 
-    // Add effect for fetching summary when tab changes
     useEffect(() => {
-        // If we're on the summary tab and have a conversation selected
-        if (activeTab === 'summary' && selectedConversationId) {
-            console.log(`[ChatInterface] Summary tab active for conversation ${selectedConversationId}. Checking for summary...`);
-            
-            // Request summary via WebSocket
-            console.log(`[ChatInterface] Requesting summary for conversation ${selectedConversationId}`);
-            sendMessage({
-                type: 'get_summary',
-                payload: { conversationId: selectedConversationId }
-            });
+        if (selectedConversationId) {
+            if (activeTab === 'summary') {
+                console.log(`[ChatInterface] Summary tab active. Requesting summary for ${selectedConversationId}`);
+                sendMessage(JSON.stringify({
+                    type: 'get_summary',
+                    payload: { conversationId: selectedConversationId }
+                }));
+            } else if (activeTab === 'history') {
+                console.log(`[ChatInterface] History tab active. Fetching history for ${selectedConversationId}`);
+                getMedicalHistory(selectedConversationId)
+                    .then(data => {
+                        console.log(`[ChatInterface] REST Received medical history:`, data);
+                        setMedicalHistoryContent(data.content);
+                    })
+                    .catch(error => {
+                        console.error(`[ChatInterface] Error fetching REST medical history:`, error);
+                        sendMessage(JSON.stringify({
+                            type: 'get_medical_history',
+                            payload: { conversationId: selectedConversationId }
+                        }));
+                    });
+            } else if (activeTab === 'chat') {
+                // Maybe refetch messages if needed when switching back to chat?
+                // sendMessage(JSON.stringify({ type: 'get_messages', payload: { conversationId: selectedConversationId } }));
+            }
         }
     }, [activeTab, selectedConversationId, sendMessage]);
 
-    // Effect to automatically start/stop recording on session change
     useEffect(() => {
-        console.log(`[Effect Auto Mic] Running. SelectedID: ${selectedConversationId}, SessionActive: ${isSessionActive}, STT Status: ${status}, IsPaused: ${hookIsPaused}`);
-        // Only act if a conversation is selected and the session is marked active
+        console.log(`[Effect Auto Mic] Running. SelectedID: ${selectedConversationId}, SessionActive: ${isSessionActive}, STT Status: ${sttStatus}, IsPaused: ${hookIsPaused}`);
         if (selectedConversationId && isSessionActive) {
-            // <<< ADDED CHECK >>>: Don't auto-start if conversation is already finished
-            if (currentSummary === 'summarized' || currentSummary === 'ended' || currentSummary === 'ended_error') {
-                 console.log(`[Effect Auto Mic] Conversation ${selectedConversationId} has status ${currentSummary}. Preventing auto-start.`);
-                 // If STT is somehow running, stop it
-                 if (status === 'connected' || status === 'connecting') {
-                     console.log(`[Effect Auto Mic] Stopping STT for finished conversation.`);
-                     stopRecording();
-                 }
-                 return; // Do not proceed to start recording
+            if (summaryContent && summaryContent !== "Generating...") {
+                console.log(`[Effect Auto Mic] Conversation ${selectedConversationId} appears finished. Preventing auto-start.`);
+                if (sttStatus === 'connected' || sttStatus === 'connecting') {
+                    stopRecording();
+                }
+                return;
             }
-            // <<<<<<<<<<<<<<<<<<
 
-            // Start recording only if STT is currently idle or closed
-            if ((status === 'idle' || status === 'closed') && !hookIsPaused) {
+            if ((sttStatus === 'idle' || sttStatus === 'closed') && !hookIsPaused) {
                 console.log(`[Effect Auto Mic] Session active (${selectedConversationId}), auto-starting STT recording...`);
-                startRecording(); 
-            } else if (hookIsPaused) {
-                console.log(`[Effect Auto Mic] Session active but recording is paused. No action.`);
-                        } else {
-                console.log(`[Effect Auto Mic] Session active but STT status is ${status}. No action.`);
+                startRecording();
+            } else {
+                console.log(`[Effect Auto Mic] Session active but STT status is ${sttStatus} or recording is paused. No start action.`);
             }
-                } else {
-            // Stop recording if no conversation is selected or session is inactive
-            if (status === 'connected' || status === 'connecting') { 
+        } else {
+            if (sttStatus === 'connected' || sttStatus === 'connecting') { 
                 console.log(`[Effect Auto Mic] Session inactive or deselected, stopping STT recording.`);
                 stopRecording();
             }
         }
-    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording, hookIsPaused, currentSummary]);
+    }, [selectedConversationId, isSessionActive, sttStatus, startRecording, stopRecording, hookIsPaused, summaryContent]);
 
-    // Effect to fetch historical messages when conversation changes
     useEffect(() => {
         if (selectedConversationId) {
-            console.log(`🚀 [ChatInterface] useEffect[selectedConversationId] - RUNNING for ID: ${selectedConversationId}. Fetching messages...`);
-            // Clear messages from previous conversation
-            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - Clearing previous messages.');
-            setDisplayMessages([]); 
+            console.log(`🚀 [ChatInterface] useEffect[selectedConversationId] - RUNNING for ID: ${selectedConversationId}.`);
+            console.log('🧹 [ChatInterface] Clearing previous state.');
+            setMessages([]); 
+            setSummaryContent(null);
+            setMedicalHistoryContent(null);
+            setActions([]);
             
-            // Send request via control channel WebSocket
-            console.log('📤 [ChatInterface] Sending get_messages request.');
-            sendMessage({
+            console.log('📤 [ChatInterface] Sending initial WS requests (messages, actions, history trigger).');
+            sendMessage(JSON.stringify({
                 type: 'get_messages',
                 payload: { conversationId: selectedConversationId }
-            });
-            
-            // Always switch to chat tab when a conversation is selected
+            }));
+            sendMessage(JSON.stringify({ 
+                type: 'get_actions',
+                payload: { conversationId: selectedConversationId }
+            }));
+            const fetchAndTriggerHistory = async () => {
+                 try {
+                    const historyData = await getMedicalHistory(selectedConversationId);
+                    console.log("[ChatInterface] Initial REST fetch medical history successful:", historyData);
+                    setMedicalHistoryContent(historyData.content); 
+                } catch (error) {
+                    console.error("[ChatInterface] Initial error fetching medical history via REST:", error);
+                } finally {
+                     sendMessage(JSON.stringify({ type: "get_medical_history", payload: { conversationId: selectedConversationId } }));
+                }
+            };
+            fetchAndTriggerHistory();
+
             setActiveTab('chat');
         } else {
-            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - RUNNING for null ID. Clearing messages.');
-            setDisplayMessages([]); // Clear messages if no conversation is selected
+            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - RUNNING for null ID. Clearing state.');
+            setMessages([]); 
+            setSummaryContent(null);
+            setMedicalHistoryContent(null);
+            setActions([]);
+            setActiveTab('chat');
         }
-    }, [selectedConversationId, sendMessage]); // Depend on selection and sendMessage function
+    }, [selectedConversationId, sendMessage]);
 
-    // Effect to handle incoming WebSocket messages
     useEffect(() => {
-        console.log('[WS Effect] Running. SelectedID:', selectedConversationId, 'lastMessage:', JSON.stringify(lastMessage)); // Log selected ID too
+        console.log('[WS Effect] Running. SelectedID:', selectedConversationId, 'lastMessage:', JSON.stringify(lastMessage)); 
         if (lastMessage && isBackendMessage(lastMessage)) {
             const message = lastMessage;
             console.log('[WS Effect] Processing type:', message.type);
 
-            // Check payload for message_list data
-            if (message.type === 'message_list' && message.payload) {
-                console.log('[WS Effect] Received message_list payload:', message.payload);
-                // Log IDs for comparison
-                console.log(`[WS Effect] Comparing received ConvID (${message.payload.conversationId}) with selected ConvID (${selectedConversationId})`);
-                
-                if (message.payload.messages && message.payload.conversationId === selectedConversationId) {
-                    console.log(`[ChatInterface] ConvID match. Processing ${message.payload.messages.length} historical messages.`);
-                    const messagesArray = message.payload.messages as Message[]; 
-                    if (!Array.isArray(messagesArray)) {
-                        console.error('[ChatInterface] Error: message.payload.messages is not an array!');
-                        return;
-                    }
-
-                    const mapMessageToDisplay = (msg: Message): DisplayMessage | null => {
-                        return convertToDisplayMessage(msg);
-                    };
-
-                    const newDisplayMessages = messagesArray
-                        .map(mapMessageToDisplay)
-                        .filter((msg): msg is DisplayMessage => msg !== null);
-                    console.log(`[ChatInterface] Converted historical messages:`, newDisplayMessages); 
-                    setDisplayMessages(newDisplayMessages); 
-                    console.log(`[ChatInterface] Display messages updated to length: ${newDisplayMessages.length}`);
-                }
+            if (message.payload?.conversationId !== selectedConversationId) {
+                 console.log(`[WS Effect] Ignoring message for different conversation (${message.payload?.conversationId})`);
+                 return;
             }
-            // Handle new_message - add individual messages as they come in
+
+            if (message.type === 'message_list' && message.payload?.messages) {
+                console.log(`[WS Effect] Received message_list with ${message.payload.messages.length} messages.`);
+                 const newDisplayMessages = message.payload.messages
+                    .map(convertToDisplayMessage)
+                    .filter((m: DisplayMessage | null): m is DisplayMessage => m !== null);
+                 setMessages(newDisplayMessages); 
+            } 
             else if (message.type === 'new_message' && message.payload) {
-                console.log('[WS Effect] Received new_message payload:', message.payload);
-                if (message.payload.conversationId === selectedConversationId) {
-                    console.log('[WS Effect] Adding new message to display messages');
-                    // Add the new message
-                    handleNewMessage(message.payload);
-                } else {
-                    console.log(`[WS Effect] Message was for different conversation. Received: ${message.payload.conversationId}, Selected: ${selectedConversationId}`);
-                }
+                 console.log('[WS Effect] Received new_message');
+                 handleNewMessage(message.payload as Message);
             }
-            // Handle summary_data - stores the summary for viewing in summary tab
             else if (message.type === 'summary_data' && message.payload) {
-                console.log('[WS Effect] Received summary data:', message.payload);
-                if (message.payload.conversationId === selectedConversationId) {
-                    console.log('[WS Effect] Updating current summary with new data');
-                    setCurrentSummary(message.payload.summary);
-                }
+                 console.log('[WS Effect] Received summary_data');
+                 setSummaryContent(message.payload.summary);
+            } 
+            else if (message.type === 'action_list' && message.payload?.actions) {
+                console.log('[WS Effect] Received action_list');
+                setActions(message.payload.actions);
             }
-            // Handle medical_history_data - stores medical history for viewing in history tab
             else if (message.type === 'medical_history_data' && message.payload) {
-                console.log('[WS Effect] Received medical history data');
-                if (message.payload.conversationId === selectedConversationId) {
-                    setCurrentMedicalHistory(message.payload.medicalHistory);
-                }
+                 console.log('[WS Effect] Received medical_history_data');
+                 setMedicalHistoryContent(message.payload.history);
             }
-        }
+            else if ((message.type === 'system' || message.type === 'error') && message.text) {
+                 const systemMsg: DisplayMessage = {
+                     id: `sys-${Date.now()}`,
+                     text: message.text,
+                     sender: message.type === 'error' ? 'error' : 'system',
+                     timestamp: new Date().toISOString(),
+                     backendSenderType: 'SYSTEM',
+                 };
+                 setMessages(prev => [...prev, systemMsg]);
+            }
+            else if (message.type === 'interim_transcript' && message.payload) {
+                 console.log('[WS Effect] Received interim_transcript');
+                 // Example: update a temporary "typing" message or replace last interim
+            }
+             else if (message.type === 'final_transcript' && message.payload) {
+                 console.log('[WS Effect] Received final_transcript');
+                 handleNewMessage(message.payload as Message); 
+            }
+             else if (message.type === 'translation' && message.payload) {
+                 console.log('[WS Effect] Received translation');
+                 handleNewMessage(message.payload as Message); 
+            }
+             else if (message.type === 'conversation_selected') {
+                  console.log('[WS Effect] Received conversation_selected confirmation');
+                  // Update local state based on payload if needed (e.g., status)
+             }
+            else {
+                 console.log(`[WS Effect] Received unhandled message type or invalid payload for known type: ${message.type}`);
+            }
+        } 
     }, [lastMessage, selectedConversationId, handleNewMessage]);
-
-    // Fetch medical history when conversation is selected and history tab is active
-    useEffect(() => {
-        if (selectedConversationId && activeTab === 'history') {
-            console.log(`[ChatInterface] Fetching medical history for conversation ${selectedConversationId}`);
-            getMedicalHistory(selectedConversationId)
-                .then(data => {
-                    console.log(`[ChatInterface] Received medical history:`, data);
-                    setCurrentMedicalHistory(data.content);
-                })
-                .catch(error => {
-                    console.error(`[ChatInterface] Error fetching medical history:`, error);
-                });
-        }
-    }, [selectedConversationId, activeTab]);
 
     const handleEndSession = async () => {
         console.log("[ChatInterface] handleEndSession called");
         if (selectedConversationId) {
-            // Ensure STT is stopped
-            if (status === 'connected') {
+            if (sttStatus === 'connected') {
                 console.log('[ChatInterface] Stopping STT before ending session');
                 stopRecording();
             }
-            // End the session at the context level
-            console.log('[ChatInterface] Ending session for conversation:', selectedConversationId);
+            console.log('[ChatInterface] Ending session via context for:', selectedConversationId);
             await endCurrentSession();
             
-            // Switch to summary tab to show the summary
-            console.log('[ChatInterface] Switching to summary tab after ending session');
+            console.log('[ChatInterface] Switching to summary tab');
             setActiveTab('summary');
             
-            // Request summary (it may take a moment to generate)
             setTimeout(() => {
                 console.log('[ChatInterface] Requesting summary after end session timeout');
-                sendMessage({
+                sendMessage(JSON.stringify({
                     type: 'get_summary',
                     payload: { conversationId: selectedConversationId }
-                });
-            }, 2000); // Give the backend some time to generate the summary
+                }));
+            }, 2000); 
         }
     };
 
-    // Render appropriate content based on the active tab
     const renderContent = () => {
         if (!selectedConversationId) {
             return (
@@ -778,7 +702,7 @@ const ChatInterface: React.FC = () => {
             case 'chat':
                 return (
                     <MessageArea ref={messageAreaRef}>
-                        {displayMessages.map((msg, index) => (
+                        {messages.map((msg, index) => (
                             <MessageGroup key={`${msg.id}-${index}`} $isSender={msg.sender === 'user'}>
                                 <SenderLabel $isSender={msg.sender === 'user'}>
                                     {msg.sender === 'user' ? clinicianUsername : patientName}
@@ -795,14 +719,14 @@ const ChatInterface: React.FC = () => {
                 );
             case 'summary':
                 return (
-                    <SummaryArea key={summaryKey} className={renderedSummary !== currentSummary ? 'refreshing' : ''}>
-                        {renderedSummary || "No summary available yet. End the session to generate a summary."}
+                    <SummaryArea key={summaryRenderKey}>
+                        {summaryContent || "No summary available yet. End the session to generate a summary."}
                     </SummaryArea>
                 );
             case 'history':
                 return (
                     <MedicalHistoryArea>
-                        {currentMedicalHistory || "No medical history available."}
+                        {medicalHistoryContent || "No medical history available."}
                     </MedicalHistoryArea>
                 );
             default:
@@ -835,9 +759,9 @@ const ChatInterface: React.FC = () => {
             </ContentArea>
 
             <ControlsArea>
-                {isSessionActive && (
+                {selectedConversationId && isSessionActive && (
                     <>
-                        {status === 'connected' ? (
+                        {sttStatus === 'connected' ? (
                             <MicControlButton onClick={pauseRecording}>
                                 Pause Mic
                             </MicControlButton>
@@ -845,25 +769,33 @@ const ChatInterface: React.FC = () => {
                             <MicControlButton onClick={resumeRecording}>
                                 Resume Mic
                             </MicControlButton>
-                        ) : status !== 'connecting' && (
+                        ) : sttStatus !== 'connecting' && (
                             <MicControlButton onClick={startRecording}>
                                 Start Mic
                             </MicControlButton>
                         )}
-                        <EndSessionButton onClick={handleEndSession}>
+                        <EndSessionButton onClick={handleEndSession} disabled={!isSessionActive}>
                             End Session
                         </EndSessionButton>
                     </>
                 )}
+                {!selectedConversationId && (
+                    <NoSessionText>Start or select a conversation to begin.</NoSessionText>
+                )}
             </ControlsArea>
 
-            {/* Status indicators */}
             <TopStatusContainer>
-                <SttStatusDisplay $status={status}>
-                    {status === 'connected' ? 'Recording' : 
-                     status === 'connecting' ? 'Connecting...' : 
-                     status === 'error' || status === 'failed' ? 'Error' : 
-                     'Not Recording'}
+                {selectedConversationId && (
+                    <SttStatusDisplay $status={sttStatus}>
+                        {sttStatus === 'connected' ? 'Recording' : 
+                         sttStatus === 'connecting' ? 'Connecting...' : 
+                         sttStatus === 'error' || sttStatus === 'failed' ? 'Error' : 
+                         hookIsPaused ? 'Paused' :
+                         'Not Recording'}
+                    </SttStatusDisplay>
+                )}
+                <SttStatusDisplay $status={isConnected ? 'connected' : 'disconnected'}>
+                    {isConnected ? 'Server Connected' : 'Server Disconnected'}
                 </SttStatusDisplay>
             </TopStatusContainer>
         </ChatContainer>

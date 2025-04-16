@@ -19,7 +19,7 @@ The core goal is to provide seamless, real-time interpretation during medical co
 - **Conversation History:** Stores original transcriptions and translations.
 - **Action Tracking:** Detects and logs actionable items mentioned during the conversation (e.g., follow-ups, notes).
 - **Summarization:** Generates a concise summary of the conversation upon completion.
-- **Mock Medical History:** Automatically generates contextually relevant mock medical history at the start of a session.
+- **Mock Medical History:** Automatically generates contextually relevant mock medical history at the start of a session, accessible via REST and WebSocket.
 
 **Basic User Flow:**
 
@@ -52,8 +52,9 @@ This application follows best practices for structure and employs modern technol
   - **Domain:** Contains core entities, value objects, interfaces for repositories and services.
   - **Application:** Orchestrates use cases, handles commands.
   - **Infrastructure:** Implements interfaces using specific technologies (Prisma, OpenAI, WebSockets, Express, etc.).
-- **Separation of Concerns:** Services have distinct responsibilities (e.g., `TranscriptionService`, `CommandDetectionService`, `MedicalHistoryService`, `ConversationService`).
+- **Separation of Concerns:** Services have distinct responsibilities (e.g., `TranscriptionService`, `CommandDetectionService`, `MedicalHistoryService`, `ConversationService`, `NotificationService`).
 - **Dependency Injection:** Uses `tsyringe` for managing dependencies, promoting loose coupling and testability.
+- **API Routing:** Backend uses Express.js. Most routes are defined without an `/api/` prefix (e.g., `/conversations`, `/auth/login`). Authentication is handled via JWT middleware.
 
 **Technology Stack:**
 
@@ -72,9 +73,14 @@ This application follows best practices for structure and employs modern technol
   - Styling: Styled Components
   - State Management: React Context API (potentially others like Zustand/Redux if needed later)
   - WebSockets: Native browser WebSocket API
+  - API Client: Centralized Axios instance (`src/lib/api.ts`) handles base URL, request/response interception (auth tokens, automatic token refresh).
 
 **Key Technical Implementations:**
 
+- **WebSocket Architecture:** The backend manages two distinct WebSocket connection types:
+  - `/transcription?token=<jwt>&conversationId=<id>`: Dedicated to streaming raw audio data for a specific conversation to the `TranscriptionService`. Requires a valid JWT and `conversationId`.
+  - `/?token=<jwt>`: Serves as the main control channel for a client. Used for actions like selecting conversations, sending/receiving chat messages, fetching history/actions/summaries, and receiving real-time updates (like new messages or generated medical history). Requires a valid JWT.
+  - The backend uses a `NotificationService` to manage client subscriptions to conversations and broadcast relevant updates (e.g., new messages, medical history) to all connected clients for a specific conversation.
 - **Proxy WebSocket:** The frontend connects to the backend via WebSockets. The backend acts as a proxy, establishing its own secure connections to external services like OpenAI's real-time transcription API. This keeps API keys secure and allows backend processing.
 - **FFmpeg Audio Conversion:** The frontend typically sends audio in WebM Opus format. The backend uses `ffmpeg` (via `fluent-ffmpeg` and `@ffmpeg-installer/ffmpeg`) to transcode this stream in real-time into the required format for OpenAI Whisper (PCM S16LE, mono, typically 16kHz or 24kHz - currently set to 24kHz).
 - **Automatic Language Detection:** After receiving a transcription, the backend makes a separate API call to OpenAI (using `gpt-4o-mini`) with a specific prompt to identify the primary language of the transcribed text.
@@ -112,7 +118,7 @@ Follow these steps to set up and run the application.
     - `OPENAI_API_KEY`: Your secret key from OpenAI.
     - `JWT_SECRET`: A strong, random string for signing authentication tokens.
     - `PORT`: (Optional) Port for the backend server (defaults to 8080).
-    - `VITE_APP_BACKEND_URL`: For the frontend, the _host-accessible_ URL of the backend (e.g., `http://localhost:8080` for local Docker setup).
+    - `VITE_BACKEND_URL`: For the frontend (`interpreter-frontend/.env`), the _host-accessible_ URL of the backend (e.g., `http://localhost:8080` for local Docker setup). Make sure this matches the variable used in `src/lib/api.ts`.
 - **Database Migration:**
   - Navigate to `interpreter-backend`.
   - Run `npx prisma migrate dev` to apply schema changes and create the database if it doesn't exist.
@@ -138,11 +144,11 @@ Follow these steps to set up and run the application.
 - **Environment Variables:** Configure Cloud Run service environment variables to:
   - Reference the secrets stored in Secret Manager.
   - Set `PORT` to `8080` (or the port your container listens on).
-  - Set frontend's `VITE_APP_BACKEND_URL` during its build process to the URL of the deployed backend service.
-- **Dockerfile:** Ensure `Dockerfile` (for backend) and potentially `frontend.Dockerfile` correctly build production-ready images (install only production dependencies, run Prisma generate, build code).
-- **Build & Push:** Build the Docker images and push them to Google Artifact Registry:
+  - Set frontend's `VITE_BACKEND_URL` environment variable within the Cloud Run service configuration to the URL of the deployed backend service (e.g., using `--set-env-vars="VITE_BACKEND_URL=https://your-backend-service-url"`).
+- **Dockerfile:** Ensure `Dockerfile` (for backend) and `interpreter-frontend/Dockerfile` correctly build production-ready images (install only production dependencies, run Prisma generate, build code).
+- **Build & Push:** Build the Docker images (using the respective Dockerfiles in `interpreter-backend` and `interpreter-frontend`) and push them to Google Artifact Registry or your preferred registry. Example:
   - `gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/interpreter-backend:latest ./interpreter-backend`
-  - `gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/interpreter-frontend:latest ./interpreter-frontend` (Adjust Dockerfile path if needed)
+  - `gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/interpreter-frontend:latest ./interpreter-frontend`
 - **Deploy Backend:**
   - Use `gcloud run deploy interpreter-backend ...` command.
   - Specify the backend image URL.
@@ -153,8 +159,8 @@ Follow these steps to set up and run the application.
 - **Deploy Frontend:**
   - Use `gcloud run deploy interpreter-frontend ...` command.
   - Specify the frontend image URL.
-  - Set environment variables (like `VITE_APP_BACKEND_URL` pointing to the deployed backend service URL).
+  - Set environment variables (specifically `VITE_BACKEND_URL` pointing to the deployed backend service URL using `--set-env-vars="VITE_BACKEND_URL=https://your-backend-service-url"`)
   - Allow unauthenticated access.
-- **Deployment Scripts:** The `deploy.sh` and `deploy-prod.sh` scripts provide a starting point for automating deployment, handling environment variables and `gcloud` commands. Review and adapt them for your specific GCP setup.
+- **Deployment Scripts:** The `deploy-prod.sh` script provides a starting point for automating deployment to Cloud Run, handling environment variable injection (including `VITE_BACKEND_URL` for the frontend) and `gcloud` commands. Review and adapt it for your specific GCP setup.
 
 ---

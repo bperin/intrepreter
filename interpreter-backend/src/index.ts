@@ -38,39 +38,11 @@ import { IAggregationService } from "./domain/services/IAggregationService";
 import { IUserRepository } from "./domain/repositories/IUserRepository";
 import { SummaryService } from './infrastructure/services/SummaryService';
 
+// --- Initialize Express App ---
 const app = express();
 const port = process.env.PORT || 8080;
 
-// --- CORS Configuration (Allow Specific Origins) ---
-const allowedOrigins = [
-    'https://interpreter-frontend-service-rc7cuwbtwa-uc.a.run.app', // Deployed frontend
-    'http://localhost:5173', // Local frontend dev server (Vite default)
-    'http://localhost:3000'  // Local frontend dev server (CRA default)
-];
-
-console.log(`[CORS] Configuring allowed origins:`, allowedOrigins);
-
-const corsOptions: cors.CorsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests) - uncomment if needed
-        // if (!origin) return callback(null, true);
-        
-        // Check if the origin is in our allowed list or if it's undefined (e.g. same-origin)
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            console.log(`[CORS] Allowed origin: ${origin}`);
-            callback(null, true);
-        } else {
-            console.warn(`[CORS] Blocked origin: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-    optionsSuccessStatus: 204
-};
-
-app.use(cors(corsOptions));
-
+// --- Dependency Injection Container Setup ---
 // Register MessageService implementation for IMessageService
 container.register<IMessageService>(IMessageServiceToken, { useClass: MessageService });
 
@@ -88,7 +60,41 @@ const medicalHistoryService = container.resolve(MedicalHistoryService);
 const aggregationService = container.resolve<IAggregationService>("IAggregationService");
 const prisma = container.resolve<PrismaClient>("PrismaClient");
 
+// --- Global Middleware --- 
+// CORS
+const allowedOrigins = [
+    'https://interpreter-frontend-service-rc7cuwbtwa-uc.a.run.app', // Deployed frontend
+    'http://localhost:5173', // Local frontend dev server (Vite default)
+    'http://localhost:3000'  // Local frontend dev server (CRA default)
+];
+console.log(`[CORS] Configuring allowed origins:`, allowedOrigins);
+const corsOptions: cors.CorsOptions = {
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            console.log(`[CORS] Allowed origin: ${origin}`);
+            callback(null, true);
+        } else {
+            console.warn(`[CORS] Blocked origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
+
+// JSON Body Parser
 app.use(express.json());
+
+// --- Public / Unauthenticated Routes ---
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+app.get("/", (req: Request, res: Response) => {
+    res.send("Interpreter Backend is running!");
+});
 
 app.post("/auth/register", (req: Request, res: Response, next: NextFunction) => {
     (async () => {
@@ -174,9 +180,37 @@ app.post("/auth/refresh", (req: Request, res: Response, next: NextFunction) => {
     })();
 });
 
+// --- Authentication Middleware (applied to all routes below) ---
+app.use(authMiddleware);
 
-// New route to get actions for a specific conversation
-app.get("/conversations/:conversationId/actions", authMiddleware, async (req, res, next): Promise<void> => {
+// --- Protected / Authenticated Routes ---
+
+// Get authenticated user profile
+app.get("/auth/me", async (req, res, next) => {
+    try {
+        // authMiddleware has already verified the token and attached the user payload
+        const userPayload = req.user; 
+        console.log(`[Route /auth/me] Request received for user:`, userPayload);
+
+        if (userPayload && userPayload.id && userPayload.username) {
+             // Return the necessary info directly from the token payload
+            res.status(200).json({
+                id: userPayload.id,
+                username: userPayload.username
+            });
+        } else {
+            // This case indicates an issue with the token payload or middleware
+            console.error("[Route /auth/me] Missing user information in request after authMiddleware.");
+            res.status(401).json({ message: "Invalid authentication token data." });
+        }
+    } catch (error) {
+        console.error("Error processing /auth/me:", error);
+        next(error); // Pass error to the default error handler
+    }
+});
+
+// Get actions for a specific conversation
+app.get("/conversations/:conversationId/actions", async (req, res, next): Promise<void> => {
     try {
         const userId = req.user!.id; 
         const { conversationId } = req.params;
@@ -209,36 +243,70 @@ app.get("/conversations/:conversationId/actions", authMiddleware, async (req, re
     }
 });
 
-// New route to get authenticated user profile
-app.get("/auth/me", authMiddleware, async (req, res, next) => {
+// Create a new conversation
+app.post("/conversations", async (req, res, next) => {
+    console.log(`[${new Date().toISOString()}] POST /conversations request received`);
     try {
-        // authMiddleware has already verified the token and attached the user payload
-        const userPayload = req.user; 
-        console.log(`[Route /auth/me] Request received for user:`, userPayload);
-
-        if (userPayload && userPayload.id && userPayload.username) {
-             // Return the necessary info directly from the token payload
-            res.status(200).json({
-                id: userPayload.id,
-                username: userPayload.username
-            });
-        } else {
-            // This case indicates an issue with the token payload or middleware
-            console.error("[Route /auth/me] Missing user information in request after authMiddleware.");
-            res.status(401).json({ message: "Invalid authentication token data." });
+        const userId = req.user!.id;
+        const { firstName, lastName, dob, patientLanguage = "es" } = req.body;
+        
+        if (!firstName || !lastName || !dob) {
+            res.status(400).json({ message: "Missing required patient information" });
+            return;
         }
+        
+        console.log(`[REST API] Creating new conversation for user ${userId} with patient ${firstName} ${lastName}`);
+        
+        const startSessionResult = await conversationService.startNewSession({
+            userId,
+            patientFirstName: firstName,
+            patientLastName: lastName,
+            patientDob: new Date(dob),
+            clinicianPreferredLanguage: patientLanguage
+        });
+        
+        res.status(201).json(startSessionResult.conversation);
+        return;
     } catch (error) {
-        console.error("Error processing /auth/me:", error);
-        next(error); // Pass error to the default error handler
+        console.error("[REST API] Error creating conversation:", error);
+        next(error);
     }
 });
 
-app.get("/", (req: Request, res: Response) => {
-    res.send("Interpreter Backend is running!");
+// Get medical history for a specific conversation
+app.get("/conversations/:id/medical-history", async (req, res, next) => {
+    console.log(`[${new Date().toISOString()}] GET /conversations/:id/medical-history request for ID: ${req.params.id}`);
+    try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id;
+        
+        console.log(`[REST API] Fetching medical history for conversation ${conversationId}`);
+        
+        // Verify ownership
+        const conversation = await conversationRepository.findById(conversationId);
+        if (!conversation) {
+            res.status(404).json({ message: "Conversation not found" });
+            return;
+        }
+        
+        if (conversation.userId !== userId) {
+            res.status(403).json({ message: "Forbidden: You don't have access to this conversation" });
+            return;
+        }
+        
+        const history = await medicalHistoryService.getHistory(conversationId);
+        res.status(200).json(history);
+        return;
+    } catch (error) {
+        console.error(`[REST API] Error fetching medical history for conversation ${req.params.id}:`, error);
+        next(error);
+    }
 });
 
+// --- Create HTTP Server (needed for WebSocket upgrade) ---
 const server = http.createServer(app);
 
+// --- WebSocket Server Setup ---
 const wss = new WebSocket.Server({ server });
 
 interface AuthenticatedWebSocket extends WebSocket {
@@ -250,13 +318,13 @@ interface AuthenticatedWebSocket extends WebSocket {
 wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessage) => {
     console.log("WebSocket: Client attempting to connect...");
 
-    // After parsing URL and query parameters, add debug log
+    // Parse URL and query parameters
     const parsedUrl = url.parse(req.url || "", true);
     const pathname = parsedUrl.pathname;
     const queryParams = parsedUrl.query;
     console.debug("[DEBUG] WebSocket connection parsed parameters:", { pathname, tokenPresent: !!queryParams.token, conversationId: queryParams.conversationId || null });
 
-    // --- New code: Verify token for all WebSocket connections ---
+    // Verify token for ALL WebSocket connections
     const token = queryParams.token;
     if (!token || typeof token !== "string") {
         console.error("[WebSocket Router] Missing or invalid token in WebSocket connection.");
@@ -279,9 +347,8 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
         ws.close(4001, "Invalid token");
         return;
     }
-    // --- End of new token verification code ---
 
-    // Now handle connection based on pathname
+    // Handle connection based on pathname
     if (pathname === '/transcription') {
         console.log("[DEBUG] Handling transcription connection for conversation:", queryParams.conversationId);
         // Handle Transcription Stream Connection (token already verified above)
@@ -308,11 +375,10 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
             ws.close(1011, 'Server error handling transcription connection');
         }
     } else {
+        // Handle Control Channel Connection
         console.log("[DEBUG] Handling control channel connection. Client authenticated as:", { username: ws.username, userId: ws.userId });
-        // Handle Control Channel Connection (token already verified above)
         ws.send(JSON.stringify({ type: "system", text: "Welcome! You are connected via control channel." }));
 
-        // Attach message, close, error handlers for the authenticated control channel
         ws.on("message", async (messageData: WebSocket.Data, isBinary: boolean) => {
             // Existing control channel message handling logic...
             if (!ws.userId) {
@@ -608,7 +674,7 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
     }
 });
 
-// Function to check database connection
+// --- Database Connection Check ---
 async function checkDbConnection() {
     console.log("Attempting to connect to database...");
     try {
@@ -621,7 +687,7 @@ async function checkDbConnection() {
     }
 }
 
-// Check DB connection before starting server
+// --- Start Server ---
 checkDbConnection().then(() => {
     server.listen(port, () => {
         console.log(`Server is running on port ${port}`);
@@ -631,14 +697,12 @@ checkDbConnection().then(() => {
     // process.exit(1); // Exit if DB check promise itself fails
 });
 
-// --- Add Global Uncaught Exception Handler for Debugging ---
+// --- Global Error Handlers (Must be defined LAST) ---
 process.on('uncaughtException', (error) => {
   console.error('--- UNCAUGHT EXCEPTION ---');
   console.error('Caught exception:', error.message);
   console.error('Stack Trace:', error.stack);
   console.error('--------------------------');
-  // Optionally exit after logging
-  // process.exit(1); 
 });
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -646,138 +710,5 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise);
   console.error('Reason:', reason);
   console.error('---------------------------');
-  // Optionally exit after logging
-  // process.exit(1);
 });
 // ---------------------------------------------------------
-
-
-// Get all conversations for current user - handle both path patterns
-app.get("/conversations", authMiddleware, async (req, res, next) => {
-    try {
-        const userId = req.user!.id;
-        console.log(`[REST API] Fetching conversations for user ${userId}`);
-        const conversations = await conversationRepository.findByUserId(userId);
-        res.status(200).json(conversations);
-        return;
-    } catch (error) {
-        console.error("[REST API] Error fetching conversations:", error);
-        next(error);
-    }
-});
-
-// Get a specific conversation by ID - handle both path patterns
-app.get("/conversations/:id", authMiddleware, async (req, res, next) => {
-    try {
-        const userId = req.user!.id;
-        const conversationId = req.params.id;
-        
-        console.log(`[REST API] Fetching conversation ${conversationId} for user ${userId}`);
-        const conversation = await conversationRepository.findById(conversationId);
-        
-        if (!conversation) {
-            res.status(404).json({ message: "Conversation not found" });
-            return;
-        }
-        
-        if (conversation.userId !== userId) {
-            res.status(403).json({ message: "Forbidden: You don't have access to this conversation" });
-            return;
-        }
-        
-        res.status(200).json(conversation);
-        return;
-    } catch (error) {
-        console.error(`[REST API] Error fetching conversation ${req.params.id}:`, error);
-        next(error);
-    }
-});
-
-// Create a new conversation - handle both path patterns
-app.post("/conversations", authMiddleware, async (req, res, next) => {
-    try {
-        const userId = req.user!.id;
-        const { firstName, lastName, dob, patientLanguage = "es" } = req.body;
-        
-        if (!firstName || !lastName || !dob) {
-            res.status(400).json({ message: "Missing required patient information" });
-            return;
-        }
-        
-        console.log(`[REST API] Creating new conversation for user ${userId} with patient ${firstName} ${lastName}`);
-        
-        const startSessionResult = await conversationService.startNewSession({
-            userId,
-            patientFirstName: firstName,
-            patientLastName: lastName,
-            patientDob: new Date(dob),
-            clinicianPreferredLanguage: patientLanguage
-        });
-        
-        res.status(201).json(startSessionResult.conversation);
-        return;
-    } catch (error) {
-        console.error("[REST API] Error creating conversation:", error);
-        next(error);
-    }
-});
-
-// End a conversation - handle both path patterns
-app.post("/conversations/:id/end", authMiddleware, async (req, res, next) => {
-    try {
-        const userId = req.user!.id;
-        const conversationId = req.params.id;
-        
-        console.log(`[REST API] Ending conversation ${conversationId} for user ${userId}`);
-        
-        // Verify ownership
-        const conversation = await conversationRepository.findById(conversationId);
-        if (!conversation) {
-            res.status(404).json({ message: "Conversation not found" });
-            return;
-        }
-        
-        if (conversation.userId !== userId) {
-            res.status(403).json({ message: "Forbidden: You don't have access to this conversation" });
-            return;
-        }
-        
-        // End and summarize the conversation
-        const updatedConversation = await conversationService.endAndSummarizeConversation(conversationId);
-        
-        res.status(200).json(updatedConversation);
-        return;
-    } catch (error) {
-        console.error(`[REST API] Error ending conversation ${req.params.id}:`, error);
-        next(error);
-    }
-});
-
-/* Add medical history endpoint */
-app.get("/conversations/:id/medical-history", authMiddleware, async (req, res, next) => {
-    try {
-        const userId = req.user!.id;
-        const conversationId = req.params.id;
-        
-        console.log(`[REST API] Fetching medical history for conversation ${conversationId}`);
-        
-        // Verify ownership
-        const conversation = await conversationRepository.findById(conversationId);
-        if (!conversation) {
-            res.status(404).json({ message: "Conversation not found" });
-            return;
-        }
-        
-        if (conversation.userId !== userId) {
-            res.status(403).json({ message: "Forbidden: You don't have access to this conversation" });
-            return;
-        }
-        
-        const history = await medicalHistoryService.getHistory(conversationId);
-        res.status(200).json(history);
-        return;
-    } catch (error) {
-        console.error(`[REST API] Error fetching medical history for conversation ${req.params.id}:`, error);
-        next(error);
-    }
-});

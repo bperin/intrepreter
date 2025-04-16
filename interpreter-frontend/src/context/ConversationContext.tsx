@@ -122,7 +122,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
                 setIsRefreshing(true);
             }
             console.log("[ConversationContext] Fetching conversations from API");
-            const response = await api.get('/api/conversations');
+            const response = await api.get('/conversations');
             
             if (response.data && Array.isArray(response.data)) {
                 // Sort conversations by startTime (newest first)
@@ -180,7 +180,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
             });
             
             // Call REST API to end session
-            await api.post(`/api/conversations/${currentConversation.id}/end`);
+            await api.post(`/conversations/${currentConversation.id}/end`);
             
             // Refresh conversations to get updated status
             fetchConversations(true); // Use refresh mode
