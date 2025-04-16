@@ -51,6 +51,9 @@ squash.sh
 git-dates.py
 
 # Configuration files containing potentially sensitive info
+# deploy.sh # Make sure this is NOT ignored
+docker-compose.prod.yml 
+deploy-prod.sh # Ignore the production deploy script
 
-docker-compose.prod.yml
+# History cleaning script
 clean_history.sh
