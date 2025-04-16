@@ -1,75 +1,94 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from "react";
+import apiClient, { setAuthContext } from '../api/apiClient';
 
-interface AuthContextType {
-    accessToken: string | null;
-    refreshToken: string | null;
+export interface AuthContextType {
     isAuthenticated: boolean;
-    login: (access: string, refresh: string) => void;
+    isLoading: boolean;
+    login: (email: string, pass: string) => Promise<void>;
     logout: () => void;
-    setTokens: (access: string | null, refresh: string | null) => void;
+    user: any | null;
+    setToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-    children: ReactNode;
-}
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [user, setUser] = useState<any | null>(null);
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-    const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem("accessToken"));
-    const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem("refreshToken"));
-
-    const isAuthenticated = !!accessToken;
-
-    // Load tokens from localStorage on initial render
     useEffect(() => {
-        const storedAccess = localStorage.getItem("accessToken");
-        const storedRefresh = localStorage.getItem("refreshToken");
-        if (storedAccess) {
-            setAccessToken(storedAccess);
-        }
-        if (storedRefresh) {
-            setRefreshToken(storedRefresh);
-        }
+        setAuthContext(authContextValue);
     }, []);
 
-    const login = (access: string, refresh: string) => {
-        localStorage.setItem("accessToken", access);
-        localStorage.setItem("refreshToken", refresh);
-        setAccessToken(access);
-        setRefreshToken(refresh);
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            setIsAuthenticated(true);
+        }
+        setIsLoading(false);
+    }, []);
+
+    const login = async (email: string, pass: string): Promise<void> => {
+        setIsLoading(true);
+        try {
+            const response = await apiClient.post('/auth/login', { email, password: pass });
+            const { accessToken, refreshToken } = response.data;
+
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            setIsAuthenticated(true);
+            console.log('Login successful');
+
+        } catch (error) {
+            console.error('Login failed:', error);
+            setIsAuthenticated(false);
+            setUser(null);
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const logout = () => {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        setAccessToken(null);
-        setRefreshToken(null);
-        // Optionally redirect to login page here or let ProtectedRoute handle it
+        console.log('Logging out...');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        setIsAuthenticated(false);
+        setUser(null);
     };
 
-    const setTokens = (access: string | null, refresh: string | null) => {
-        if (access) {
-            localStorage.setItem("accessToken", access);
+    const setToken = (token: string | null) => {
+        if (token) {
+            localStorage.setItem('accessToken', token);
+            setIsAuthenticated(true);
         } else {
-            localStorage.removeItem("accessToken");
+            logout();
         }
-        if (refresh) {
-            localStorage.setItem("refreshToken", refresh);
-        } else {
-            localStorage.removeItem("refreshToken");
-        }
-        setAccessToken(access);
-        setRefreshToken(refresh);
+    }
+
+    const authContextValue: AuthContextType = {
+        isAuthenticated,
+        isLoading,
+        login,
+        logout,
+        user,
+        setToken
     };
 
-    return <AuthContext.Provider value={{ accessToken, refreshToken, isAuthenticated, login, logout, setTokens }}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider value={authContextValue}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
     const context = useContext(AuthContext);
     if (context === undefined) {
-        throw new Error("useAuth must be used within an AuthProvider");
+        throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
 };

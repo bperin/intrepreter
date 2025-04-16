@@ -68,6 +68,14 @@ const MessageGroup = styled.div<{ $isSender?: boolean }>`
     max-width: 70%;
 `;
 
+const SenderLabel = styled.div<{ $isSender?: boolean } & ThemedProps>`
+    font-size: ${({ theme }) => theme.typography.sizes.xs};
+    color: ${({ theme }) => theme.colors.text.secondary};
+    font-weight: ${({ theme }) => theme.typography.weights.medium};
+    margin-bottom: ${({ theme }) => theme.spacing.xs}; // Use xs instead of xxs
+    text-align: ${({ $isSender }) => ($isSender ? "right" : "left")};
+`;
+
 const Bubble = styled.div<{ $isSender?: boolean; $type?: string } & ThemedProps>`
     padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
     border-radius: ${({ theme }) => theme.borderRadius.xl};
@@ -210,6 +218,7 @@ interface DisplayMessage {
     timestamp: string;
     originalMessageId?: string | null; // Link to the original message if this is a translation
     sourceLanguage?: string | null; // Optional: Store the source language (might derive at render time)
+    backendSenderType: string; // Store the original sender type (CLINICIAN, PATIENT, SYSTEM etc.)
 }
 
 // Type guard for incoming WS messages
@@ -296,6 +305,7 @@ const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
         language: msg.language, // Keep language info for metadata
         timestamp: msg.timestamp,
         originalMessageId: msg.originalMessageId,
+        backendSenderType: msg.senderType,
     };
 };
 
@@ -501,6 +511,7 @@ const ChatInterface: React.FC = () => {
                 sender: 'error',
                 text: `STT Error: ${error.message}`,
                 timestamp: new Date().toISOString(),
+                backendSenderType: 'SYSTEM', // Add default type for STT errors
             };
             setDisplayMessages(prev => [...prev, sttErrorMsg]);
         }
@@ -777,41 +788,58 @@ const ChatInterface: React.FC = () => {
                         })()}
                         {displayMessages.map((msg, index) => {
                             console.log(`[ChatInterface] Rendering message ${index + 1}/${displayMessages.length}:`, msg);
-                            // Simple time formatting (HH:MM)
+                            
+                            // --- Determine Sender Label & Translation Status --- 
+                            let senderLabel: string | null = null;
+                            let isTranslated = !!msg.originalMessageId; // Check if this message is a translation
+                            let originalSenderType = msg.backendSenderType;
+                            
+                            // If it's a translation, find the original message's sender type
+                            if (isTranslated) {
+                                const originalMsg = displayMessages.find(m => m.id === msg.originalMessageId);
+                                if (originalMsg) {
+                                    originalSenderType = originalMsg.backendSenderType;
+                                }
+                            }
+                            
+                            // Map backend type to display label
+                            if (originalSenderType?.toUpperCase() === 'CLINICIAN') {
+                                senderLabel = 'Clinician';
+                            } else if (originalSenderType?.toUpperCase() === 'PATIENT') {
+                                senderLabel = 'Patient';
+                            }
+                            
+                            // Append translation status if applicable
+                            if (senderLabel && isTranslated) {
+                                senderLabel += ' (Translated)';
+                            }
+                            // --- End Determine Sender Label --- 
+                            
+                            // --- Time Formatting --- 
                             let formattedTime = '';
-                            let metaText = '';
                             try {
                                 formattedTime = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                             } catch (e) {
                                 console.error("Error formatting timestamp:", msg.timestamp, e);
-                                formattedTime = msg.timestamp; // Fallback to raw string
+                                formattedTime = msg.timestamp; // Fallback
                             }
-
-                            // Determine metadata text (Language or Translation source)
-                            if (msg.originalMessageId) {
-                                // It's likely a translation, find the original message
-                                const originalMsg = displayMessages.find(m => m.id === msg.originalMessageId);
-                                if (originalMsg && originalMsg.language) {
-                                    metaText = `(Translated from: ${originalMsg.language})`;
-                                } else {
-                                    // Fallback if original not found or has no language
-                                    metaText = `(Translation - Lang: ${msg.language || '??'})`; 
-                                }
-                            } else if (msg.language) {
-                                // Original message with language
-                                metaText = `(Lang: ${msg.language})`;
-                            }
-
-                            // Combine time and meta text
-                            const fullMeta = `${formattedTime} ${metaText}`.trim();
+                            // --- End Time Formatting ---
 
                             return (
                                 <MessageGroup key={msg.id || index} $isSender={msg.sender === "user"}>
-                            <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
-                                {msg.text}
+                                    {/* Render Sender Label (possibly with translation indicator) */}
+                                    {senderLabel && (
+                                        <SenderLabel $isSender={msg.sender === "user"}>
+                                            {senderLabel}
+                                        </SenderLabel>
+                                    )}
+                            
+                                    <Bubble $isSender={msg.sender === "user"} $type={msg.sender === "error" ? "error" : msg.sender === "system" ? "system" : undefined}>
+                                        {msg.text}
                                     </Bubble>
-                                    {/* Message Meta: Timestamp and Language/Translation Info */}
-                                    <MessageMeta>{fullMeta}</MessageMeta>
+                                    
+                                    {/* Message Meta: Only show timestamp now */}
+                                    <MessageMeta>{formattedTime}</MessageMeta>
                                 </MessageGroup>
                             );
                         })}
