@@ -275,7 +275,7 @@ const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
     console.log('🔄 [convertToDisplayMessage] Converting message:', JSON.stringify(msg, null, 2)); // Log input
 
     // Check if the input is a valid message object expected from backend
-    if (!msg || typeof msg.originalText !== 'string' || typeof msg.senderType !== 'string') {
+    if (!msg || typeof msg.originalText !== 'string' || typeof msg.senderType !== 'string' /* || typeof msg.language !== 'string' */) {
         console.warn('⚠️ [convertToDisplayMessage] Invalid message structure received:', msg);
         return null;
     }
@@ -291,7 +291,10 @@ const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
     else { return null; } 
     */
 
-    switch (msg.senderType.toUpperCase()) { // Use toUpperCase for case-insensitivity
+    const msgSenderType = msg.senderType?.toUpperCase();
+    const msgLang = msg.language?.toLowerCase() || 'unknown'; // Normalize language, default to unknown
+
+    switch (msgSenderType) { 
         case "USER": // Clinician
         case "CLINICIAN": // Added potential alternative
             sender = "user";
@@ -299,9 +302,11 @@ const convertToDisplayMessage = (msg: Message): DisplayMessage | null => {
         case "PATIENT":
             sender = "other";
             break;
-        case "ASSISTANT": // Handle the type seen in logs
-             sender = "system"; // Map assistant to system display for now
-             break;
+        case "ASSISTANT": // Transcribed message from backend
+            // Align based on language: Non-english maps to 'other' (patient/left), English maps to 'user' (clinician/right)
+            sender = (msgLang === 'en' || msgLang === 'unknown') ? 'user' : 'other';
+            console.log(`[convertToDisplayMessage] Assistant message language: ${msgLang}, setting sender to: ${sender}`);
+            break;
         case "TRANSLATION":
             sender = "translation";
             // TODO: Handle translatedText if needed
