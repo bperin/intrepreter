@@ -1,4 +1,4 @@
-import { PrismaClient, Conversation, Message, Patient } from "../../generated/prisma";
+import { PrismaClient, Conversation, Message, Patient, MedicalHistory, Summary } from "../../generated/prisma";
 import { IConversationService, StartSessionInput, StartSessionResult } from "../../domain/services/IConversationService";
 import { IPatientRepository } from "../../domain/repositories/IPatientRepository";
 import { IConversationRepository, ConversationWithRelations } from "../../domain/repositories/IConversationRepository";
@@ -7,6 +7,7 @@ import { IOpenAIClient } from "../../domain/clients/IOpenAIClient";
 import axios from 'axios'; // Assuming axios is installed
 import { IMessageService, IMessageService as IMessageServiceToken } from '../../domain/services/IMessageService';
 import { MedicalHistoryService } from './MedicalHistoryService';
+import { IAudioProcessingService } from "../../domain/services/IAudioProcessingService";
 
 // Interface for the expected OpenAI Chat Completion response structure (can be shared)
 interface OpenAIChatCompletionResponse {
@@ -29,7 +30,8 @@ export class ConversationService implements IConversationService {
         @inject("IConversationRepository") private conversationRepository: IConversationRepository,
         @inject("IOpenAIClient") private openAIClient: IOpenAIClient,
         @inject(IMessageServiceToken) private messageService: IMessageService,
-        @inject(MedicalHistoryService) private medicalHistoryService: MedicalHistoryService
+        @inject(MedicalHistoryService) private medicalHistoryService: MedicalHistoryService,
+        @inject("IAudioProcessingService") private audioProcessingService: IAudioProcessingService
     ) {
         this.openaiApiKey = process.env.OPENAI_API_KEY || '';
         if (!this.openaiApiKey) {
@@ -169,14 +171,16 @@ export class ConversationService implements IConversationService {
                      include: { 
                          patient: true, 
                          summary: true,
-                         user: { select: { username: true } }, // Match ConversationWithRelations
-                         messages: true, // Include all relations
-                         actions: true,
+                         user: { select: { username: true } },
+                         messages: true,
+                         notes: true,
+                         followUps: true,
+                         prescriptions: true,
                          medicalHistory: true
                      }, 
                 });
                 console.log(`[ConversationService] Conversation ${conversationId} marked as ended (no messages).`);
-                return updatedConv;
+                return updatedConv as ConversationWithRelations;
             } catch (updateError) {
                 console.error(`[ConversationService] Error marking empty conversation ${conversationId} as ended:`, updateError);
                 throw new Error(`Failed to end empty conversation ${conversationId}`);
@@ -188,7 +192,7 @@ export class ConversationService implements IConversationService {
 
         // 3. Generate Summary
         const summaryText = await this.generateSummary(transcript);
-        if (summaryText === null) {
+        if (summaryText === null || summaryText === "(Summary generation failed)" || summaryText === "(No messages to summarize)") {
             console.error(`[ConversationService] Summary generation failed for ${conversationId}. Ending session without summary.`);
              try {
                  const updatedConv = await this.prisma.conversation.update({
@@ -200,14 +204,16 @@ export class ConversationService implements IConversationService {
                      include: { 
                          patient: true, 
                          summary: true,
-                         user: { select: { username: true } }, // Match ConversationWithRelations
-                         messages: true, // Include all relations
-                         actions: true,
+                         user: { select: { username: true } },
+                         messages: true,
+                         notes: true,
+                         followUps: true,
+                         prescriptions: true,
                          medicalHistory: true
                      }, 
                 });
                  console.warn(`[ConversationService] Session ${conversationId} ended with error, summary generation failed.`);
-                 return updatedConv;
+                 return updatedConv as ConversationWithRelations;
              } catch (updateError) {
                  console.error(`[ConversationService] Error ending conversation ${conversationId} after summary failure:`, updateError);
                 throw new Error(`Summary failed and failed to end conversation ${conversationId}`);
@@ -238,16 +244,18 @@ export class ConversationService implements IConversationService {
                     include: { 
                         patient: true, 
                         summary: true,
-                        user: { select: { username: true } }, // Match ConversationWithRelations
-                        messages: true, // Include all relations
-                        actions: true,
+                        user: { select: { username: true } },
+                        messages: true,
+                        notes: true,
+                        followUps: true,
+                        prescriptions: true,
                         medicalHistory: true
                      }, 
                 });
                 console.log(`[ConversationService] Conversation ${conversationId} status updated to summarized.`);
                 return conv;
             });
-            return updatedConversation;
+            return updatedConversation as ConversationWithRelations;
         } catch (error) {
             console.error(`[ConversationService] Error creating summary or updating conversation ${conversationId}:`, error);
             try {
@@ -257,19 +265,161 @@ export class ConversationService implements IConversationService {
                     include: { 
                         patient: true, 
                         summary: true,
-                        user: { select: { username: true } }, // Match ConversationWithRelations
-                        messages: true, // Include all relations
-                        actions: true,
+                        user: { select: { username: true } },
+                        messages: true,
+                        notes: true,
+                        followUps: true,
+                        prescriptions: true,
                         medicalHistory: true
                      }, 
                 });
                 console.warn(`[ConversationService] Marked conversation ${conversationId} as ended_error due to transaction failure.`);
-                return fallbackConv;
+                return fallbackConv as ConversationWithRelations;
             } catch (fallbackError) {
                 console.error(`[ConversationService] Failed to even mark conversation ${conversationId} as ended_error:`, fallbackError);
                 throw new Error(`Failed transaction and failed to mark conversation ${conversationId} as ended_error.`);
             }
         }
+    }
+
+    async endSession(conversationId: string): Promise<ConversationWithRelations> {
+        console.log(`[ConversationService] Attempting to end session for conversation: ${conversationId}`);
+        // Use prisma directly for update, then findById to get full relations
+        await this.prisma.conversation.update({
+            where: { id: conversationId },
+            data: {
+                endTime: new Date(),
+                status: 'ended'
+            }
+        });
+        const updatedConv = await this.conversationRepository.findById(conversationId);
+        if (!updatedConv) {
+             throw new Error(`Conversation ${conversationId} not found after update.`);
+        }
+        console.log(`[ConversationService] Session ended for conversation: ${conversationId}`);
+        return updatedConv;
+    }
+
+    async summarizeConversation(conversationId: string): Promise<ConversationWithRelations> {
+        console.log(`[ConversationService] Summarizing conversation: ${conversationId}`);
+        const conversation = await this.conversationRepository.findById(conversationId);
+        if (!conversation) {
+            throw new Error("Conversation not found");
+        }
+
+        const messagesText = conversation.messages.map(m => `${m.senderType}: ${m.originalText}`).join('\n');
+        const summaryContent = await this.generateSummary(messagesText);
+
+        if (summaryContent === null || summaryContent === "Error generating summary." || summaryContent === "Summary generation failed.") {
+             console.warn(`[ConversationService] Summary generation failed or returned null/error string for ${conversationId}. Skipping update.`);
+        } else {
+            await this.prisma.conversation.update({
+                where: { id: conversationId },
+                data: {
+                    status: 'summarized',
+                    summary: {
+                        upsert: {
+                            create: { content: summaryContent },
+                            update: { content: summaryContent },
+                        }
+                    }
+                }
+            });
+        }
+        const updatedConv = await this.conversationRepository.findById(conversationId);
+         if (!updatedConv) {
+             throw new Error(`Conversation ${conversationId} not found after summary update.`);
+         }
+        return updatedConv;
+    }
+
+    async getConversationDetails(conversationId: string): Promise<ConversationWithRelations | null> {
+        console.log(`[ConversationService] Getting details for conversation: ${conversationId}`);
+        const conversation = await this.conversationRepository.findById(conversationId);
+        if (!conversation) {
+             console.warn(`[ConversationService] Conversation not found: ${conversationId}`);
+        }
+        return conversation;
+    }
+
+    async processAudioChunk(conversationId: string, userId: string, speakerType: "clinician" | "patient", audioChunk: Buffer): Promise<void> {
+        console.log(`[ConversationService] Forwarding audio chunk for conversation ${conversationId} from ${speakerType} (${userId})`);
+        // Delegate to AudioProcessingService
+        await this.audioProcessingService.processAudioChunk(conversationId, userId, speakerType, audioChunk);
+        console.log(`[ConversationService] Audio chunk processed for ${conversationId}`);
+    }
+
+    async finalizeAudioStream(conversationId: string, userId: string): Promise<void> {
+        console.log(`[ConversationService] Finalizing audio stream for conversation ${conversationId}, user ${userId}`);
+        // Delegate to AudioProcessingService
+        await this.audioProcessingService.finalizeStream(conversationId, userId);
+        console.log(`[ConversationService] Finalized audio stream for ${conversationId}, user ${userId}`);
+    }
+
+    // --- Medical History Handling ---
+    async getMedicalHistory(conversationId: string): Promise<MedicalHistory | null> {
+        console.log(`[ConversationService] Getting medical history for conversation: ${conversationId}`);
+        const conversation = await this.prisma.conversation.findUnique({
+            where: { id: conversationId },
+            select: { medicalHistory: true } // Only select history
+        });
+        return conversation?.medicalHistory ?? null;
+    }
+
+    async updateMedicalHistory(conversationId: string, content: string): Promise<ConversationWithRelations> {
+         console.log(`[ConversationService] Updating medical history for conversation: ${conversationId}`);
+         if (content === null) {
+             throw new Error("Medical history content cannot be null.");
+         }
+         const updatedConversation = await this.prisma.conversation.update({
+             where: { id: conversationId },
+             data: {
+                 medicalHistory: {
+                     upsert: {
+                         create: { content: content },
+                         update: { content: content }
+                     }
+                 }
+             }
+         });
+         const updatedConv = await this.conversationRepository.findById(conversationId);
+          if (!updatedConv) {
+              throw new Error(`Conversation ${conversationId} not found after medical history update.`);
+          }
+         return updatedConv;
+     }
+
+    // --- Summary Handling ---
+    async getSummary(conversationId: string): Promise<Summary | null> {
+        console.log(`[ConversationService] Getting summary for conversation: ${conversationId}`);
+        const conversation = await this.prisma.conversation.findUnique({
+            where: { id: conversationId },
+            select: { summary: true } // Only select summary
+        });
+        return conversation?.summary ?? null;
+    }
+
+    async updateSummary(conversationId: string, content: string): Promise<ConversationWithRelations> {
+        console.log(`[ConversationService] Updating summary for conversation: ${conversationId}`);
+        if (content === null) {
+            throw new Error("Summary content cannot be null.");
+        }
+        const updatedConversation = await this.prisma.conversation.update({
+            where: { id: conversationId },
+            data: {
+                summary: {
+                    upsert: {
+                        create: { content: content },
+                        update: { content: content }
+                    }
+                }
+            }
+        });
+        const updatedConv = await this.conversationRepository.findById(conversationId);
+         if (!updatedConv) {
+             throw new Error(`Conversation ${conversationId} not found after summary update.`);
+         }
+        return updatedConv;
     }
 
     // Implement other IConversationService methods here later

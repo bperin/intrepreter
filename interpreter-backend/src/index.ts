@@ -23,11 +23,20 @@ import { IMessageService, IMessageService as IMessageServiceToken } from "./doma
 import { MessageService } from "./infrastructure/services/MessageService";
 import { ITextToSpeechService, ITextToSpeechService as ITextToSpeechServiceToken } from "./domain/services/ITextToSpeechService";
 import { TextToSpeechService } from "./infrastructure/services/TextToSpeechService";
-import { IActionRepository } from "./domain/repositories/IActionRepository";
-import { IActionService } from "./domain/services/IActionService";
 import { INotificationService } from "./domain/services/INotificationService";
 import { WebSocketNotificationService } from "./infrastructure/services/WebSocketNotificationService";
 import { MedicalHistoryService } from "./infrastructure/services/MedicalHistoryService";
+import { IPatientRepository } from "./domain/repositories/IPatientRepository";
+import { INoteRepository } from "./domain/repositories/INoteRepository";
+import { IFollowUpRepository } from "./domain/repositories/IFollowUpRepository";
+import { IPrescriptionRepository } from "./domain/repositories/IPrescriptionRepository";
+import { IMessageRepository } from "./domain/repositories/IMessageRepository";
+import { IOpenAIClient } from "./domain/clients/IOpenAIClient";
+import { INoteService } from "./domain/services/INoteService";
+import { IFollowUpService } from "./domain/services/IFollowUpService";
+import { IPrescriptionService } from "./domain/services/IPrescriptionService";
+import { IAggregationService } from "./domain/services/IAggregationService";
+import { IUserRepository } from "./domain/repositories/IUserRepository";
 
 dotenv.config();
 
@@ -57,9 +66,9 @@ const authService = container.resolve<IAuthService>("IAuthService");
 const conversationService = container.resolve<IConversationService>("IConversationService");
 const conversationRepository = container.resolve<IConversationRepository>("IConversationRepository");
 const transcriptionService = container.resolve(TranscriptionService);
-const actionService = container.resolve<IActionService>("IActionService");
 const notificationService = container.resolve<INotificationService>("INotificationService");
 const medicalHistoryService = container.resolve(MedicalHistoryService);
+const aggregationService = container.resolve<IAggregationService>("IAggregationService");
 const prisma = container.resolve<PrismaClient>("PrismaClient");
 
 app.use(express.json());
@@ -180,15 +189,15 @@ app.get("/conversations/:conversationId/actions", authMiddleware, async (req, re
             return;
         }
 
-        // 2. Fetch actions using the ActionService
-        console.log(`[Route /actions] Fetching actions for conversation ${conversationId}...`);
-        const actions = await actionService.getActionsByConversationId(conversationId);
-        console.log(`[Route /actions] Found ${actions.length} actions.`);
+        // 2. Fetch aggregated actions using the AggregationService
+        console.log(`[Route /actions] Fetching aggregated actions for conversation ${conversationId}...`);
+        const actions = await aggregationService.getAggregatedActionsByConversationId(conversationId);
+        console.log(`[Route /actions] Found ${actions.length} aggregated actions.`);
         
         res.status(200).json(actions);
 
     } catch (error) {
-        console.error(`Error fetching actions for conversation ${req.params.conversationId}:`, error);
+        console.error(`Error fetching aggregated actions for conversation ${req.params.conversationId}:`, error);
         next(error); // Pass error to the default error handler
     }
 });
@@ -481,7 +490,7 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                     }
                     break;
 
-                // +++ Add get_actions Case +++
+                // +++ Update get_actions Case +++
                 case "get_actions":
                     console.log('[WebSocket Router] Control Channel: Entered get_actions case.');
                     const conversationIdForActions = request.payload?.conversationId;
@@ -489,10 +498,16 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
 
                     if (conversationIdForActions && typeof conversationIdForActions === 'string') {
                         try {
-                            // Use the ActionService to fetch actions
-                            const actions = await actionService.getActionsByConversationId(conversationIdForActions);
+                            // Verify user access (important for WebSocket too)
+                            const conversation = await conversationRepository.findById(conversationIdForActions);
+                            if (!conversation || conversation.userId !== ws.userId) {
+                                throw new Error("Access denied or conversation not found.");
+                            }
                             
-                            console.log(`[WebSocket Router] Control Channel: Found ${actions.length} actions for conversation ${conversationIdForActions}`);
+                            // Use the AggregationService to fetch actions
+                            const actions = await aggregationService.getAggregatedActionsByConversationId(conversationIdForActions);
+                            
+                            console.log(`[WebSocket Router] Control Channel: Found ${actions.length} aggregated actions for conversation ${conversationIdForActions}`);
                             
                             // Send the actions back to the client
                             ws.send(JSON.stringify({
@@ -504,7 +519,7 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                             }));
 
                         } catch (error) {
-                            console.error(`[WebSocket Router] Control Channel: Error fetching actions for ${conversationIdForActions}:`, error);
+                            console.error(`[WebSocket Router] Control Channel: Error fetching aggregated actions for ${conversationIdForActions}:`, error);
                             ws.send(JSON.stringify({
                                 type: 'error',
                                 message: `Failed to fetch actions: ${error instanceof Error ? error.message : String(error)}`
