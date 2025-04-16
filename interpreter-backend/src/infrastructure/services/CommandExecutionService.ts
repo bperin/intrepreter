@@ -30,7 +30,14 @@ export class CommandExecutionService {
                     }
                     const note = await this.noteService.createNote(conversationId, args.note_content);
                     console.log(`[CommandExecutor][${conversationId}] Note created successfully (ID: ${note.id}).`);
-                    return { status: 'success', name: toolName, payload: note };
+                    return { 
+                        status: 'success', 
+                        name: toolName, 
+                        payload: { 
+                            type: 'note', 
+                            data: note 
+                        } 
+                    };
 
                 case 'schedule_follow_up':
                     if (args?.duration === undefined || typeof args.duration !== 'number' || args.duration <= 0) {
@@ -49,7 +56,14 @@ export class CommandExecutionService {
                         details
                     );
                     console.log(`[CommandExecutor][${conversationId}] Follow-up scheduled successfully for ${followUp.scheduledFor?.toISOString()} (ID: ${followUp.id}).`);
-                    return { status: 'success', name: toolName, payload: followUp };
+                    return { 
+                        status: 'success', 
+                        name: toolName, 
+                        payload: { 
+                            type: 'followup', 
+                            data: followUp 
+                        } 
+                    };
 
                 case 'write_prescription':
                     if (!args?.medication_name || typeof args.medication_name !== 'string') {
@@ -71,7 +85,14 @@ export class CommandExecutionService {
                         presDetails
                     );
                     console.log(`[CommandExecutor][${conversationId}] Prescription created successfully (ID: ${prescription.id}).`);
-                    return { status: 'success', name: toolName, payload: prescription };
+                    return { 
+                        status: 'success', 
+                        name: toolName, 
+                        payload: { 
+                            type: 'prescription', 
+                            data: prescription 
+                        } 
+                    };
 
                 default:
                     console.warn(`[CommandExecutor][${conversationId}] Attempted to execute unhandled command: ${toolName}`);
