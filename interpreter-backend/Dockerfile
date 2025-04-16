@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM node:18-alpine AS builder
+FROM node:18-slim AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ RUN npm run build
 # RUN npm prune --production
 
 # Stage 2: Runner
-FROM node:18-alpine
+FROM node:18-slim
 
 WORKDIR /app
 

@@ -1,6 +1,5 @@
 import "reflect-metadata";
 import express, { Request, Response, NextFunction, RequestHandler } from "express";
-import dotenv from "dotenv";
 import http from "http";
 import WebSocket from "ws";
 import cors from "cors";
@@ -38,22 +37,21 @@ import { IPrescriptionService } from "./domain/services/IPrescriptionService";
 import { IAggregationService } from "./domain/services/IAggregationService";
 import { IUserRepository } from "./domain/repositories/IUserRepository";
 
-dotenv.config();
-
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Allow all origins for Cloud Run deployment (restrict later for security)
-const allowedOrigin = "http://localhost"; 
-console.log(`[CORS] Allowing requests from origin: ${allowedOrigin}`);
+// --- CORS Configuration (Reverted to Static) ---
+// Define the single allowed origin directly
+const allowedOrigin = 'https://interpreter-frontend-service-rc7cuwbtwa-uc.a.run.app';
 
-app.use(
-    cors({
-        origin: allowedOrigin, 
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-    })
-);
+const corsOptions: cors.CorsOptions = {
+    origin: allowedOrigin, // Use the static string
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    optionsSuccessStatus: 204 // For legacy browser compatibility
+};
+
+app.use(cors(corsOptions));
 
 // Register MessageService implementation for IMessageService
 container.register<IMessageService>(IMessageServiceToken, { useClass: MessageService });

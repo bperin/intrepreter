@@ -46,14 +46,15 @@ export class ConversationService implements IConversationService {
 
         const patient = await this.patientRepository.findOrCreate(patientFirstName, patientLastName, dobDateOnly);
 
-        console.log("[ConversationService] Creating conversation record without openaiSessionKey.")
+        console.log("[ConversationService] Creating conversation record with default patient language 'es'.")
         const conversation = await this.conversationRepository.create({
             userId: input.userId,
             patientId: patient.id,
             status: "active",
+            patientLanguage: "es", // Add default language
         });
 
-        console.log(`[ConversationService] Session started, conversation ID: ${conversation.id}`);
+        console.log(`[ConversationService] Session started, conversation ID: ${conversation.id}, patientLang: ${conversation.patientLanguage}`);
 
         // --- Trigger Medical History Generation (Async) ---
         console.log(`[ConversationService] Triggering async medical history generation for conversation ${conversation.id}`);
