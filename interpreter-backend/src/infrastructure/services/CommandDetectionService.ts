@@ -58,16 +58,25 @@ export class CommandDetectionService {
             type: "function",
             function: {
                 name: "schedule_follow_up",
-                description: "Schedules a follow-up task or appointment based on the conversation.",
+                description: "Schedules a follow-up task or appointment based on the conversation, specifying the timeframe.",
                 parameters: {
                     type: "object",
                     properties: {
-                        follow_up_details: {
+                        duration: {
+                            type: "number",
+                            description: "The numerical value for the follow-up timeframe (e.g., 1, 7, 2).",
+                        },
+                        unit: {
                             type: "string",
-                            description: "The specific details of the follow-up, including reason, timeframe, or action needed.",
+                            enum: ["day", "week", "month"],
+                            description: "The unit of time for the follow-up (day, week, or month). Singular form.",
+                        },
+                        details: {
+                            type: "string",
+                            description: "Optional additional details or reason for the follow-up.",
                         },
                     },
-                    required: ["follow_up_details"],
+                    required: ["duration", "unit"],
                 },
             },
         },
@@ -91,7 +100,10 @@ export class CommandDetectionService {
                             type: "string",
                             description: "How often the medication should be taken (e.g., 'once daily', 'twice a day', 'every 6 hours as needed').",
                         },
-                        // Optional: Add quantity, refills etc. later if needed
+                        details: {
+                            type: "string",
+                            description: "Optional additional details like quantity, refills, or specific instructions.",
+                        },
                     },
                     required: ["medication_name", "dosage", "frequency"],
                 },

@@ -44,10 +44,20 @@ export type Summary = $Result.DefaultSelection<Prisma.$SummaryPayload>
  */
 export type Message = $Result.DefaultSelection<Prisma.$MessagePayload>
 /**
- * Model Action
+ * Model Note
  * 
  */
-export type Action = $Result.DefaultSelection<Prisma.$ActionPayload>
+export type Note = $Result.DefaultSelection<Prisma.$NotePayload>
+/**
+ * Model FollowUp
+ * 
+ */
+export type FollowUp = $Result.DefaultSelection<Prisma.$FollowUpPayload>
+/**
+ * Model Prescription
+ * 
+ */
+export type Prescription = $Result.DefaultSelection<Prisma.$PrescriptionPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -235,14 +245,34 @@ export class PrismaClient<
   get message(): Prisma.MessageDelegate<ExtArgs, ClientOptions>;
 
   /**
-   * `prisma.action`: Exposes CRUD operations for the **Action** model.
+   * `prisma.note`: Exposes CRUD operations for the **Note** model.
     * Example usage:
     * ```ts
-    * // Fetch zero or more Actions
-    * const actions = await prisma.action.findMany()
+    * // Fetch zero or more Notes
+    * const notes = await prisma.note.findMany()
     * ```
     */
-  get action(): Prisma.ActionDelegate<ExtArgs, ClientOptions>;
+  get note(): Prisma.NoteDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.followUp`: Exposes CRUD operations for the **FollowUp** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more FollowUps
+    * const followUps = await prisma.followUp.findMany()
+    * ```
+    */
+  get followUp(): Prisma.FollowUpDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.prescription`: Exposes CRUD operations for the **Prescription** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Prescriptions
+    * const prescriptions = await prisma.prescription.findMany()
+    * ```
+    */
+  get prescription(): Prisma.PrescriptionDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -689,7 +719,9 @@ export namespace Prisma {
     MedicalHistory: 'MedicalHistory',
     Summary: 'Summary',
     Message: 'Message',
-    Action: 'Action'
+    Note: 'Note',
+    FollowUp: 'FollowUp',
+    Prescription: 'Prescription'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -708,7 +740,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "patient" | "conversation" | "medicalHistory" | "summary" | "message" | "action"
+      modelProps: "user" | "patient" | "conversation" | "medicalHistory" | "summary" | "message" | "note" | "followUp" | "prescription"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1156,77 +1188,225 @@ export namespace Prisma {
           }
         }
       }
-      Action: {
-        payload: Prisma.$ActionPayload<ExtArgs>
-        fields: Prisma.ActionFieldRefs
+      Note: {
+        payload: Prisma.$NotePayload<ExtArgs>
+        fields: Prisma.NoteFieldRefs
         operations: {
           findUnique: {
-            args: Prisma.ActionFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload> | null
+            args: Prisma.NoteFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload> | null
           }
           findUniqueOrThrow: {
-            args: Prisma.ActionFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>
+            args: Prisma.NoteFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>
           }
           findFirst: {
-            args: Prisma.ActionFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload> | null
+            args: Prisma.NoteFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload> | null
           }
           findFirstOrThrow: {
-            args: Prisma.ActionFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>
+            args: Prisma.NoteFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>
           }
           findMany: {
-            args: Prisma.ActionFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>[]
+            args: Prisma.NoteFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>[]
           }
           create: {
-            args: Prisma.ActionCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>
+            args: Prisma.NoteCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>
           }
           createMany: {
-            args: Prisma.ActionCreateManyArgs<ExtArgs>
+            args: Prisma.NoteCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
           createManyAndReturn: {
-            args: Prisma.ActionCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>[]
+            args: Prisma.NoteCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>[]
           }
           delete: {
-            args: Prisma.ActionDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>
+            args: Prisma.NoteDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>
           }
           update: {
-            args: Prisma.ActionUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>
+            args: Prisma.NoteUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>
           }
           deleteMany: {
-            args: Prisma.ActionDeleteManyArgs<ExtArgs>
+            args: Prisma.NoteDeleteManyArgs<ExtArgs>
             result: BatchPayload
           }
           updateMany: {
-            args: Prisma.ActionUpdateManyArgs<ExtArgs>
+            args: Prisma.NoteUpdateManyArgs<ExtArgs>
             result: BatchPayload
           }
           updateManyAndReturn: {
-            args: Prisma.ActionUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>[]
+            args: Prisma.NoteUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>[]
           }
           upsert: {
-            args: Prisma.ActionUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ActionPayload>
+            args: Prisma.NoteUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotePayload>
           }
           aggregate: {
-            args: Prisma.ActionAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateAction>
+            args: Prisma.NoteAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateNote>
           }
           groupBy: {
-            args: Prisma.ActionGroupByArgs<ExtArgs>
-            result: $Utils.Optional<ActionGroupByOutputType>[]
+            args: Prisma.NoteGroupByArgs<ExtArgs>
+            result: $Utils.Optional<NoteGroupByOutputType>[]
           }
           count: {
-            args: Prisma.ActionCountArgs<ExtArgs>
-            result: $Utils.Optional<ActionCountAggregateOutputType> | number
+            args: Prisma.NoteCountArgs<ExtArgs>
+            result: $Utils.Optional<NoteCountAggregateOutputType> | number
+          }
+        }
+      }
+      FollowUp: {
+        payload: Prisma.$FollowUpPayload<ExtArgs>
+        fields: Prisma.FollowUpFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.FollowUpFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.FollowUpFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>
+          }
+          findFirst: {
+            args: Prisma.FollowUpFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.FollowUpFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>
+          }
+          findMany: {
+            args: Prisma.FollowUpFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>[]
+          }
+          create: {
+            args: Prisma.FollowUpCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>
+          }
+          createMany: {
+            args: Prisma.FollowUpCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.FollowUpCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>[]
+          }
+          delete: {
+            args: Prisma.FollowUpDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>
+          }
+          update: {
+            args: Prisma.FollowUpUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>
+          }
+          deleteMany: {
+            args: Prisma.FollowUpDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.FollowUpUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.FollowUpUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>[]
+          }
+          upsert: {
+            args: Prisma.FollowUpUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FollowUpPayload>
+          }
+          aggregate: {
+            args: Prisma.FollowUpAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFollowUp>
+          }
+          groupBy: {
+            args: Prisma.FollowUpGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FollowUpGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.FollowUpCountArgs<ExtArgs>
+            result: $Utils.Optional<FollowUpCountAggregateOutputType> | number
+          }
+        }
+      }
+      Prescription: {
+        payload: Prisma.$PrescriptionPayload<ExtArgs>
+        fields: Prisma.PrescriptionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.PrescriptionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.PrescriptionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>
+          }
+          findFirst: {
+            args: Prisma.PrescriptionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.PrescriptionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>
+          }
+          findMany: {
+            args: Prisma.PrescriptionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>[]
+          }
+          create: {
+            args: Prisma.PrescriptionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>
+          }
+          createMany: {
+            args: Prisma.PrescriptionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.PrescriptionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>[]
+          }
+          delete: {
+            args: Prisma.PrescriptionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>
+          }
+          update: {
+            args: Prisma.PrescriptionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>
+          }
+          deleteMany: {
+            args: Prisma.PrescriptionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.PrescriptionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.PrescriptionUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>[]
+          }
+          upsert: {
+            args: Prisma.PrescriptionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PrescriptionPayload>
+          }
+          aggregate: {
+            args: Prisma.PrescriptionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregatePrescription>
+          }
+          groupBy: {
+            args: Prisma.PrescriptionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<PrescriptionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.PrescriptionCountArgs<ExtArgs>
+            result: $Utils.Optional<PrescriptionCountAggregateOutputType> | number
           }
         }
       }
@@ -1320,7 +1500,9 @@ export namespace Prisma {
     medicalHistory?: MedicalHistoryOmit
     summary?: SummaryOmit
     message?: MessageOmit
-    action?: ActionOmit
+    note?: NoteOmit
+    followUp?: FollowUpOmit
+    prescription?: PrescriptionOmit
   }
 
   /* Types for Logging */
@@ -1478,12 +1660,16 @@ export namespace Prisma {
 
   export type ConversationCountOutputType = {
     messages: number
-    actions: number
+    notes: number
+    followUps: number
+    prescriptions: number
   }
 
   export type ConversationCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     messages?: boolean | ConversationCountOutputTypeCountMessagesArgs
-    actions?: boolean | ConversationCountOutputTypeCountActionsArgs
+    notes?: boolean | ConversationCountOutputTypeCountNotesArgs
+    followUps?: boolean | ConversationCountOutputTypeCountFollowUpsArgs
+    prescriptions?: boolean | ConversationCountOutputTypeCountPrescriptionsArgs
   }
 
   // Custom InputTypes
@@ -1507,8 +1693,22 @@ export namespace Prisma {
   /**
    * ConversationCountOutputType without action
    */
-  export type ConversationCountOutputTypeCountActionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: ActionWhereInput
+  export type ConversationCountOutputTypeCountNotesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: NoteWhereInput
+  }
+
+  /**
+   * ConversationCountOutputType without action
+   */
+  export type ConversationCountOutputTypeCountFollowUpsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FollowUpWhereInput
+  }
+
+  /**
+   * ConversationCountOutputType without action
+   */
+  export type ConversationCountOutputTypeCountPrescriptionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: PrescriptionWhereInput
   }
 
 
@@ -3925,7 +4125,9 @@ export namespace Prisma {
     user?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | PatientDefaultArgs<ExtArgs>
     messages?: boolean | Conversation$messagesArgs<ExtArgs>
-    actions?: boolean | Conversation$actionsArgs<ExtArgs>
+    notes?: boolean | Conversation$notesArgs<ExtArgs>
+    followUps?: boolean | Conversation$followUpsArgs<ExtArgs>
+    prescriptions?: boolean | Conversation$prescriptionsArgs<ExtArgs>
     summary?: boolean | Conversation$summaryArgs<ExtArgs>
     medicalHistory?: boolean | Conversation$medicalHistoryArgs<ExtArgs>
     _count?: boolean | ConversationCountOutputTypeDefaultArgs<ExtArgs>
@@ -3976,7 +4178,9 @@ export namespace Prisma {
     user?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | PatientDefaultArgs<ExtArgs>
     messages?: boolean | Conversation$messagesArgs<ExtArgs>
-    actions?: boolean | Conversation$actionsArgs<ExtArgs>
+    notes?: boolean | Conversation$notesArgs<ExtArgs>
+    followUps?: boolean | Conversation$followUpsArgs<ExtArgs>
+    prescriptions?: boolean | Conversation$prescriptionsArgs<ExtArgs>
     summary?: boolean | Conversation$summaryArgs<ExtArgs>
     medicalHistory?: boolean | Conversation$medicalHistoryArgs<ExtArgs>
     _count?: boolean | ConversationCountOutputTypeDefaultArgs<ExtArgs>
@@ -3996,7 +4200,9 @@ export namespace Prisma {
       user: Prisma.$UserPayload<ExtArgs>
       patient: Prisma.$PatientPayload<ExtArgs>
       messages: Prisma.$MessagePayload<ExtArgs>[]
-      actions: Prisma.$ActionPayload<ExtArgs>[]
+      notes: Prisma.$NotePayload<ExtArgs>[]
+      followUps: Prisma.$FollowUpPayload<ExtArgs>[]
+      prescriptions: Prisma.$PrescriptionPayload<ExtArgs>[]
       summary: Prisma.$SummaryPayload<ExtArgs> | null
       medicalHistory: Prisma.$MedicalHistoryPayload<ExtArgs> | null
     }
@@ -4407,7 +4613,9 @@ export namespace Prisma {
     user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     patient<T extends PatientDefaultArgs<ExtArgs> = {}>(args?: Subset<T, PatientDefaultArgs<ExtArgs>>): Prisma__PatientClient<$Result.GetResult<Prisma.$PatientPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     messages<T extends Conversation$messagesArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$messagesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    actions<T extends Conversation$actionsArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$actionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    notes<T extends Conversation$notesArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$notesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    followUps<T extends Conversation$followUpsArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$followUpsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    prescriptions<T extends Conversation$prescriptionsArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$prescriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     summary<T extends Conversation$summaryArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$summaryArgs<ExtArgs>>): Prisma__SummaryClient<$Result.GetResult<Prisma.$SummaryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     medicalHistory<T extends Conversation$medicalHistoryArgs<ExtArgs> = {}>(args?: Subset<T, Conversation$medicalHistoryArgs<ExtArgs>>): Prisma__MedicalHistoryClient<$Result.GetResult<Prisma.$MedicalHistoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
@@ -4868,27 +5076,75 @@ export namespace Prisma {
   }
 
   /**
-   * Conversation.actions
+   * Conversation.notes
    */
-  export type Conversation$actionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type Conversation$notesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
-    where?: ActionWhereInput
-    orderBy?: ActionOrderByWithRelationInput | ActionOrderByWithRelationInput[]
-    cursor?: ActionWhereUniqueInput
+    include?: NoteInclude<ExtArgs> | null
+    where?: NoteWhereInput
+    orderBy?: NoteOrderByWithRelationInput | NoteOrderByWithRelationInput[]
+    cursor?: NoteWhereUniqueInput
     take?: number
     skip?: number
-    distinct?: ActionScalarFieldEnum | ActionScalarFieldEnum[]
+    distinct?: NoteScalarFieldEnum | NoteScalarFieldEnum[]
+  }
+
+  /**
+   * Conversation.followUps
+   */
+  export type Conversation$followUpsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    where?: FollowUpWhereInput
+    orderBy?: FollowUpOrderByWithRelationInput | FollowUpOrderByWithRelationInput[]
+    cursor?: FollowUpWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: FollowUpScalarFieldEnum | FollowUpScalarFieldEnum[]
+  }
+
+  /**
+   * Conversation.prescriptions
+   */
+  export type Conversation$prescriptionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    where?: PrescriptionWhereInput
+    orderBy?: PrescriptionOrderByWithRelationInput | PrescriptionOrderByWithRelationInput[]
+    cursor?: PrescriptionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: PrescriptionScalarFieldEnum | PrescriptionScalarFieldEnum[]
   }
 
   /**
@@ -8232,370 +8488,362 @@ export namespace Prisma {
 
 
   /**
-   * Model Action
+   * Model Note
    */
 
-  export type AggregateAction = {
-    _count: ActionCountAggregateOutputType | null
-    _min: ActionMinAggregateOutputType | null
-    _max: ActionMaxAggregateOutputType | null
+  export type AggregateNote = {
+    _count: NoteCountAggregateOutputType | null
+    _min: NoteMinAggregateOutputType | null
+    _max: NoteMaxAggregateOutputType | null
   }
 
-  export type ActionMinAggregateOutputType = {
+  export type NoteMinAggregateOutputType = {
     id: string | null
     conversationId: string | null
-    type: string | null
+    content: string | null
     status: string | null
-    detectedAt: Date | null
-    executedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
   }
 
-  export type ActionMaxAggregateOutputType = {
+  export type NoteMaxAggregateOutputType = {
     id: string | null
     conversationId: string | null
-    type: string | null
+    content: string | null
     status: string | null
-    detectedAt: Date | null
-    executedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
   }
 
-  export type ActionCountAggregateOutputType = {
+  export type NoteCountAggregateOutputType = {
     id: number
     conversationId: number
-    type: number
+    content: number
     status: number
-    metadata: number
-    detectedAt: number
-    executedAt: number
+    createdAt: number
+    updatedAt: number
     _all: number
   }
 
 
-  export type ActionMinAggregateInputType = {
+  export type NoteMinAggregateInputType = {
     id?: true
     conversationId?: true
-    type?: true
+    content?: true
     status?: true
-    detectedAt?: true
-    executedAt?: true
+    createdAt?: true
+    updatedAt?: true
   }
 
-  export type ActionMaxAggregateInputType = {
+  export type NoteMaxAggregateInputType = {
     id?: true
     conversationId?: true
-    type?: true
+    content?: true
     status?: true
-    detectedAt?: true
-    executedAt?: true
+    createdAt?: true
+    updatedAt?: true
   }
 
-  export type ActionCountAggregateInputType = {
+  export type NoteCountAggregateInputType = {
     id?: true
     conversationId?: true
-    type?: true
+    content?: true
     status?: true
-    metadata?: true
-    detectedAt?: true
-    executedAt?: true
+    createdAt?: true
+    updatedAt?: true
     _all?: true
   }
 
-  export type ActionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Filter which Action to aggregate.
+     * Filter which Note to aggregate.
      */
-    where?: ActionWhereInput
+    where?: NoteWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of Actions to fetch.
+     * Determine the order of Notes to fetch.
      */
-    orderBy?: ActionOrderByWithRelationInput | ActionOrderByWithRelationInput[]
+    orderBy?: NoteOrderByWithRelationInput | NoteOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
      * Sets the start position
      */
-    cursor?: ActionWhereUniqueInput
+    cursor?: NoteWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` Actions from the position of the cursor.
+     * Take `±n` Notes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` Actions.
+     * Skip the first `n` Notes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
-     * Count returned Actions
+     * Count returned Notes
     **/
-    _count?: true | ActionCountAggregateInputType
+    _count?: true | NoteCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
      * Select which fields to find the minimum value
     **/
-    _min?: ActionMinAggregateInputType
+    _min?: NoteMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
      * Select which fields to find the maximum value
     **/
-    _max?: ActionMaxAggregateInputType
+    _max?: NoteMaxAggregateInputType
   }
 
-  export type GetActionAggregateType<T extends ActionAggregateArgs> = {
-        [P in keyof T & keyof AggregateAction]: P extends '_count' | 'count'
+  export type GetNoteAggregateType<T extends NoteAggregateArgs> = {
+        [P in keyof T & keyof AggregateNote]: P extends '_count' | 'count'
       ? T[P] extends true
         ? number
-        : GetScalarType<T[P], AggregateAction[P]>
-      : GetScalarType<T[P], AggregateAction[P]>
+        : GetScalarType<T[P], AggregateNote[P]>
+      : GetScalarType<T[P], AggregateNote[P]>
   }
 
 
 
 
-  export type ActionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: ActionWhereInput
-    orderBy?: ActionOrderByWithAggregationInput | ActionOrderByWithAggregationInput[]
-    by: ActionScalarFieldEnum[] | ActionScalarFieldEnum
-    having?: ActionScalarWhereWithAggregatesInput
+  export type NoteGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: NoteWhereInput
+    orderBy?: NoteOrderByWithAggregationInput | NoteOrderByWithAggregationInput[]
+    by: NoteScalarFieldEnum[] | NoteScalarFieldEnum
+    having?: NoteScalarWhereWithAggregatesInput
     take?: number
     skip?: number
-    _count?: ActionCountAggregateInputType | true
-    _min?: ActionMinAggregateInputType
-    _max?: ActionMaxAggregateInputType
+    _count?: NoteCountAggregateInputType | true
+    _min?: NoteMinAggregateInputType
+    _max?: NoteMaxAggregateInputType
   }
 
-  export type ActionGroupByOutputType = {
+  export type NoteGroupByOutputType = {
     id: string
     conversationId: string
-    type: string
+    content: string
     status: string
-    metadata: JsonValue | null
-    detectedAt: Date
-    executedAt: Date | null
-    _count: ActionCountAggregateOutputType | null
-    _min: ActionMinAggregateOutputType | null
-    _max: ActionMaxAggregateOutputType | null
+    createdAt: Date
+    updatedAt: Date
+    _count: NoteCountAggregateOutputType | null
+    _min: NoteMinAggregateOutputType | null
+    _max: NoteMaxAggregateOutputType | null
   }
 
-  type GetActionGroupByPayload<T extends ActionGroupByArgs> = Prisma.PrismaPromise<
+  type GetNoteGroupByPayload<T extends NoteGroupByArgs> = Prisma.PrismaPromise<
     Array<
-      PickEnumerable<ActionGroupByOutputType, T['by']> &
+      PickEnumerable<NoteGroupByOutputType, T['by']> &
         {
-          [P in ((keyof T) & (keyof ActionGroupByOutputType))]: P extends '_count'
+          [P in ((keyof T) & (keyof NoteGroupByOutputType))]: P extends '_count'
             ? T[P] extends boolean
               ? number
-              : GetScalarType<T[P], ActionGroupByOutputType[P]>
-            : GetScalarType<T[P], ActionGroupByOutputType[P]>
+              : GetScalarType<T[P], NoteGroupByOutputType[P]>
+            : GetScalarType<T[P], NoteGroupByOutputType[P]>
         }
       >
     >
 
 
-  export type ActionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type NoteSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     conversationId?: boolean
-    type?: boolean
+    content?: boolean
     status?: boolean
-    metadata?: boolean
-    detectedAt?: boolean
-    executedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["action"]>
+  }, ExtArgs["result"]["note"]>
 
-  export type ActionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type NoteSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     conversationId?: boolean
-    type?: boolean
+    content?: boolean
     status?: boolean
-    metadata?: boolean
-    detectedAt?: boolean
-    executedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["action"]>
+  }, ExtArgs["result"]["note"]>
 
-  export type ActionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type NoteSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     conversationId?: boolean
-    type?: boolean
+    content?: boolean
     status?: boolean
-    metadata?: boolean
-    detectedAt?: boolean
-    executedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["action"]>
+  }, ExtArgs["result"]["note"]>
 
-  export type ActionSelectScalar = {
+  export type NoteSelectScalar = {
     id?: boolean
     conversationId?: boolean
-    type?: boolean
+    content?: boolean
     status?: boolean
-    metadata?: boolean
-    detectedAt?: boolean
-    executedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
   }
 
-  export type ActionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "conversationId" | "type" | "status" | "metadata" | "detectedAt" | "executedAt", ExtArgs["result"]["action"]>
-  export type ActionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "conversationId" | "content" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["note"]>
+  export type NoteInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
   }
-  export type ActionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
   }
-  export type ActionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     conversation?: boolean | ConversationDefaultArgs<ExtArgs>
   }
 
-  export type $ActionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "Action"
+  export type $NotePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Note"
     objects: {
       conversation: Prisma.$ConversationPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       conversationId: string
-      type: string
+      content: string
       status: string
-      metadata: Prisma.JsonValue | null
-      detectedAt: Date
-      executedAt: Date | null
-    }, ExtArgs["result"]["action"]>
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["note"]>
     composites: {}
   }
 
-  type ActionGetPayload<S extends boolean | null | undefined | ActionDefaultArgs> = $Result.GetResult<Prisma.$ActionPayload, S>
+  type NoteGetPayload<S extends boolean | null | undefined | NoteDefaultArgs> = $Result.GetResult<Prisma.$NotePayload, S>
 
-  type ActionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<ActionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
-      select?: ActionCountAggregateInputType | true
+  type NoteCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<NoteFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: NoteCountAggregateInputType | true
     }
 
-  export interface ActionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Action'], meta: { name: 'Action' } }
+  export interface NoteDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Note'], meta: { name: 'Note' } }
     /**
-     * Find zero or one Action that matches the filter.
-     * @param {ActionFindUniqueArgs} args - Arguments to find a Action
+     * Find zero or one Note that matches the filter.
+     * @param {NoteFindUniqueArgs} args - Arguments to find a Note
      * @example
-     * // Get one Action
-     * const action = await prisma.action.findUnique({
+     * // Get one Note
+     * const note = await prisma.note.findUnique({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findUnique<T extends ActionFindUniqueArgs>(args: SelectSubset<T, ActionFindUniqueArgs<ExtArgs>>): Prisma__ActionClient<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    findUnique<T extends NoteFindUniqueArgs>(args: SelectSubset<T, NoteFindUniqueArgs<ExtArgs>>): Prisma__NoteClient<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find one Action that matches the filter or throw an error with `error.code='P2025'`
+     * Find one Note that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
-     * @param {ActionFindUniqueOrThrowArgs} args - Arguments to find a Action
+     * @param {NoteFindUniqueOrThrowArgs} args - Arguments to find a Note
      * @example
-     * // Get one Action
-     * const action = await prisma.action.findUniqueOrThrow({
+     * // Get one Note
+     * const note = await prisma.note.findUniqueOrThrow({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findUniqueOrThrow<T extends ActionFindUniqueOrThrowArgs>(args: SelectSubset<T, ActionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ActionClient<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    findUniqueOrThrow<T extends NoteFindUniqueOrThrowArgs>(args: SelectSubset<T, NoteFindUniqueOrThrowArgs<ExtArgs>>): Prisma__NoteClient<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find the first Action that matches the filter.
+     * Find the first Note that matches the filter.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {ActionFindFirstArgs} args - Arguments to find a Action
+     * @param {NoteFindFirstArgs} args - Arguments to find a Note
      * @example
-     * // Get one Action
-     * const action = await prisma.action.findFirst({
+     * // Get one Note
+     * const note = await prisma.note.findFirst({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findFirst<T extends ActionFindFirstArgs>(args?: SelectSubset<T, ActionFindFirstArgs<ExtArgs>>): Prisma__ActionClient<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    findFirst<T extends NoteFindFirstArgs>(args?: SelectSubset<T, NoteFindFirstArgs<ExtArgs>>): Prisma__NoteClient<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find the first Action that matches the filter or
+     * Find the first Note that matches the filter or
      * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {ActionFindFirstOrThrowArgs} args - Arguments to find a Action
+     * @param {NoteFindFirstOrThrowArgs} args - Arguments to find a Note
      * @example
-     * // Get one Action
-     * const action = await prisma.action.findFirstOrThrow({
+     * // Get one Note
+     * const note = await prisma.note.findFirstOrThrow({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findFirstOrThrow<T extends ActionFindFirstOrThrowArgs>(args?: SelectSubset<T, ActionFindFirstOrThrowArgs<ExtArgs>>): Prisma__ActionClient<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    findFirstOrThrow<T extends NoteFindFirstOrThrowArgs>(args?: SelectSubset<T, NoteFindFirstOrThrowArgs<ExtArgs>>): Prisma__NoteClient<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find zero or more Actions that matches the filter.
+     * Find zero or more Notes that matches the filter.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {ActionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @param {NoteFindManyArgs} args - Arguments to filter and select certain fields only.
      * @example
-     * // Get all Actions
-     * const actions = await prisma.action.findMany()
+     * // Get all Notes
+     * const notes = await prisma.note.findMany()
      * 
-     * // Get first 10 Actions
-     * const actions = await prisma.action.findMany({ take: 10 })
+     * // Get first 10 Notes
+     * const notes = await prisma.note.findMany({ take: 10 })
      * 
      * // Only select the `id`
-     * const actionWithIdOnly = await prisma.action.findMany({ select: { id: true } })
+     * const noteWithIdOnly = await prisma.note.findMany({ select: { id: true } })
      * 
      */
-    findMany<T extends ActionFindManyArgs>(args?: SelectSubset<T, ActionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+    findMany<T extends NoteFindManyArgs>(args?: SelectSubset<T, NoteFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
     /**
-     * Create a Action.
-     * @param {ActionCreateArgs} args - Arguments to create a Action.
+     * Create a Note.
+     * @param {NoteCreateArgs} args - Arguments to create a Note.
      * @example
-     * // Create one Action
-     * const Action = await prisma.action.create({
+     * // Create one Note
+     * const Note = await prisma.note.create({
      *   data: {
-     *     // ... data to create a Action
+     *     // ... data to create a Note
      *   }
      * })
      * 
      */
-    create<T extends ActionCreateArgs>(args: SelectSubset<T, ActionCreateArgs<ExtArgs>>): Prisma__ActionClient<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    create<T extends NoteCreateArgs>(args: SelectSubset<T, NoteCreateArgs<ExtArgs>>): Prisma__NoteClient<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Create many Actions.
-     * @param {ActionCreateManyArgs} args - Arguments to create many Actions.
+     * Create many Notes.
+     * @param {NoteCreateManyArgs} args - Arguments to create many Notes.
      * @example
-     * // Create many Actions
-     * const action = await prisma.action.createMany({
+     * // Create many Notes
+     * const note = await prisma.note.createMany({
      *   data: [
      *     // ... provide data here
      *   ]
      * })
      *     
      */
-    createMany<T extends ActionCreateManyArgs>(args?: SelectSubset<T, ActionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    createMany<T extends NoteCreateManyArgs>(args?: SelectSubset<T, NoteCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Actions and returns the data saved in the database.
-     * @param {ActionCreateManyAndReturnArgs} args - Arguments to create many Actions.
+     * Create many Notes and returns the data saved in the database.
+     * @param {NoteCreateManyAndReturnArgs} args - Arguments to create many Notes.
      * @example
-     * // Create many Actions
-     * const action = await prisma.action.createManyAndReturn({
+     * // Create many Notes
+     * const note = await prisma.note.createManyAndReturn({
      *   data: [
      *     // ... provide data here
      *   ]
      * })
      * 
-     * // Create many Actions and only return the `id`
-     * const actionWithIdOnly = await prisma.action.createManyAndReturn({
+     * // Create many Notes and only return the `id`
+     * const noteWithIdOnly = await prisma.note.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -8605,28 +8853,28 @@ export namespace Prisma {
      * Read more here: https://pris.ly/d/null-undefined
      * 
      */
-    createManyAndReturn<T extends ActionCreateManyAndReturnArgs>(args?: SelectSubset<T, ActionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+    createManyAndReturn<T extends NoteCreateManyAndReturnArgs>(args?: SelectSubset<T, NoteCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
 
     /**
-     * Delete a Action.
-     * @param {ActionDeleteArgs} args - Arguments to delete one Action.
+     * Delete a Note.
+     * @param {NoteDeleteArgs} args - Arguments to delete one Note.
      * @example
-     * // Delete one Action
-     * const Action = await prisma.action.delete({
+     * // Delete one Note
+     * const Note = await prisma.note.delete({
      *   where: {
-     *     // ... filter to delete one Action
+     *     // ... filter to delete one Note
      *   }
      * })
      * 
      */
-    delete<T extends ActionDeleteArgs>(args: SelectSubset<T, ActionDeleteArgs<ExtArgs>>): Prisma__ActionClient<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    delete<T extends NoteDeleteArgs>(args: SelectSubset<T, NoteDeleteArgs<ExtArgs>>): Prisma__NoteClient<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Update one Action.
-     * @param {ActionUpdateArgs} args - Arguments to update one Action.
+     * Update one Note.
+     * @param {NoteUpdateArgs} args - Arguments to update one Note.
      * @example
-     * // Update one Action
-     * const action = await prisma.action.update({
+     * // Update one Note
+     * const note = await prisma.note.update({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -8636,30 +8884,30 @@ export namespace Prisma {
      * })
      * 
      */
-    update<T extends ActionUpdateArgs>(args: SelectSubset<T, ActionUpdateArgs<ExtArgs>>): Prisma__ActionClient<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    update<T extends NoteUpdateArgs>(args: SelectSubset<T, NoteUpdateArgs<ExtArgs>>): Prisma__NoteClient<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Delete zero or more Actions.
-     * @param {ActionDeleteManyArgs} args - Arguments to filter Actions to delete.
+     * Delete zero or more Notes.
+     * @param {NoteDeleteManyArgs} args - Arguments to filter Notes to delete.
      * @example
-     * // Delete a few Actions
-     * const { count } = await prisma.action.deleteMany({
+     * // Delete a few Notes
+     * const { count } = await prisma.note.deleteMany({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      * 
      */
-    deleteMany<T extends ActionDeleteManyArgs>(args?: SelectSubset<T, ActionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    deleteMany<T extends NoteDeleteManyArgs>(args?: SelectSubset<T, NoteDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Update zero or more Actions.
+     * Update zero or more Notes.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {ActionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @param {NoteUpdateManyArgs} args - Arguments to update one or more rows.
      * @example
-     * // Update many Actions
-     * const action = await prisma.action.updateMany({
+     * // Update many Notes
+     * const note = await prisma.note.updateMany({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -8669,14 +8917,14 @@ export namespace Prisma {
      * })
      * 
      */
-    updateMany<T extends ActionUpdateManyArgs>(args: SelectSubset<T, ActionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    updateMany<T extends NoteUpdateManyArgs>(args: SelectSubset<T, NoteUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Update zero or more Actions and returns the data updated in the database.
-     * @param {ActionUpdateManyAndReturnArgs} args - Arguments to update many Actions.
+     * Update zero or more Notes and returns the data updated in the database.
+     * @param {NoteUpdateManyAndReturnArgs} args - Arguments to update many Notes.
      * @example
-     * // Update many Actions
-     * const action = await prisma.action.updateManyAndReturn({
+     * // Update many Notes
+     * const note = await prisma.note.updateManyAndReturn({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -8685,8 +8933,8 @@ export namespace Prisma {
      *   ]
      * })
      * 
-     * // Update zero or more Actions and only return the `id`
-     * const actionWithIdOnly = await prisma.action.updateManyAndReturn({
+     * // Update zero or more Notes and only return the `id`
+     * const noteWithIdOnly = await prisma.note.updateManyAndReturn({
      *   select: { id: true },
      *   where: {
      *     // ... provide filter here
@@ -8699,56 +8947,56 @@ export namespace Prisma {
      * Read more here: https://pris.ly/d/null-undefined
      * 
      */
-    updateManyAndReturn<T extends ActionUpdateManyAndReturnArgs>(args: SelectSubset<T, ActionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+    updateManyAndReturn<T extends NoteUpdateManyAndReturnArgs>(args: SelectSubset<T, NoteUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
-     * Create or update one Action.
-     * @param {ActionUpsertArgs} args - Arguments to update or create a Action.
+     * Create or update one Note.
+     * @param {NoteUpsertArgs} args - Arguments to update or create a Note.
      * @example
-     * // Update or create a Action
-     * const action = await prisma.action.upsert({
+     * // Update or create a Note
+     * const note = await prisma.note.upsert({
      *   create: {
-     *     // ... data to create a Action
+     *     // ... data to create a Note
      *   },
      *   update: {
      *     // ... in case it already exists, update
      *   },
      *   where: {
-     *     // ... the filter for the Action we want to update
+     *     // ... the filter for the Note we want to update
      *   }
      * })
      */
-    upsert<T extends ActionUpsertArgs>(args: SelectSubset<T, ActionUpsertArgs<ExtArgs>>): Prisma__ActionClient<$Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    upsert<T extends NoteUpsertArgs>(args: SelectSubset<T, NoteUpsertArgs<ExtArgs>>): Prisma__NoteClient<$Result.GetResult<Prisma.$NotePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
 
     /**
-     * Count the number of Actions.
+     * Count the number of Notes.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {ActionCountArgs} args - Arguments to filter Actions to count.
+     * @param {NoteCountArgs} args - Arguments to filter Notes to count.
      * @example
-     * // Count the number of Actions
-     * const count = await prisma.action.count({
+     * // Count the number of Notes
+     * const count = await prisma.note.count({
      *   where: {
-     *     // ... the filter for the Actions we want to count
+     *     // ... the filter for the Notes we want to count
      *   }
      * })
     **/
-    count<T extends ActionCountArgs>(
-      args?: Subset<T, ActionCountArgs>,
+    count<T extends NoteCountArgs>(
+      args?: Subset<T, NoteCountArgs>,
     ): Prisma.PrismaPromise<
       T extends $Utils.Record<'select', any>
         ? T['select'] extends true
           ? number
-          : GetScalarType<T['select'], ActionCountAggregateOutputType>
+          : GetScalarType<T['select'], NoteCountAggregateOutputType>
         : number
     >
 
     /**
-     * Allows you to perform aggregations operations on a Action.
+     * Allows you to perform aggregations operations on a Note.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {ActionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @param {NoteAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
      * @example
      * // Ordered by age ascending
      * // Where email contains prisma.io
@@ -8768,13 +9016,13 @@ export namespace Prisma {
      *   take: 10,
      * })
     **/
-    aggregate<T extends ActionAggregateArgs>(args: Subset<T, ActionAggregateArgs>): Prisma.PrismaPromise<GetActionAggregateType<T>>
+    aggregate<T extends NoteAggregateArgs>(args: Subset<T, NoteAggregateArgs>): Prisma.PrismaPromise<GetNoteAggregateType<T>>
 
     /**
-     * Group by Action.
+     * Group by Note.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {ActionGroupByArgs} args - Group by arguments.
+     * @param {NoteGroupByArgs} args - Group by arguments.
      * @example
      * // Group by city, order by createdAt, get count
      * const result = await prisma.user.groupBy({
@@ -8789,14 +9037,14 @@ export namespace Prisma {
      * 
     **/
     groupBy<
-      T extends ActionGroupByArgs,
+      T extends NoteGroupByArgs,
       HasSelectOrTake extends Or<
         Extends<'skip', Keys<T>>,
         Extends<'take', Keys<T>>
       >,
       OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: ActionGroupByArgs['orderBy'] }
-        : { orderBy?: ActionGroupByArgs['orderBy'] },
+        ? { orderBy: NoteGroupByArgs['orderBy'] }
+        : { orderBy?: NoteGroupByArgs['orderBy'] },
       OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
       ByFields extends MaybeTupleToUnion<T['by']>,
       ByValid extends Has<ByFields, OrderFields>,
@@ -8845,20 +9093,20 @@ export namespace Prisma {
             ? never
             : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
         }[OrderFields]
-    >(args: SubsetIntersection<T, ActionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetActionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+    >(args: SubsetIntersection<T, NoteGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetNoteGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
   /**
-   * Fields of the Action model
+   * Fields of the Note model
    */
-  readonly fields: ActionFieldRefs;
+  readonly fields: NoteFieldRefs;
   }
 
   /**
-   * The delegate class that acts as a "Promise-like" for Action.
+   * The delegate class that acts as a "Promise-like" for Note.
    * Why is this prefixed with `Prisma__`?
    * Because we want to prevent naming conflicts as mentioned in
    * https://github.com/prisma/prisma-client-js/issues/707
    */
-  export interface Prisma__ActionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+  export interface Prisma__NoteClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     conversation<T extends ConversationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ConversationDefaultArgs<ExtArgs>>): Prisma__ConversationClient<$Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
@@ -8887,427 +9135,2680 @@ export namespace Prisma {
 
 
   /**
-   * Fields of the Action model
+   * Fields of the Note model
    */
-  interface ActionFieldRefs {
-    readonly id: FieldRef<"Action", 'String'>
-    readonly conversationId: FieldRef<"Action", 'String'>
-    readonly type: FieldRef<"Action", 'String'>
-    readonly status: FieldRef<"Action", 'String'>
-    readonly metadata: FieldRef<"Action", 'Json'>
-    readonly detectedAt: FieldRef<"Action", 'DateTime'>
-    readonly executedAt: FieldRef<"Action", 'DateTime'>
+  interface NoteFieldRefs {
+    readonly id: FieldRef<"Note", 'String'>
+    readonly conversationId: FieldRef<"Note", 'String'>
+    readonly content: FieldRef<"Note", 'String'>
+    readonly status: FieldRef<"Note", 'String'>
+    readonly createdAt: FieldRef<"Note", 'DateTime'>
+    readonly updatedAt: FieldRef<"Note", 'DateTime'>
   }
     
 
   // Custom InputTypes
   /**
-   * Action findUnique
+   * Note findUnique
    */
-  export type ActionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * Filter, which Action to fetch.
+     * Filter, which Note to fetch.
      */
-    where: ActionWhereUniqueInput
+    where: NoteWhereUniqueInput
   }
 
   /**
-   * Action findUniqueOrThrow
+   * Note findUniqueOrThrow
    */
-  export type ActionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * Filter, which Action to fetch.
+     * Filter, which Note to fetch.
      */
-    where: ActionWhereUniqueInput
+    where: NoteWhereUniqueInput
   }
 
   /**
-   * Action findFirst
+   * Note findFirst
    */
-  export type ActionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * Filter, which Action to fetch.
+     * Filter, which Note to fetch.
      */
-    where?: ActionWhereInput
+    where?: NoteWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of Actions to fetch.
+     * Determine the order of Notes to fetch.
      */
-    orderBy?: ActionOrderByWithRelationInput | ActionOrderByWithRelationInput[]
+    orderBy?: NoteOrderByWithRelationInput | NoteOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for searching for Actions.
+     * Sets the position for searching for Notes.
      */
-    cursor?: ActionWhereUniqueInput
+    cursor?: NoteWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` Actions from the position of the cursor.
+     * Take `±n` Notes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` Actions.
+     * Skip the first `n` Notes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
      * 
-     * Filter by unique combinations of Actions.
+     * Filter by unique combinations of Notes.
      */
-    distinct?: ActionScalarFieldEnum | ActionScalarFieldEnum[]
+    distinct?: NoteScalarFieldEnum | NoteScalarFieldEnum[]
   }
 
   /**
-   * Action findFirstOrThrow
+   * Note findFirstOrThrow
    */
-  export type ActionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * Filter, which Action to fetch.
+     * Filter, which Note to fetch.
      */
-    where?: ActionWhereInput
+    where?: NoteWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of Actions to fetch.
+     * Determine the order of Notes to fetch.
      */
-    orderBy?: ActionOrderByWithRelationInput | ActionOrderByWithRelationInput[]
+    orderBy?: NoteOrderByWithRelationInput | NoteOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for searching for Actions.
+     * Sets the position for searching for Notes.
      */
-    cursor?: ActionWhereUniqueInput
+    cursor?: NoteWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` Actions from the position of the cursor.
+     * Take `±n` Notes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` Actions.
+     * Skip the first `n` Notes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
      * 
-     * Filter by unique combinations of Actions.
+     * Filter by unique combinations of Notes.
      */
-    distinct?: ActionScalarFieldEnum | ActionScalarFieldEnum[]
+    distinct?: NoteScalarFieldEnum | NoteScalarFieldEnum[]
   }
 
   /**
-   * Action findMany
+   * Note findMany
    */
-  export type ActionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * Filter, which Actions to fetch.
+     * Filter, which Notes to fetch.
      */
-    where?: ActionWhereInput
+    where?: NoteWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of Actions to fetch.
+     * Determine the order of Notes to fetch.
      */
-    orderBy?: ActionOrderByWithRelationInput | ActionOrderByWithRelationInput[]
+    orderBy?: NoteOrderByWithRelationInput | NoteOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for listing Actions.
+     * Sets the position for listing Notes.
      */
-    cursor?: ActionWhereUniqueInput
+    cursor?: NoteWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` Actions from the position of the cursor.
+     * Take `±n` Notes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` Actions.
+     * Skip the first `n` Notes.
      */
     skip?: number
-    distinct?: ActionScalarFieldEnum | ActionScalarFieldEnum[]
+    distinct?: NoteScalarFieldEnum | NoteScalarFieldEnum[]
   }
 
   /**
-   * Action create
+   * Note create
    */
-  export type ActionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * The data needed to create a Action.
+     * The data needed to create a Note.
      */
-    data: XOR<ActionCreateInput, ActionUncheckedCreateInput>
+    data: XOR<NoteCreateInput, NoteUncheckedCreateInput>
   }
 
   /**
-   * Action createMany
+   * Note createMany
    */
-  export type ActionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * The data used to create many Actions.
+     * The data used to create many Notes.
      */
-    data: ActionCreateManyInput | ActionCreateManyInput[]
+    data: NoteCreateManyInput | NoteCreateManyInput[]
     skipDuplicates?: boolean
   }
 
   /**
-   * Action createManyAndReturn
+   * Note createManyAndReturn
    */
-  export type ActionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelectCreateManyAndReturn<ExtArgs> | null
+    select?: NoteSelectCreateManyAndReturn<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
-     * The data used to create many Actions.
+     * The data used to create many Notes.
      */
-    data: ActionCreateManyInput | ActionCreateManyInput[]
+    data: NoteCreateManyInput | NoteCreateManyInput[]
     skipDuplicates?: boolean
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionIncludeCreateManyAndReturn<ExtArgs> | null
+    include?: NoteIncludeCreateManyAndReturn<ExtArgs> | null
   }
 
   /**
-   * Action update
+   * Note update
    */
-  export type ActionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * The data needed to update a Action.
+     * The data needed to update a Note.
      */
-    data: XOR<ActionUpdateInput, ActionUncheckedUpdateInput>
+    data: XOR<NoteUpdateInput, NoteUncheckedUpdateInput>
     /**
-     * Choose, which Action to update.
+     * Choose, which Note to update.
      */
-    where: ActionWhereUniqueInput
+    where: NoteWhereUniqueInput
   }
 
   /**
-   * Action updateMany
+   * Note updateMany
    */
-  export type ActionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * The data used to update Actions.
+     * The data used to update Notes.
      */
-    data: XOR<ActionUpdateManyMutationInput, ActionUncheckedUpdateManyInput>
+    data: XOR<NoteUpdateManyMutationInput, NoteUncheckedUpdateManyInput>
     /**
-     * Filter which Actions to update
+     * Filter which Notes to update
      */
-    where?: ActionWhereInput
+    where?: NoteWhereInput
     /**
-     * Limit how many Actions to update.
+     * Limit how many Notes to update.
      */
     limit?: number
   }
 
   /**
-   * Action updateManyAndReturn
+   * Note updateManyAndReturn
    */
-  export type ActionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelectUpdateManyAndReturn<ExtArgs> | null
+    select?: NoteSelectUpdateManyAndReturn<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
-     * The data used to update Actions.
+     * The data used to update Notes.
      */
-    data: XOR<ActionUpdateManyMutationInput, ActionUncheckedUpdateManyInput>
+    data: XOR<NoteUpdateManyMutationInput, NoteUncheckedUpdateManyInput>
     /**
-     * Filter which Actions to update
+     * Filter which Notes to update
      */
-    where?: ActionWhereInput
+    where?: NoteWhereInput
     /**
-     * Limit how many Actions to update.
+     * Limit how many Notes to update.
      */
     limit?: number
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionIncludeUpdateManyAndReturn<ExtArgs> | null
+    include?: NoteIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
-   * Action upsert
+   * Note upsert
    */
-  export type ActionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * The filter to search for the Action to update in case it exists.
+     * The filter to search for the Note to update in case it exists.
      */
-    where: ActionWhereUniqueInput
+    where: NoteWhereUniqueInput
     /**
-     * In case the Action found by the `where` argument doesn't exist, create a new Action with this data.
+     * In case the Note found by the `where` argument doesn't exist, create a new Note with this data.
      */
-    create: XOR<ActionCreateInput, ActionUncheckedCreateInput>
+    create: XOR<NoteCreateInput, NoteUncheckedCreateInput>
     /**
-     * In case the Action was found with the provided `where` argument, update it with this data.
+     * In case the Note was found with the provided `where` argument, update it with this data.
      */
-    update: XOR<ActionUpdateInput, ActionUncheckedUpdateInput>
+    update: XOR<NoteUpdateInput, NoteUncheckedUpdateInput>
   }
 
   /**
-   * Action delete
+   * Note delete
    */
-  export type ActionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
     /**
-     * Filter which Action to delete.
+     * Filter which Note to delete.
      */
-    where: ActionWhereUniqueInput
+    where: NoteWhereUniqueInput
   }
 
   /**
-   * Action deleteMany
+   * Note deleteMany
    */
-  export type ActionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Filter which Actions to delete
+     * Filter which Notes to delete
      */
-    where?: ActionWhereInput
+    where?: NoteWhereInput
     /**
-     * Limit how many Actions to delete.
+     * Limit how many Notes to delete.
      */
     limit?: number
   }
 
   /**
-   * Action without action
+   * Note without action
    */
-  export type ActionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type NoteDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Action
+     * Select specific fields to fetch from the Note
      */
-    select?: ActionSelect<ExtArgs> | null
+    select?: NoteSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Action
+     * Omit specific fields from the Note
      */
-    omit?: ActionOmit<ExtArgs> | null
+    omit?: NoteOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: ActionInclude<ExtArgs> | null
+    include?: NoteInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model FollowUp
+   */
+
+  export type AggregateFollowUp = {
+    _count: FollowUpCountAggregateOutputType | null
+    _avg: FollowUpAvgAggregateOutputType | null
+    _sum: FollowUpSumAggregateOutputType | null
+    _min: FollowUpMinAggregateOutputType | null
+    _max: FollowUpMaxAggregateOutputType | null
+  }
+
+  export type FollowUpAvgAggregateOutputType = {
+    duration: number | null
+  }
+
+  export type FollowUpSumAggregateOutputType = {
+    duration: number | null
+  }
+
+  export type FollowUpMinAggregateOutputType = {
+    id: string | null
+    conversationId: string | null
+    duration: number | null
+    unit: string | null
+    scheduledFor: Date | null
+    details: string | null
+    status: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type FollowUpMaxAggregateOutputType = {
+    id: string | null
+    conversationId: string | null
+    duration: number | null
+    unit: string | null
+    scheduledFor: Date | null
+    details: string | null
+    status: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type FollowUpCountAggregateOutputType = {
+    id: number
+    conversationId: number
+    duration: number
+    unit: number
+    scheduledFor: number
+    details: number
+    status: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type FollowUpAvgAggregateInputType = {
+    duration?: true
+  }
+
+  export type FollowUpSumAggregateInputType = {
+    duration?: true
+  }
+
+  export type FollowUpMinAggregateInputType = {
+    id?: true
+    conversationId?: true
+    duration?: true
+    unit?: true
+    scheduledFor?: true
+    details?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type FollowUpMaxAggregateInputType = {
+    id?: true
+    conversationId?: true
+    duration?: true
+    unit?: true
+    scheduledFor?: true
+    details?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type FollowUpCountAggregateInputType = {
+    id?: true
+    conversationId?: true
+    duration?: true
+    unit?: true
+    scheduledFor?: true
+    details?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type FollowUpAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FollowUp to aggregate.
+     */
+    where?: FollowUpWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FollowUps to fetch.
+     */
+    orderBy?: FollowUpOrderByWithRelationInput | FollowUpOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: FollowUpWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FollowUps from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FollowUps.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned FollowUps
+    **/
+    _count?: true | FollowUpCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: FollowUpAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: FollowUpSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FollowUpMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FollowUpMaxAggregateInputType
+  }
+
+  export type GetFollowUpAggregateType<T extends FollowUpAggregateArgs> = {
+        [P in keyof T & keyof AggregateFollowUp]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFollowUp[P]>
+      : GetScalarType<T[P], AggregateFollowUp[P]>
+  }
+
+
+
+
+  export type FollowUpGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FollowUpWhereInput
+    orderBy?: FollowUpOrderByWithAggregationInput | FollowUpOrderByWithAggregationInput[]
+    by: FollowUpScalarFieldEnum[] | FollowUpScalarFieldEnum
+    having?: FollowUpScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FollowUpCountAggregateInputType | true
+    _avg?: FollowUpAvgAggregateInputType
+    _sum?: FollowUpSumAggregateInputType
+    _min?: FollowUpMinAggregateInputType
+    _max?: FollowUpMaxAggregateInputType
+  }
+
+  export type FollowUpGroupByOutputType = {
+    id: string
+    conversationId: string
+    duration: number
+    unit: string
+    scheduledFor: Date | null
+    details: string | null
+    status: string
+    createdAt: Date
+    updatedAt: Date
+    _count: FollowUpCountAggregateOutputType | null
+    _avg: FollowUpAvgAggregateOutputType | null
+    _sum: FollowUpSumAggregateOutputType | null
+    _min: FollowUpMinAggregateOutputType | null
+    _max: FollowUpMaxAggregateOutputType | null
+  }
+
+  type GetFollowUpGroupByPayload<T extends FollowUpGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FollowUpGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FollowUpGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FollowUpGroupByOutputType[P]>
+            : GetScalarType<T[P], FollowUpGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type FollowUpSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    conversationId?: boolean
+    duration?: boolean
+    unit?: boolean
+    scheduledFor?: boolean
+    details?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["followUp"]>
+
+  export type FollowUpSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    conversationId?: boolean
+    duration?: boolean
+    unit?: boolean
+    scheduledFor?: boolean
+    details?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["followUp"]>
+
+  export type FollowUpSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    conversationId?: boolean
+    duration?: boolean
+    unit?: boolean
+    scheduledFor?: boolean
+    details?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["followUp"]>
+
+  export type FollowUpSelectScalar = {
+    id?: boolean
+    conversationId?: boolean
+    duration?: boolean
+    unit?: boolean
+    scheduledFor?: boolean
+    details?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type FollowUpOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "conversationId" | "duration" | "unit" | "scheduledFor" | "details" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["followUp"]>
+  export type FollowUpInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+  export type FollowUpIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+  export type FollowUpIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+
+  export type $FollowUpPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "FollowUp"
+    objects: {
+      conversation: Prisma.$ConversationPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      conversationId: string
+      duration: number
+      unit: string
+      scheduledFor: Date | null
+      details: string | null
+      status: string
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["followUp"]>
+    composites: {}
+  }
+
+  type FollowUpGetPayload<S extends boolean | null | undefined | FollowUpDefaultArgs> = $Result.GetResult<Prisma.$FollowUpPayload, S>
+
+  type FollowUpCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<FollowUpFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: FollowUpCountAggregateInputType | true
+    }
+
+  export interface FollowUpDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['FollowUp'], meta: { name: 'FollowUp' } }
+    /**
+     * Find zero or one FollowUp that matches the filter.
+     * @param {FollowUpFindUniqueArgs} args - Arguments to find a FollowUp
+     * @example
+     * // Get one FollowUp
+     * const followUp = await prisma.followUp.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends FollowUpFindUniqueArgs>(args: SelectSubset<T, FollowUpFindUniqueArgs<ExtArgs>>): Prisma__FollowUpClient<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one FollowUp that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {FollowUpFindUniqueOrThrowArgs} args - Arguments to find a FollowUp
+     * @example
+     * // Get one FollowUp
+     * const followUp = await prisma.followUp.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends FollowUpFindUniqueOrThrowArgs>(args: SelectSubset<T, FollowUpFindUniqueOrThrowArgs<ExtArgs>>): Prisma__FollowUpClient<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FollowUp that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowUpFindFirstArgs} args - Arguments to find a FollowUp
+     * @example
+     * // Get one FollowUp
+     * const followUp = await prisma.followUp.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends FollowUpFindFirstArgs>(args?: SelectSubset<T, FollowUpFindFirstArgs<ExtArgs>>): Prisma__FollowUpClient<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FollowUp that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowUpFindFirstOrThrowArgs} args - Arguments to find a FollowUp
+     * @example
+     * // Get one FollowUp
+     * const followUp = await prisma.followUp.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends FollowUpFindFirstOrThrowArgs>(args?: SelectSubset<T, FollowUpFindFirstOrThrowArgs<ExtArgs>>): Prisma__FollowUpClient<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more FollowUps that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowUpFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all FollowUps
+     * const followUps = await prisma.followUp.findMany()
+     * 
+     * // Get first 10 FollowUps
+     * const followUps = await prisma.followUp.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const followUpWithIdOnly = await prisma.followUp.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends FollowUpFindManyArgs>(args?: SelectSubset<T, FollowUpFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a FollowUp.
+     * @param {FollowUpCreateArgs} args - Arguments to create a FollowUp.
+     * @example
+     * // Create one FollowUp
+     * const FollowUp = await prisma.followUp.create({
+     *   data: {
+     *     // ... data to create a FollowUp
+     *   }
+     * })
+     * 
+     */
+    create<T extends FollowUpCreateArgs>(args: SelectSubset<T, FollowUpCreateArgs<ExtArgs>>): Prisma__FollowUpClient<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many FollowUps.
+     * @param {FollowUpCreateManyArgs} args - Arguments to create many FollowUps.
+     * @example
+     * // Create many FollowUps
+     * const followUp = await prisma.followUp.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends FollowUpCreateManyArgs>(args?: SelectSubset<T, FollowUpCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many FollowUps and returns the data saved in the database.
+     * @param {FollowUpCreateManyAndReturnArgs} args - Arguments to create many FollowUps.
+     * @example
+     * // Create many FollowUps
+     * const followUp = await prisma.followUp.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many FollowUps and only return the `id`
+     * const followUpWithIdOnly = await prisma.followUp.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends FollowUpCreateManyAndReturnArgs>(args?: SelectSubset<T, FollowUpCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a FollowUp.
+     * @param {FollowUpDeleteArgs} args - Arguments to delete one FollowUp.
+     * @example
+     * // Delete one FollowUp
+     * const FollowUp = await prisma.followUp.delete({
+     *   where: {
+     *     // ... filter to delete one FollowUp
+     *   }
+     * })
+     * 
+     */
+    delete<T extends FollowUpDeleteArgs>(args: SelectSubset<T, FollowUpDeleteArgs<ExtArgs>>): Prisma__FollowUpClient<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one FollowUp.
+     * @param {FollowUpUpdateArgs} args - Arguments to update one FollowUp.
+     * @example
+     * // Update one FollowUp
+     * const followUp = await prisma.followUp.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends FollowUpUpdateArgs>(args: SelectSubset<T, FollowUpUpdateArgs<ExtArgs>>): Prisma__FollowUpClient<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more FollowUps.
+     * @param {FollowUpDeleteManyArgs} args - Arguments to filter FollowUps to delete.
+     * @example
+     * // Delete a few FollowUps
+     * const { count } = await prisma.followUp.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends FollowUpDeleteManyArgs>(args?: SelectSubset<T, FollowUpDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FollowUps.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowUpUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many FollowUps
+     * const followUp = await prisma.followUp.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends FollowUpUpdateManyArgs>(args: SelectSubset<T, FollowUpUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FollowUps and returns the data updated in the database.
+     * @param {FollowUpUpdateManyAndReturnArgs} args - Arguments to update many FollowUps.
+     * @example
+     * // Update many FollowUps
+     * const followUp = await prisma.followUp.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more FollowUps and only return the `id`
+     * const followUpWithIdOnly = await prisma.followUp.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends FollowUpUpdateManyAndReturnArgs>(args: SelectSubset<T, FollowUpUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one FollowUp.
+     * @param {FollowUpUpsertArgs} args - Arguments to update or create a FollowUp.
+     * @example
+     * // Update or create a FollowUp
+     * const followUp = await prisma.followUp.upsert({
+     *   create: {
+     *     // ... data to create a FollowUp
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the FollowUp we want to update
+     *   }
+     * })
+     */
+    upsert<T extends FollowUpUpsertArgs>(args: SelectSubset<T, FollowUpUpsertArgs<ExtArgs>>): Prisma__FollowUpClient<$Result.GetResult<Prisma.$FollowUpPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of FollowUps.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowUpCountArgs} args - Arguments to filter FollowUps to count.
+     * @example
+     * // Count the number of FollowUps
+     * const count = await prisma.followUp.count({
+     *   where: {
+     *     // ... the filter for the FollowUps we want to count
+     *   }
+     * })
+    **/
+    count<T extends FollowUpCountArgs>(
+      args?: Subset<T, FollowUpCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FollowUpCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a FollowUp.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowUpAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FollowUpAggregateArgs>(args: Subset<T, FollowUpAggregateArgs>): Prisma.PrismaPromise<GetFollowUpAggregateType<T>>
+
+    /**
+     * Group by FollowUp.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowUpGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends FollowUpGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: FollowUpGroupByArgs['orderBy'] }
+        : { orderBy?: FollowUpGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, FollowUpGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFollowUpGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the FollowUp model
+   */
+  readonly fields: FollowUpFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for FollowUp.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__FollowUpClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    conversation<T extends ConversationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ConversationDefaultArgs<ExtArgs>>): Prisma__ConversationClient<$Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the FollowUp model
+   */
+  interface FollowUpFieldRefs {
+    readonly id: FieldRef<"FollowUp", 'String'>
+    readonly conversationId: FieldRef<"FollowUp", 'String'>
+    readonly duration: FieldRef<"FollowUp", 'Int'>
+    readonly unit: FieldRef<"FollowUp", 'String'>
+    readonly scheduledFor: FieldRef<"FollowUp", 'DateTime'>
+    readonly details: FieldRef<"FollowUp", 'String'>
+    readonly status: FieldRef<"FollowUp", 'String'>
+    readonly createdAt: FieldRef<"FollowUp", 'DateTime'>
+    readonly updatedAt: FieldRef<"FollowUp", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * FollowUp findUnique
+   */
+  export type FollowUpFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * Filter, which FollowUp to fetch.
+     */
+    where: FollowUpWhereUniqueInput
+  }
+
+  /**
+   * FollowUp findUniqueOrThrow
+   */
+  export type FollowUpFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * Filter, which FollowUp to fetch.
+     */
+    where: FollowUpWhereUniqueInput
+  }
+
+  /**
+   * FollowUp findFirst
+   */
+  export type FollowUpFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * Filter, which FollowUp to fetch.
+     */
+    where?: FollowUpWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FollowUps to fetch.
+     */
+    orderBy?: FollowUpOrderByWithRelationInput | FollowUpOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FollowUps.
+     */
+    cursor?: FollowUpWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FollowUps from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FollowUps.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FollowUps.
+     */
+    distinct?: FollowUpScalarFieldEnum | FollowUpScalarFieldEnum[]
+  }
+
+  /**
+   * FollowUp findFirstOrThrow
+   */
+  export type FollowUpFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * Filter, which FollowUp to fetch.
+     */
+    where?: FollowUpWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FollowUps to fetch.
+     */
+    orderBy?: FollowUpOrderByWithRelationInput | FollowUpOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FollowUps.
+     */
+    cursor?: FollowUpWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FollowUps from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FollowUps.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FollowUps.
+     */
+    distinct?: FollowUpScalarFieldEnum | FollowUpScalarFieldEnum[]
+  }
+
+  /**
+   * FollowUp findMany
+   */
+  export type FollowUpFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * Filter, which FollowUps to fetch.
+     */
+    where?: FollowUpWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FollowUps to fetch.
+     */
+    orderBy?: FollowUpOrderByWithRelationInput | FollowUpOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing FollowUps.
+     */
+    cursor?: FollowUpWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FollowUps from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FollowUps.
+     */
+    skip?: number
+    distinct?: FollowUpScalarFieldEnum | FollowUpScalarFieldEnum[]
+  }
+
+  /**
+   * FollowUp create
+   */
+  export type FollowUpCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * The data needed to create a FollowUp.
+     */
+    data: XOR<FollowUpCreateInput, FollowUpUncheckedCreateInput>
+  }
+
+  /**
+   * FollowUp createMany
+   */
+  export type FollowUpCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many FollowUps.
+     */
+    data: FollowUpCreateManyInput | FollowUpCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FollowUp createManyAndReturn
+   */
+  export type FollowUpCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * The data used to create many FollowUps.
+     */
+    data: FollowUpCreateManyInput | FollowUpCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * FollowUp update
+   */
+  export type FollowUpUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * The data needed to update a FollowUp.
+     */
+    data: XOR<FollowUpUpdateInput, FollowUpUncheckedUpdateInput>
+    /**
+     * Choose, which FollowUp to update.
+     */
+    where: FollowUpWhereUniqueInput
+  }
+
+  /**
+   * FollowUp updateMany
+   */
+  export type FollowUpUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update FollowUps.
+     */
+    data: XOR<FollowUpUpdateManyMutationInput, FollowUpUncheckedUpdateManyInput>
+    /**
+     * Filter which FollowUps to update
+     */
+    where?: FollowUpWhereInput
+    /**
+     * Limit how many FollowUps to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FollowUp updateManyAndReturn
+   */
+  export type FollowUpUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * The data used to update FollowUps.
+     */
+    data: XOR<FollowUpUpdateManyMutationInput, FollowUpUncheckedUpdateManyInput>
+    /**
+     * Filter which FollowUps to update
+     */
+    where?: FollowUpWhereInput
+    /**
+     * Limit how many FollowUps to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * FollowUp upsert
+   */
+  export type FollowUpUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * The filter to search for the FollowUp to update in case it exists.
+     */
+    where: FollowUpWhereUniqueInput
+    /**
+     * In case the FollowUp found by the `where` argument doesn't exist, create a new FollowUp with this data.
+     */
+    create: XOR<FollowUpCreateInput, FollowUpUncheckedCreateInput>
+    /**
+     * In case the FollowUp was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<FollowUpUpdateInput, FollowUpUncheckedUpdateInput>
+  }
+
+  /**
+   * FollowUp delete
+   */
+  export type FollowUpDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+    /**
+     * Filter which FollowUp to delete.
+     */
+    where: FollowUpWhereUniqueInput
+  }
+
+  /**
+   * FollowUp deleteMany
+   */
+  export type FollowUpDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FollowUps to delete
+     */
+    where?: FollowUpWhereInput
+    /**
+     * Limit how many FollowUps to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * FollowUp without action
+   */
+  export type FollowUpDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FollowUp
+     */
+    select?: FollowUpSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FollowUp
+     */
+    omit?: FollowUpOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FollowUpInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model Prescription
+   */
+
+  export type AggregatePrescription = {
+    _count: PrescriptionCountAggregateOutputType | null
+    _min: PrescriptionMinAggregateOutputType | null
+    _max: PrescriptionMaxAggregateOutputType | null
+  }
+
+  export type PrescriptionMinAggregateOutputType = {
+    id: string | null
+    conversationId: string | null
+    medicationName: string | null
+    dosage: string | null
+    frequency: string | null
+    details: string | null
+    status: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type PrescriptionMaxAggregateOutputType = {
+    id: string | null
+    conversationId: string | null
+    medicationName: string | null
+    dosage: string | null
+    frequency: string | null
+    details: string | null
+    status: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type PrescriptionCountAggregateOutputType = {
+    id: number
+    conversationId: number
+    medicationName: number
+    dosage: number
+    frequency: number
+    details: number
+    status: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type PrescriptionMinAggregateInputType = {
+    id?: true
+    conversationId?: true
+    medicationName?: true
+    dosage?: true
+    frequency?: true
+    details?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type PrescriptionMaxAggregateInputType = {
+    id?: true
+    conversationId?: true
+    medicationName?: true
+    dosage?: true
+    frequency?: true
+    details?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type PrescriptionCountAggregateInputType = {
+    id?: true
+    conversationId?: true
+    medicationName?: true
+    dosage?: true
+    frequency?: true
+    details?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type PrescriptionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Prescription to aggregate.
+     */
+    where?: PrescriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Prescriptions to fetch.
+     */
+    orderBy?: PrescriptionOrderByWithRelationInput | PrescriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: PrescriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Prescriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Prescriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Prescriptions
+    **/
+    _count?: true | PrescriptionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: PrescriptionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: PrescriptionMaxAggregateInputType
+  }
+
+  export type GetPrescriptionAggregateType<T extends PrescriptionAggregateArgs> = {
+        [P in keyof T & keyof AggregatePrescription]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregatePrescription[P]>
+      : GetScalarType<T[P], AggregatePrescription[P]>
+  }
+
+
+
+
+  export type PrescriptionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: PrescriptionWhereInput
+    orderBy?: PrescriptionOrderByWithAggregationInput | PrescriptionOrderByWithAggregationInput[]
+    by: PrescriptionScalarFieldEnum[] | PrescriptionScalarFieldEnum
+    having?: PrescriptionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: PrescriptionCountAggregateInputType | true
+    _min?: PrescriptionMinAggregateInputType
+    _max?: PrescriptionMaxAggregateInputType
+  }
+
+  export type PrescriptionGroupByOutputType = {
+    id: string
+    conversationId: string
+    medicationName: string
+    dosage: string
+    frequency: string
+    details: string | null
+    status: string
+    createdAt: Date
+    updatedAt: Date
+    _count: PrescriptionCountAggregateOutputType | null
+    _min: PrescriptionMinAggregateOutputType | null
+    _max: PrescriptionMaxAggregateOutputType | null
+  }
+
+  type GetPrescriptionGroupByPayload<T extends PrescriptionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<PrescriptionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof PrescriptionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], PrescriptionGroupByOutputType[P]>
+            : GetScalarType<T[P], PrescriptionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type PrescriptionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    conversationId?: boolean
+    medicationName?: boolean
+    dosage?: boolean
+    frequency?: boolean
+    details?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["prescription"]>
+
+  export type PrescriptionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    conversationId?: boolean
+    medicationName?: boolean
+    dosage?: boolean
+    frequency?: boolean
+    details?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["prescription"]>
+
+  export type PrescriptionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    conversationId?: boolean
+    medicationName?: boolean
+    dosage?: boolean
+    frequency?: boolean
+    details?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["prescription"]>
+
+  export type PrescriptionSelectScalar = {
+    id?: boolean
+    conversationId?: boolean
+    medicationName?: boolean
+    dosage?: boolean
+    frequency?: boolean
+    details?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type PrescriptionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "conversationId" | "medicationName" | "dosage" | "frequency" | "details" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["prescription"]>
+  export type PrescriptionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+  export type PrescriptionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+  export type PrescriptionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    conversation?: boolean | ConversationDefaultArgs<ExtArgs>
+  }
+
+  export type $PrescriptionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Prescription"
+    objects: {
+      conversation: Prisma.$ConversationPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      conversationId: string
+      medicationName: string
+      dosage: string
+      frequency: string
+      details: string | null
+      status: string
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["prescription"]>
+    composites: {}
+  }
+
+  type PrescriptionGetPayload<S extends boolean | null | undefined | PrescriptionDefaultArgs> = $Result.GetResult<Prisma.$PrescriptionPayload, S>
+
+  type PrescriptionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<PrescriptionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: PrescriptionCountAggregateInputType | true
+    }
+
+  export interface PrescriptionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Prescription'], meta: { name: 'Prescription' } }
+    /**
+     * Find zero or one Prescription that matches the filter.
+     * @param {PrescriptionFindUniqueArgs} args - Arguments to find a Prescription
+     * @example
+     * // Get one Prescription
+     * const prescription = await prisma.prescription.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends PrescriptionFindUniqueArgs>(args: SelectSubset<T, PrescriptionFindUniqueArgs<ExtArgs>>): Prisma__PrescriptionClient<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Prescription that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {PrescriptionFindUniqueOrThrowArgs} args - Arguments to find a Prescription
+     * @example
+     * // Get one Prescription
+     * const prescription = await prisma.prescription.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends PrescriptionFindUniqueOrThrowArgs>(args: SelectSubset<T, PrescriptionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__PrescriptionClient<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Prescription that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PrescriptionFindFirstArgs} args - Arguments to find a Prescription
+     * @example
+     * // Get one Prescription
+     * const prescription = await prisma.prescription.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends PrescriptionFindFirstArgs>(args?: SelectSubset<T, PrescriptionFindFirstArgs<ExtArgs>>): Prisma__PrescriptionClient<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Prescription that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PrescriptionFindFirstOrThrowArgs} args - Arguments to find a Prescription
+     * @example
+     * // Get one Prescription
+     * const prescription = await prisma.prescription.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends PrescriptionFindFirstOrThrowArgs>(args?: SelectSubset<T, PrescriptionFindFirstOrThrowArgs<ExtArgs>>): Prisma__PrescriptionClient<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Prescriptions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PrescriptionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Prescriptions
+     * const prescriptions = await prisma.prescription.findMany()
+     * 
+     * // Get first 10 Prescriptions
+     * const prescriptions = await prisma.prescription.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const prescriptionWithIdOnly = await prisma.prescription.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends PrescriptionFindManyArgs>(args?: SelectSubset<T, PrescriptionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Prescription.
+     * @param {PrescriptionCreateArgs} args - Arguments to create a Prescription.
+     * @example
+     * // Create one Prescription
+     * const Prescription = await prisma.prescription.create({
+     *   data: {
+     *     // ... data to create a Prescription
+     *   }
+     * })
+     * 
+     */
+    create<T extends PrescriptionCreateArgs>(args: SelectSubset<T, PrescriptionCreateArgs<ExtArgs>>): Prisma__PrescriptionClient<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Prescriptions.
+     * @param {PrescriptionCreateManyArgs} args - Arguments to create many Prescriptions.
+     * @example
+     * // Create many Prescriptions
+     * const prescription = await prisma.prescription.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends PrescriptionCreateManyArgs>(args?: SelectSubset<T, PrescriptionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Prescriptions and returns the data saved in the database.
+     * @param {PrescriptionCreateManyAndReturnArgs} args - Arguments to create many Prescriptions.
+     * @example
+     * // Create many Prescriptions
+     * const prescription = await prisma.prescription.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Prescriptions and only return the `id`
+     * const prescriptionWithIdOnly = await prisma.prescription.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends PrescriptionCreateManyAndReturnArgs>(args?: SelectSubset<T, PrescriptionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Prescription.
+     * @param {PrescriptionDeleteArgs} args - Arguments to delete one Prescription.
+     * @example
+     * // Delete one Prescription
+     * const Prescription = await prisma.prescription.delete({
+     *   where: {
+     *     // ... filter to delete one Prescription
+     *   }
+     * })
+     * 
+     */
+    delete<T extends PrescriptionDeleteArgs>(args: SelectSubset<T, PrescriptionDeleteArgs<ExtArgs>>): Prisma__PrescriptionClient<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Prescription.
+     * @param {PrescriptionUpdateArgs} args - Arguments to update one Prescription.
+     * @example
+     * // Update one Prescription
+     * const prescription = await prisma.prescription.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends PrescriptionUpdateArgs>(args: SelectSubset<T, PrescriptionUpdateArgs<ExtArgs>>): Prisma__PrescriptionClient<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Prescriptions.
+     * @param {PrescriptionDeleteManyArgs} args - Arguments to filter Prescriptions to delete.
+     * @example
+     * // Delete a few Prescriptions
+     * const { count } = await prisma.prescription.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends PrescriptionDeleteManyArgs>(args?: SelectSubset<T, PrescriptionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Prescriptions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PrescriptionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Prescriptions
+     * const prescription = await prisma.prescription.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends PrescriptionUpdateManyArgs>(args: SelectSubset<T, PrescriptionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Prescriptions and returns the data updated in the database.
+     * @param {PrescriptionUpdateManyAndReturnArgs} args - Arguments to update many Prescriptions.
+     * @example
+     * // Update many Prescriptions
+     * const prescription = await prisma.prescription.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Prescriptions and only return the `id`
+     * const prescriptionWithIdOnly = await prisma.prescription.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends PrescriptionUpdateManyAndReturnArgs>(args: SelectSubset<T, PrescriptionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Prescription.
+     * @param {PrescriptionUpsertArgs} args - Arguments to update or create a Prescription.
+     * @example
+     * // Update or create a Prescription
+     * const prescription = await prisma.prescription.upsert({
+     *   create: {
+     *     // ... data to create a Prescription
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Prescription we want to update
+     *   }
+     * })
+     */
+    upsert<T extends PrescriptionUpsertArgs>(args: SelectSubset<T, PrescriptionUpsertArgs<ExtArgs>>): Prisma__PrescriptionClient<$Result.GetResult<Prisma.$PrescriptionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Prescriptions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PrescriptionCountArgs} args - Arguments to filter Prescriptions to count.
+     * @example
+     * // Count the number of Prescriptions
+     * const count = await prisma.prescription.count({
+     *   where: {
+     *     // ... the filter for the Prescriptions we want to count
+     *   }
+     * })
+    **/
+    count<T extends PrescriptionCountArgs>(
+      args?: Subset<T, PrescriptionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], PrescriptionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Prescription.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PrescriptionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends PrescriptionAggregateArgs>(args: Subset<T, PrescriptionAggregateArgs>): Prisma.PrismaPromise<GetPrescriptionAggregateType<T>>
+
+    /**
+     * Group by Prescription.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PrescriptionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends PrescriptionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: PrescriptionGroupByArgs['orderBy'] }
+        : { orderBy?: PrescriptionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, PrescriptionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetPrescriptionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Prescription model
+   */
+  readonly fields: PrescriptionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Prescription.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__PrescriptionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    conversation<T extends ConversationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ConversationDefaultArgs<ExtArgs>>): Prisma__ConversationClient<$Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Prescription model
+   */
+  interface PrescriptionFieldRefs {
+    readonly id: FieldRef<"Prescription", 'String'>
+    readonly conversationId: FieldRef<"Prescription", 'String'>
+    readonly medicationName: FieldRef<"Prescription", 'String'>
+    readonly dosage: FieldRef<"Prescription", 'String'>
+    readonly frequency: FieldRef<"Prescription", 'String'>
+    readonly details: FieldRef<"Prescription", 'String'>
+    readonly status: FieldRef<"Prescription", 'String'>
+    readonly createdAt: FieldRef<"Prescription", 'DateTime'>
+    readonly updatedAt: FieldRef<"Prescription", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Prescription findUnique
+   */
+  export type PrescriptionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which Prescription to fetch.
+     */
+    where: PrescriptionWhereUniqueInput
+  }
+
+  /**
+   * Prescription findUniqueOrThrow
+   */
+  export type PrescriptionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which Prescription to fetch.
+     */
+    where: PrescriptionWhereUniqueInput
+  }
+
+  /**
+   * Prescription findFirst
+   */
+  export type PrescriptionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which Prescription to fetch.
+     */
+    where?: PrescriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Prescriptions to fetch.
+     */
+    orderBy?: PrescriptionOrderByWithRelationInput | PrescriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Prescriptions.
+     */
+    cursor?: PrescriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Prescriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Prescriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Prescriptions.
+     */
+    distinct?: PrescriptionScalarFieldEnum | PrescriptionScalarFieldEnum[]
+  }
+
+  /**
+   * Prescription findFirstOrThrow
+   */
+  export type PrescriptionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which Prescription to fetch.
+     */
+    where?: PrescriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Prescriptions to fetch.
+     */
+    orderBy?: PrescriptionOrderByWithRelationInput | PrescriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Prescriptions.
+     */
+    cursor?: PrescriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Prescriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Prescriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Prescriptions.
+     */
+    distinct?: PrescriptionScalarFieldEnum | PrescriptionScalarFieldEnum[]
+  }
+
+  /**
+   * Prescription findMany
+   */
+  export type PrescriptionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which Prescriptions to fetch.
+     */
+    where?: PrescriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Prescriptions to fetch.
+     */
+    orderBy?: PrescriptionOrderByWithRelationInput | PrescriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Prescriptions.
+     */
+    cursor?: PrescriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Prescriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Prescriptions.
+     */
+    skip?: number
+    distinct?: PrescriptionScalarFieldEnum | PrescriptionScalarFieldEnum[]
+  }
+
+  /**
+   * Prescription create
+   */
+  export type PrescriptionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a Prescription.
+     */
+    data: XOR<PrescriptionCreateInput, PrescriptionUncheckedCreateInput>
+  }
+
+  /**
+   * Prescription createMany
+   */
+  export type PrescriptionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Prescriptions.
+     */
+    data: PrescriptionCreateManyInput | PrescriptionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Prescription createManyAndReturn
+   */
+  export type PrescriptionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * The data used to create many Prescriptions.
+     */
+    data: PrescriptionCreateManyInput | PrescriptionCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Prescription update
+   */
+  export type PrescriptionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a Prescription.
+     */
+    data: XOR<PrescriptionUpdateInput, PrescriptionUncheckedUpdateInput>
+    /**
+     * Choose, which Prescription to update.
+     */
+    where: PrescriptionWhereUniqueInput
+  }
+
+  /**
+   * Prescription updateMany
+   */
+  export type PrescriptionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Prescriptions.
+     */
+    data: XOR<PrescriptionUpdateManyMutationInput, PrescriptionUncheckedUpdateManyInput>
+    /**
+     * Filter which Prescriptions to update
+     */
+    where?: PrescriptionWhereInput
+    /**
+     * Limit how many Prescriptions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Prescription updateManyAndReturn
+   */
+  export type PrescriptionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * The data used to update Prescriptions.
+     */
+    data: XOR<PrescriptionUpdateManyMutationInput, PrescriptionUncheckedUpdateManyInput>
+    /**
+     * Filter which Prescriptions to update
+     */
+    where?: PrescriptionWhereInput
+    /**
+     * Limit how many Prescriptions to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Prescription upsert
+   */
+  export type PrescriptionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the Prescription to update in case it exists.
+     */
+    where: PrescriptionWhereUniqueInput
+    /**
+     * In case the Prescription found by the `where` argument doesn't exist, create a new Prescription with this data.
+     */
+    create: XOR<PrescriptionCreateInput, PrescriptionUncheckedCreateInput>
+    /**
+     * In case the Prescription was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<PrescriptionUpdateInput, PrescriptionUncheckedUpdateInput>
+  }
+
+  /**
+   * Prescription delete
+   */
+  export type PrescriptionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
+    /**
+     * Filter which Prescription to delete.
+     */
+    where: PrescriptionWhereUniqueInput
+  }
+
+  /**
+   * Prescription deleteMany
+   */
+  export type PrescriptionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Prescriptions to delete
+     */
+    where?: PrescriptionWhereInput
+    /**
+     * Limit how many Prescriptions to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Prescription without action
+   */
+  export type PrescriptionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Prescription
+     */
+    select?: PrescriptionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Prescription
+     */
+    omit?: PrescriptionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PrescriptionInclude<ExtArgs> | null
   }
 
 
@@ -9402,17 +11903,46 @@ export namespace Prisma {
   export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
 
 
-  export const ActionScalarFieldEnum: {
+  export const NoteScalarFieldEnum: {
     id: 'id',
     conversationId: 'conversationId',
-    type: 'type',
+    content: 'content',
     status: 'status',
-    metadata: 'metadata',
-    detectedAt: 'detectedAt',
-    executedAt: 'executedAt'
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
   };
 
-  export type ActionScalarFieldEnum = (typeof ActionScalarFieldEnum)[keyof typeof ActionScalarFieldEnum]
+  export type NoteScalarFieldEnum = (typeof NoteScalarFieldEnum)[keyof typeof NoteScalarFieldEnum]
+
+
+  export const FollowUpScalarFieldEnum: {
+    id: 'id',
+    conversationId: 'conversationId',
+    duration: 'duration',
+    unit: 'unit',
+    scheduledFor: 'scheduledFor',
+    details: 'details',
+    status: 'status',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type FollowUpScalarFieldEnum = (typeof FollowUpScalarFieldEnum)[keyof typeof FollowUpScalarFieldEnum]
+
+
+  export const PrescriptionScalarFieldEnum: {
+    id: 'id',
+    conversationId: 'conversationId',
+    medicationName: 'medicationName',
+    dosage: 'dosage',
+    frequency: 'frequency',
+    details: 'details',
+    status: 'status',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type PrescriptionScalarFieldEnum = (typeof PrescriptionScalarFieldEnum)[keyof typeof PrescriptionScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -9421,14 +11951,6 @@ export namespace Prisma {
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
-
-
-  export const NullableJsonNullValueInput: {
-    DbNull: typeof DbNull,
-    JsonNull: typeof JsonNull
-  };
-
-  export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
   export const QueryMode: {
@@ -9445,15 +11967,6 @@ export namespace Prisma {
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
-
-
-  export const JsonNullValueFilter: {
-    DbNull: typeof DbNull,
-    JsonNull: typeof JsonNull,
-    AnyNull: typeof AnyNull
-  };
-
-  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   /**
@@ -9497,20 +12010,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'Json'
-   */
-  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-    
-
-
-  /**
-   * Reference to a field of type 'QueryMode'
-   */
-  export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
-    
-
-
-  /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -9521,6 +12020,20 @@ export namespace Prisma {
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Float'
+   */
+  export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+  /**
+   * Reference to a field of type 'Float[]'
+   */
+  export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
   /**
    * Deep Input Types
@@ -9668,7 +12181,9 @@ export namespace Prisma {
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     patient?: XOR<PatientScalarRelationFilter, PatientWhereInput>
     messages?: MessageListRelationFilter
-    actions?: ActionListRelationFilter
+    notes?: NoteListRelationFilter
+    followUps?: FollowUpListRelationFilter
+    prescriptions?: PrescriptionListRelationFilter
     summary?: XOR<SummaryNullableScalarRelationFilter, SummaryWhereInput> | null
     medicalHistory?: XOR<MedicalHistoryNullableScalarRelationFilter, MedicalHistoryWhereInput> | null
   }
@@ -9686,7 +12201,9 @@ export namespace Prisma {
     user?: UserOrderByWithRelationInput
     patient?: PatientOrderByWithRelationInput
     messages?: MessageOrderByRelationAggregateInput
-    actions?: ActionOrderByRelationAggregateInput
+    notes?: NoteOrderByRelationAggregateInput
+    followUps?: FollowUpOrderByRelationAggregateInput
+    prescriptions?: PrescriptionOrderByRelationAggregateInput
     summary?: SummaryOrderByWithRelationInput
     medicalHistory?: MedicalHistoryOrderByWithRelationInput
   }
@@ -9707,7 +12224,9 @@ export namespace Prisma {
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     patient?: XOR<PatientScalarRelationFilter, PatientWhereInput>
     messages?: MessageListRelationFilter
-    actions?: ActionListRelationFilter
+    notes?: NoteListRelationFilter
+    followUps?: FollowUpListRelationFilter
+    prescriptions?: PrescriptionListRelationFilter
     summary?: XOR<SummaryNullableScalarRelationFilter, SummaryWhereInput> | null
     medicalHistory?: XOR<MedicalHistoryNullableScalarRelationFilter, MedicalHistoryWhereInput> | null
   }, "id">
@@ -9933,69 +12452,216 @@ export namespace Prisma {
     originalMessageId?: StringNullableWithAggregatesFilter<"Message"> | string | null
   }
 
-  export type ActionWhereInput = {
-    AND?: ActionWhereInput | ActionWhereInput[]
-    OR?: ActionWhereInput[]
-    NOT?: ActionWhereInput | ActionWhereInput[]
-    id?: StringFilter<"Action"> | string
-    conversationId?: StringFilter<"Action"> | string
-    type?: StringFilter<"Action"> | string
-    status?: StringFilter<"Action"> | string
-    metadata?: JsonNullableFilter<"Action">
-    detectedAt?: DateTimeFilter<"Action"> | Date | string
-    executedAt?: DateTimeNullableFilter<"Action"> | Date | string | null
+  export type NoteWhereInput = {
+    AND?: NoteWhereInput | NoteWhereInput[]
+    OR?: NoteWhereInput[]
+    NOT?: NoteWhereInput | NoteWhereInput[]
+    id?: StringFilter<"Note"> | string
+    conversationId?: StringFilter<"Note"> | string
+    content?: StringFilter<"Note"> | string
+    status?: StringFilter<"Note"> | string
+    createdAt?: DateTimeFilter<"Note"> | Date | string
+    updatedAt?: DateTimeFilter<"Note"> | Date | string
     conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
   }
 
-  export type ActionOrderByWithRelationInput = {
+  export type NoteOrderByWithRelationInput = {
     id?: SortOrder
     conversationId?: SortOrder
-    type?: SortOrder
+    content?: SortOrder
     status?: SortOrder
-    metadata?: SortOrderInput | SortOrder
-    detectedAt?: SortOrder
-    executedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
     conversation?: ConversationOrderByWithRelationInput
   }
 
-  export type ActionWhereUniqueInput = Prisma.AtLeast<{
+  export type NoteWhereUniqueInput = Prisma.AtLeast<{
     id?: string
-    AND?: ActionWhereInput | ActionWhereInput[]
-    OR?: ActionWhereInput[]
-    NOT?: ActionWhereInput | ActionWhereInput[]
-    conversationId?: StringFilter<"Action"> | string
-    type?: StringFilter<"Action"> | string
-    status?: StringFilter<"Action"> | string
-    metadata?: JsonNullableFilter<"Action">
-    detectedAt?: DateTimeFilter<"Action"> | Date | string
-    executedAt?: DateTimeNullableFilter<"Action"> | Date | string | null
+    AND?: NoteWhereInput | NoteWhereInput[]
+    OR?: NoteWhereInput[]
+    NOT?: NoteWhereInput | NoteWhereInput[]
+    conversationId?: StringFilter<"Note"> | string
+    content?: StringFilter<"Note"> | string
+    status?: StringFilter<"Note"> | string
+    createdAt?: DateTimeFilter<"Note"> | Date | string
+    updatedAt?: DateTimeFilter<"Note"> | Date | string
     conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
   }, "id">
 
-  export type ActionOrderByWithAggregationInput = {
+  export type NoteOrderByWithAggregationInput = {
     id?: SortOrder
     conversationId?: SortOrder
-    type?: SortOrder
+    content?: SortOrder
     status?: SortOrder
-    metadata?: SortOrderInput | SortOrder
-    detectedAt?: SortOrder
-    executedAt?: SortOrderInput | SortOrder
-    _count?: ActionCountOrderByAggregateInput
-    _max?: ActionMaxOrderByAggregateInput
-    _min?: ActionMinOrderByAggregateInput
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: NoteCountOrderByAggregateInput
+    _max?: NoteMaxOrderByAggregateInput
+    _min?: NoteMinOrderByAggregateInput
   }
 
-  export type ActionScalarWhereWithAggregatesInput = {
-    AND?: ActionScalarWhereWithAggregatesInput | ActionScalarWhereWithAggregatesInput[]
-    OR?: ActionScalarWhereWithAggregatesInput[]
-    NOT?: ActionScalarWhereWithAggregatesInput | ActionScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"Action"> | string
-    conversationId?: StringWithAggregatesFilter<"Action"> | string
-    type?: StringWithAggregatesFilter<"Action"> | string
-    status?: StringWithAggregatesFilter<"Action"> | string
-    metadata?: JsonNullableWithAggregatesFilter<"Action">
-    detectedAt?: DateTimeWithAggregatesFilter<"Action"> | Date | string
-    executedAt?: DateTimeNullableWithAggregatesFilter<"Action"> | Date | string | null
+  export type NoteScalarWhereWithAggregatesInput = {
+    AND?: NoteScalarWhereWithAggregatesInput | NoteScalarWhereWithAggregatesInput[]
+    OR?: NoteScalarWhereWithAggregatesInput[]
+    NOT?: NoteScalarWhereWithAggregatesInput | NoteScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Note"> | string
+    conversationId?: StringWithAggregatesFilter<"Note"> | string
+    content?: StringWithAggregatesFilter<"Note"> | string
+    status?: StringWithAggregatesFilter<"Note"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"Note"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"Note"> | Date | string
+  }
+
+  export type FollowUpWhereInput = {
+    AND?: FollowUpWhereInput | FollowUpWhereInput[]
+    OR?: FollowUpWhereInput[]
+    NOT?: FollowUpWhereInput | FollowUpWhereInput[]
+    id?: StringFilter<"FollowUp"> | string
+    conversationId?: StringFilter<"FollowUp"> | string
+    duration?: IntFilter<"FollowUp"> | number
+    unit?: StringFilter<"FollowUp"> | string
+    scheduledFor?: DateTimeNullableFilter<"FollowUp"> | Date | string | null
+    details?: StringNullableFilter<"FollowUp"> | string | null
+    status?: StringFilter<"FollowUp"> | string
+    createdAt?: DateTimeFilter<"FollowUp"> | Date | string
+    updatedAt?: DateTimeFilter<"FollowUp"> | Date | string
+    conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+  }
+
+  export type FollowUpOrderByWithRelationInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    duration?: SortOrder
+    unit?: SortOrder
+    scheduledFor?: SortOrderInput | SortOrder
+    details?: SortOrderInput | SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    conversation?: ConversationOrderByWithRelationInput
+  }
+
+  export type FollowUpWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: FollowUpWhereInput | FollowUpWhereInput[]
+    OR?: FollowUpWhereInput[]
+    NOT?: FollowUpWhereInput | FollowUpWhereInput[]
+    conversationId?: StringFilter<"FollowUp"> | string
+    duration?: IntFilter<"FollowUp"> | number
+    unit?: StringFilter<"FollowUp"> | string
+    scheduledFor?: DateTimeNullableFilter<"FollowUp"> | Date | string | null
+    details?: StringNullableFilter<"FollowUp"> | string | null
+    status?: StringFilter<"FollowUp"> | string
+    createdAt?: DateTimeFilter<"FollowUp"> | Date | string
+    updatedAt?: DateTimeFilter<"FollowUp"> | Date | string
+    conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+  }, "id">
+
+  export type FollowUpOrderByWithAggregationInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    duration?: SortOrder
+    unit?: SortOrder
+    scheduledFor?: SortOrderInput | SortOrder
+    details?: SortOrderInput | SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: FollowUpCountOrderByAggregateInput
+    _avg?: FollowUpAvgOrderByAggregateInput
+    _max?: FollowUpMaxOrderByAggregateInput
+    _min?: FollowUpMinOrderByAggregateInput
+    _sum?: FollowUpSumOrderByAggregateInput
+  }
+
+  export type FollowUpScalarWhereWithAggregatesInput = {
+    AND?: FollowUpScalarWhereWithAggregatesInput | FollowUpScalarWhereWithAggregatesInput[]
+    OR?: FollowUpScalarWhereWithAggregatesInput[]
+    NOT?: FollowUpScalarWhereWithAggregatesInput | FollowUpScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"FollowUp"> | string
+    conversationId?: StringWithAggregatesFilter<"FollowUp"> | string
+    duration?: IntWithAggregatesFilter<"FollowUp"> | number
+    unit?: StringWithAggregatesFilter<"FollowUp"> | string
+    scheduledFor?: DateTimeNullableWithAggregatesFilter<"FollowUp"> | Date | string | null
+    details?: StringNullableWithAggregatesFilter<"FollowUp"> | string | null
+    status?: StringWithAggregatesFilter<"FollowUp"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"FollowUp"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"FollowUp"> | Date | string
+  }
+
+  export type PrescriptionWhereInput = {
+    AND?: PrescriptionWhereInput | PrescriptionWhereInput[]
+    OR?: PrescriptionWhereInput[]
+    NOT?: PrescriptionWhereInput | PrescriptionWhereInput[]
+    id?: StringFilter<"Prescription"> | string
+    conversationId?: StringFilter<"Prescription"> | string
+    medicationName?: StringFilter<"Prescription"> | string
+    dosage?: StringFilter<"Prescription"> | string
+    frequency?: StringFilter<"Prescription"> | string
+    details?: StringNullableFilter<"Prescription"> | string | null
+    status?: StringFilter<"Prescription"> | string
+    createdAt?: DateTimeFilter<"Prescription"> | Date | string
+    updatedAt?: DateTimeFilter<"Prescription"> | Date | string
+    conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+  }
+
+  export type PrescriptionOrderByWithRelationInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    medicationName?: SortOrder
+    dosage?: SortOrder
+    frequency?: SortOrder
+    details?: SortOrderInput | SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    conversation?: ConversationOrderByWithRelationInput
+  }
+
+  export type PrescriptionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: PrescriptionWhereInput | PrescriptionWhereInput[]
+    OR?: PrescriptionWhereInput[]
+    NOT?: PrescriptionWhereInput | PrescriptionWhereInput[]
+    conversationId?: StringFilter<"Prescription"> | string
+    medicationName?: StringFilter<"Prescription"> | string
+    dosage?: StringFilter<"Prescription"> | string
+    frequency?: StringFilter<"Prescription"> | string
+    details?: StringNullableFilter<"Prescription"> | string | null
+    status?: StringFilter<"Prescription"> | string
+    createdAt?: DateTimeFilter<"Prescription"> | Date | string
+    updatedAt?: DateTimeFilter<"Prescription"> | Date | string
+    conversation?: XOR<ConversationScalarRelationFilter, ConversationWhereInput>
+  }, "id">
+
+  export type PrescriptionOrderByWithAggregationInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    medicationName?: SortOrder
+    dosage?: SortOrder
+    frequency?: SortOrder
+    details?: SortOrderInput | SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: PrescriptionCountOrderByAggregateInput
+    _max?: PrescriptionMaxOrderByAggregateInput
+    _min?: PrescriptionMinOrderByAggregateInput
+  }
+
+  export type PrescriptionScalarWhereWithAggregatesInput = {
+    AND?: PrescriptionScalarWhereWithAggregatesInput | PrescriptionScalarWhereWithAggregatesInput[]
+    OR?: PrescriptionScalarWhereWithAggregatesInput[]
+    NOT?: PrescriptionScalarWhereWithAggregatesInput | PrescriptionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Prescription"> | string
+    conversationId?: StringWithAggregatesFilter<"Prescription"> | string
+    medicationName?: StringWithAggregatesFilter<"Prescription"> | string
+    dosage?: StringWithAggregatesFilter<"Prescription"> | string
+    frequency?: StringWithAggregatesFilter<"Prescription"> | string
+    details?: StringNullableWithAggregatesFilter<"Prescription"> | string | null
+    status?: StringWithAggregatesFilter<"Prescription"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"Prescription"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"Prescription"> | Date | string
   }
 
   export type UserCreateInput = {
@@ -10150,7 +12816,9 @@ export namespace Prisma {
     user: UserCreateNestedOneWithoutConversationsInput
     patient: PatientCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
-    actions?: ActionCreateNestedManyWithoutConversationInput
+    notes?: NoteCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionCreateNestedManyWithoutConversationInput
     summary?: SummaryCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
@@ -10166,7 +12834,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
-    actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    notes?: NoteUncheckedCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpUncheckedCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionUncheckedCreateNestedManyWithoutConversationInput
     summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
@@ -10182,7 +12852,9 @@ export namespace Prisma {
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
-    actions?: ActionUpdateManyWithoutConversationNestedInput
+    notes?: NoteUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUpdateManyWithoutConversationNestedInput
     summary?: SummaryUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
@@ -10198,7 +12870,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
-    actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    notes?: NoteUncheckedUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUncheckedUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUncheckedUpdateManyWithoutConversationNestedInput
     summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
@@ -10433,73 +13107,232 @@ export namespace Prisma {
     originalMessageId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
-  export type ActionCreateInput = {
+  export type NoteCreateInput = {
     id?: string
-    type: string
+    content: string
     status?: string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: Date | string
-    executedAt?: Date | string | null
-    conversation: ConversationCreateNestedOneWithoutActionsInput
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    conversation: ConversationCreateNestedOneWithoutNotesInput
   }
 
-  export type ActionUncheckedCreateInput = {
-    id?: string
-    conversationId: string
-    type: string
-    status?: string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: Date | string
-    executedAt?: Date | string | null
-  }
-
-  export type ActionUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    type?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    executedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    conversation?: ConversationUpdateOneRequiredWithoutActionsNestedInput
-  }
-
-  export type ActionUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    conversationId?: StringFieldUpdateOperationsInput | string
-    type?: StringFieldUpdateOperationsInput | string
-    status?: StringFieldUpdateOperationsInput | string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    executedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  }
-
-  export type ActionCreateManyInput = {
+  export type NoteUncheckedCreateInput = {
     id?: string
     conversationId: string
-    type: string
+    content: string
     status?: string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: Date | string
-    executedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
-  export type ActionUpdateManyMutationInput = {
+  export type NoteUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    type?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    executedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    conversation?: ConversationUpdateOneRequiredWithoutNotesNestedInput
   }
 
-  export type ActionUncheckedUpdateManyInput = {
+  export type NoteUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     conversationId?: StringFieldUpdateOperationsInput | string
-    type?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    executedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NoteCreateManyInput = {
+    id?: string
+    conversationId: string
+    content: string
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type NoteUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NoteUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUpCreateInput = {
+    id?: string
+    duration: number
+    unit: string
+    scheduledFor?: Date | string | null
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    conversation: ConversationCreateNestedOneWithoutFollowUpsInput
+  }
+
+  export type FollowUpUncheckedCreateInput = {
+    id?: string
+    conversationId: string
+    duration: number
+    unit: string
+    scheduledFor?: Date | string | null
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type FollowUpUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    duration?: IntFieldUpdateOperationsInput | number
+    unit?: StringFieldUpdateOperationsInput | string
+    scheduledFor?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    conversation?: ConversationUpdateOneRequiredWithoutFollowUpsNestedInput
+  }
+
+  export type FollowUpUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    duration?: IntFieldUpdateOperationsInput | number
+    unit?: StringFieldUpdateOperationsInput | string
+    scheduledFor?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUpCreateManyInput = {
+    id?: string
+    conversationId: string
+    duration: number
+    unit: string
+    scheduledFor?: Date | string | null
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type FollowUpUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    duration?: IntFieldUpdateOperationsInput | number
+    unit?: StringFieldUpdateOperationsInput | string
+    scheduledFor?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUpUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    duration?: IntFieldUpdateOperationsInput | number
+    unit?: StringFieldUpdateOperationsInput | string
+    scheduledFor?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PrescriptionCreateInput = {
+    id?: string
+    medicationName: string
+    dosage: string
+    frequency: string
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    conversation: ConversationCreateNestedOneWithoutPrescriptionsInput
+  }
+
+  export type PrescriptionUncheckedCreateInput = {
+    id?: string
+    conversationId: string
+    medicationName: string
+    dosage: string
+    frequency: string
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PrescriptionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    medicationName?: StringFieldUpdateOperationsInput | string
+    dosage?: StringFieldUpdateOperationsInput | string
+    frequency?: StringFieldUpdateOperationsInput | string
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    conversation?: ConversationUpdateOneRequiredWithoutPrescriptionsNestedInput
+  }
+
+  export type PrescriptionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    medicationName?: StringFieldUpdateOperationsInput | string
+    dosage?: StringFieldUpdateOperationsInput | string
+    frequency?: StringFieldUpdateOperationsInput | string
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PrescriptionCreateManyInput = {
+    id?: string
+    conversationId: string
+    medicationName: string
+    dosage: string
+    frequency: string
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PrescriptionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    medicationName?: StringFieldUpdateOperationsInput | string
+    dosage?: StringFieldUpdateOperationsInput | string
+    frequency?: StringFieldUpdateOperationsInput | string
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PrescriptionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    conversationId?: StringFieldUpdateOperationsInput | string
+    medicationName?: StringFieldUpdateOperationsInput | string
+    dosage?: StringFieldUpdateOperationsInput | string
+    frequency?: StringFieldUpdateOperationsInput | string
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -10706,10 +13539,22 @@ export namespace Prisma {
     none?: MessageWhereInput
   }
 
-  export type ActionListRelationFilter = {
-    every?: ActionWhereInput
-    some?: ActionWhereInput
-    none?: ActionWhereInput
+  export type NoteListRelationFilter = {
+    every?: NoteWhereInput
+    some?: NoteWhereInput
+    none?: NoteWhereInput
+  }
+
+  export type FollowUpListRelationFilter = {
+    every?: FollowUpWhereInput
+    some?: FollowUpWhereInput
+    none?: FollowUpWhereInput
+  }
+
+  export type PrescriptionListRelationFilter = {
+    every?: PrescriptionWhereInput
+    some?: PrescriptionWhereInput
+    none?: PrescriptionWhereInput
   }
 
   export type SummaryNullableScalarRelationFilter = {
@@ -10726,7 +13571,15 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
-  export type ActionOrderByRelationAggregateInput = {
+  export type NoteOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type FollowUpOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type PrescriptionOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -10872,82 +13725,139 @@ export namespace Prisma {
     _min?: NestedBoolFilter<$PrismaModel>
     _max?: NestedBoolFilter<$PrismaModel>
   }
-  export type JsonNullableFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonNullableFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
 
-  export type JsonNullableFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
-
-  export type ActionCountOrderByAggregateInput = {
+  export type NoteCountOrderByAggregateInput = {
     id?: SortOrder
     conversationId?: SortOrder
-    type?: SortOrder
+    content?: SortOrder
     status?: SortOrder
-    metadata?: SortOrder
-    detectedAt?: SortOrder
-    executedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
-  export type ActionMaxOrderByAggregateInput = {
+  export type NoteMaxOrderByAggregateInput = {
     id?: SortOrder
     conversationId?: SortOrder
-    type?: SortOrder
+    content?: SortOrder
     status?: SortOrder
-    detectedAt?: SortOrder
-    executedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
-  export type ActionMinOrderByAggregateInput = {
+  export type NoteMinOrderByAggregateInput = {
     id?: SortOrder
     conversationId?: SortOrder
-    type?: SortOrder
+    content?: SortOrder
     status?: SortOrder
-    detectedAt?: SortOrder
-    executedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
-  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
 
-  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedJsonNullableFilter<$PrismaModel>
-    _max?: NestedJsonNullableFilter<$PrismaModel>
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
+  export type FollowUpCountOrderByAggregateInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    duration?: SortOrder
+    unit?: SortOrder
+    scheduledFor?: SortOrder
+    details?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type FollowUpAvgOrderByAggregateInput = {
+    duration?: SortOrder
+  }
+
+  export type FollowUpMaxOrderByAggregateInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    duration?: SortOrder
+    unit?: SortOrder
+    scheduledFor?: SortOrder
+    details?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type FollowUpMinOrderByAggregateInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    duration?: SortOrder
+    unit?: SortOrder
+    scheduledFor?: SortOrder
+    details?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type FollowUpSumOrderByAggregateInput = {
+    duration?: SortOrder
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type PrescriptionCountOrderByAggregateInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    medicationName?: SortOrder
+    dosage?: SortOrder
+    frequency?: SortOrder
+    details?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type PrescriptionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    medicationName?: SortOrder
+    dosage?: SortOrder
+    frequency?: SortOrder
+    details?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type PrescriptionMinOrderByAggregateInput = {
+    id?: SortOrder
+    conversationId?: SortOrder
+    medicationName?: SortOrder
+    dosage?: SortOrder
+    frequency?: SortOrder
+    details?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type ConversationCreateNestedManyWithoutUserInput = {
@@ -11069,11 +13979,25 @@ export namespace Prisma {
     connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
   }
 
-  export type ActionCreateNestedManyWithoutConversationInput = {
-    create?: XOR<ActionCreateWithoutConversationInput, ActionUncheckedCreateWithoutConversationInput> | ActionCreateWithoutConversationInput[] | ActionUncheckedCreateWithoutConversationInput[]
-    connectOrCreate?: ActionCreateOrConnectWithoutConversationInput | ActionCreateOrConnectWithoutConversationInput[]
-    createMany?: ActionCreateManyConversationInputEnvelope
-    connect?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
+  export type NoteCreateNestedManyWithoutConversationInput = {
+    create?: XOR<NoteCreateWithoutConversationInput, NoteUncheckedCreateWithoutConversationInput> | NoteCreateWithoutConversationInput[] | NoteUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: NoteCreateOrConnectWithoutConversationInput | NoteCreateOrConnectWithoutConversationInput[]
+    createMany?: NoteCreateManyConversationInputEnvelope
+    connect?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+  }
+
+  export type FollowUpCreateNestedManyWithoutConversationInput = {
+    create?: XOR<FollowUpCreateWithoutConversationInput, FollowUpUncheckedCreateWithoutConversationInput> | FollowUpCreateWithoutConversationInput[] | FollowUpUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: FollowUpCreateOrConnectWithoutConversationInput | FollowUpCreateOrConnectWithoutConversationInput[]
+    createMany?: FollowUpCreateManyConversationInputEnvelope
+    connect?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+  }
+
+  export type PrescriptionCreateNestedManyWithoutConversationInput = {
+    create?: XOR<PrescriptionCreateWithoutConversationInput, PrescriptionUncheckedCreateWithoutConversationInput> | PrescriptionCreateWithoutConversationInput[] | PrescriptionUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: PrescriptionCreateOrConnectWithoutConversationInput | PrescriptionCreateOrConnectWithoutConversationInput[]
+    createMany?: PrescriptionCreateManyConversationInputEnvelope
+    connect?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
   }
 
   export type SummaryCreateNestedOneWithoutConversationInput = {
@@ -11095,11 +14019,25 @@ export namespace Prisma {
     connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
   }
 
-  export type ActionUncheckedCreateNestedManyWithoutConversationInput = {
-    create?: XOR<ActionCreateWithoutConversationInput, ActionUncheckedCreateWithoutConversationInput> | ActionCreateWithoutConversationInput[] | ActionUncheckedCreateWithoutConversationInput[]
-    connectOrCreate?: ActionCreateOrConnectWithoutConversationInput | ActionCreateOrConnectWithoutConversationInput[]
-    createMany?: ActionCreateManyConversationInputEnvelope
-    connect?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
+  export type NoteUncheckedCreateNestedManyWithoutConversationInput = {
+    create?: XOR<NoteCreateWithoutConversationInput, NoteUncheckedCreateWithoutConversationInput> | NoteCreateWithoutConversationInput[] | NoteUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: NoteCreateOrConnectWithoutConversationInput | NoteCreateOrConnectWithoutConversationInput[]
+    createMany?: NoteCreateManyConversationInputEnvelope
+    connect?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+  }
+
+  export type FollowUpUncheckedCreateNestedManyWithoutConversationInput = {
+    create?: XOR<FollowUpCreateWithoutConversationInput, FollowUpUncheckedCreateWithoutConversationInput> | FollowUpCreateWithoutConversationInput[] | FollowUpUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: FollowUpCreateOrConnectWithoutConversationInput | FollowUpCreateOrConnectWithoutConversationInput[]
+    createMany?: FollowUpCreateManyConversationInputEnvelope
+    connect?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+  }
+
+  export type PrescriptionUncheckedCreateNestedManyWithoutConversationInput = {
+    create?: XOR<PrescriptionCreateWithoutConversationInput, PrescriptionUncheckedCreateWithoutConversationInput> | PrescriptionCreateWithoutConversationInput[] | PrescriptionUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: PrescriptionCreateOrConnectWithoutConversationInput | PrescriptionCreateOrConnectWithoutConversationInput[]
+    createMany?: PrescriptionCreateManyConversationInputEnvelope
+    connect?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
   }
 
   export type SummaryUncheckedCreateNestedOneWithoutConversationInput = {
@@ -11144,18 +14082,46 @@ export namespace Prisma {
     deleteMany?: MessageScalarWhereInput | MessageScalarWhereInput[]
   }
 
-  export type ActionUpdateManyWithoutConversationNestedInput = {
-    create?: XOR<ActionCreateWithoutConversationInput, ActionUncheckedCreateWithoutConversationInput> | ActionCreateWithoutConversationInput[] | ActionUncheckedCreateWithoutConversationInput[]
-    connectOrCreate?: ActionCreateOrConnectWithoutConversationInput | ActionCreateOrConnectWithoutConversationInput[]
-    upsert?: ActionUpsertWithWhereUniqueWithoutConversationInput | ActionUpsertWithWhereUniqueWithoutConversationInput[]
-    createMany?: ActionCreateManyConversationInputEnvelope
-    set?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
-    disconnect?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
-    delete?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
-    connect?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
-    update?: ActionUpdateWithWhereUniqueWithoutConversationInput | ActionUpdateWithWhereUniqueWithoutConversationInput[]
-    updateMany?: ActionUpdateManyWithWhereWithoutConversationInput | ActionUpdateManyWithWhereWithoutConversationInput[]
-    deleteMany?: ActionScalarWhereInput | ActionScalarWhereInput[]
+  export type NoteUpdateManyWithoutConversationNestedInput = {
+    create?: XOR<NoteCreateWithoutConversationInput, NoteUncheckedCreateWithoutConversationInput> | NoteCreateWithoutConversationInput[] | NoteUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: NoteCreateOrConnectWithoutConversationInput | NoteCreateOrConnectWithoutConversationInput[]
+    upsert?: NoteUpsertWithWhereUniqueWithoutConversationInput | NoteUpsertWithWhereUniqueWithoutConversationInput[]
+    createMany?: NoteCreateManyConversationInputEnvelope
+    set?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+    disconnect?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+    delete?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+    connect?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+    update?: NoteUpdateWithWhereUniqueWithoutConversationInput | NoteUpdateWithWhereUniqueWithoutConversationInput[]
+    updateMany?: NoteUpdateManyWithWhereWithoutConversationInput | NoteUpdateManyWithWhereWithoutConversationInput[]
+    deleteMany?: NoteScalarWhereInput | NoteScalarWhereInput[]
+  }
+
+  export type FollowUpUpdateManyWithoutConversationNestedInput = {
+    create?: XOR<FollowUpCreateWithoutConversationInput, FollowUpUncheckedCreateWithoutConversationInput> | FollowUpCreateWithoutConversationInput[] | FollowUpUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: FollowUpCreateOrConnectWithoutConversationInput | FollowUpCreateOrConnectWithoutConversationInput[]
+    upsert?: FollowUpUpsertWithWhereUniqueWithoutConversationInput | FollowUpUpsertWithWhereUniqueWithoutConversationInput[]
+    createMany?: FollowUpCreateManyConversationInputEnvelope
+    set?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+    disconnect?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+    delete?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+    connect?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+    update?: FollowUpUpdateWithWhereUniqueWithoutConversationInput | FollowUpUpdateWithWhereUniqueWithoutConversationInput[]
+    updateMany?: FollowUpUpdateManyWithWhereWithoutConversationInput | FollowUpUpdateManyWithWhereWithoutConversationInput[]
+    deleteMany?: FollowUpScalarWhereInput | FollowUpScalarWhereInput[]
+  }
+
+  export type PrescriptionUpdateManyWithoutConversationNestedInput = {
+    create?: XOR<PrescriptionCreateWithoutConversationInput, PrescriptionUncheckedCreateWithoutConversationInput> | PrescriptionCreateWithoutConversationInput[] | PrescriptionUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: PrescriptionCreateOrConnectWithoutConversationInput | PrescriptionCreateOrConnectWithoutConversationInput[]
+    upsert?: PrescriptionUpsertWithWhereUniqueWithoutConversationInput | PrescriptionUpsertWithWhereUniqueWithoutConversationInput[]
+    createMany?: PrescriptionCreateManyConversationInputEnvelope
+    set?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
+    disconnect?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
+    delete?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
+    connect?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
+    update?: PrescriptionUpdateWithWhereUniqueWithoutConversationInput | PrescriptionUpdateWithWhereUniqueWithoutConversationInput[]
+    updateMany?: PrescriptionUpdateManyWithWhereWithoutConversationInput | PrescriptionUpdateManyWithWhereWithoutConversationInput[]
+    deleteMany?: PrescriptionScalarWhereInput | PrescriptionScalarWhereInput[]
   }
 
   export type SummaryUpdateOneWithoutConversationNestedInput = {
@@ -11192,18 +14158,46 @@ export namespace Prisma {
     deleteMany?: MessageScalarWhereInput | MessageScalarWhereInput[]
   }
 
-  export type ActionUncheckedUpdateManyWithoutConversationNestedInput = {
-    create?: XOR<ActionCreateWithoutConversationInput, ActionUncheckedCreateWithoutConversationInput> | ActionCreateWithoutConversationInput[] | ActionUncheckedCreateWithoutConversationInput[]
-    connectOrCreate?: ActionCreateOrConnectWithoutConversationInput | ActionCreateOrConnectWithoutConversationInput[]
-    upsert?: ActionUpsertWithWhereUniqueWithoutConversationInput | ActionUpsertWithWhereUniqueWithoutConversationInput[]
-    createMany?: ActionCreateManyConversationInputEnvelope
-    set?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
-    disconnect?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
-    delete?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
-    connect?: ActionWhereUniqueInput | ActionWhereUniqueInput[]
-    update?: ActionUpdateWithWhereUniqueWithoutConversationInput | ActionUpdateWithWhereUniqueWithoutConversationInput[]
-    updateMany?: ActionUpdateManyWithWhereWithoutConversationInput | ActionUpdateManyWithWhereWithoutConversationInput[]
-    deleteMany?: ActionScalarWhereInput | ActionScalarWhereInput[]
+  export type NoteUncheckedUpdateManyWithoutConversationNestedInput = {
+    create?: XOR<NoteCreateWithoutConversationInput, NoteUncheckedCreateWithoutConversationInput> | NoteCreateWithoutConversationInput[] | NoteUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: NoteCreateOrConnectWithoutConversationInput | NoteCreateOrConnectWithoutConversationInput[]
+    upsert?: NoteUpsertWithWhereUniqueWithoutConversationInput | NoteUpsertWithWhereUniqueWithoutConversationInput[]
+    createMany?: NoteCreateManyConversationInputEnvelope
+    set?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+    disconnect?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+    delete?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+    connect?: NoteWhereUniqueInput | NoteWhereUniqueInput[]
+    update?: NoteUpdateWithWhereUniqueWithoutConversationInput | NoteUpdateWithWhereUniqueWithoutConversationInput[]
+    updateMany?: NoteUpdateManyWithWhereWithoutConversationInput | NoteUpdateManyWithWhereWithoutConversationInput[]
+    deleteMany?: NoteScalarWhereInput | NoteScalarWhereInput[]
+  }
+
+  export type FollowUpUncheckedUpdateManyWithoutConversationNestedInput = {
+    create?: XOR<FollowUpCreateWithoutConversationInput, FollowUpUncheckedCreateWithoutConversationInput> | FollowUpCreateWithoutConversationInput[] | FollowUpUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: FollowUpCreateOrConnectWithoutConversationInput | FollowUpCreateOrConnectWithoutConversationInput[]
+    upsert?: FollowUpUpsertWithWhereUniqueWithoutConversationInput | FollowUpUpsertWithWhereUniqueWithoutConversationInput[]
+    createMany?: FollowUpCreateManyConversationInputEnvelope
+    set?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+    disconnect?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+    delete?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+    connect?: FollowUpWhereUniqueInput | FollowUpWhereUniqueInput[]
+    update?: FollowUpUpdateWithWhereUniqueWithoutConversationInput | FollowUpUpdateWithWhereUniqueWithoutConversationInput[]
+    updateMany?: FollowUpUpdateManyWithWhereWithoutConversationInput | FollowUpUpdateManyWithWhereWithoutConversationInput[]
+    deleteMany?: FollowUpScalarWhereInput | FollowUpScalarWhereInput[]
+  }
+
+  export type PrescriptionUncheckedUpdateManyWithoutConversationNestedInput = {
+    create?: XOR<PrescriptionCreateWithoutConversationInput, PrescriptionUncheckedCreateWithoutConversationInput> | PrescriptionCreateWithoutConversationInput[] | PrescriptionUncheckedCreateWithoutConversationInput[]
+    connectOrCreate?: PrescriptionCreateOrConnectWithoutConversationInput | PrescriptionCreateOrConnectWithoutConversationInput[]
+    upsert?: PrescriptionUpsertWithWhereUniqueWithoutConversationInput | PrescriptionUpsertWithWhereUniqueWithoutConversationInput[]
+    createMany?: PrescriptionCreateManyConversationInputEnvelope
+    set?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
+    disconnect?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
+    delete?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
+    connect?: PrescriptionWhereUniqueInput | PrescriptionWhereUniqueInput[]
+    update?: PrescriptionUpdateWithWhereUniqueWithoutConversationInput | PrescriptionUpdateWithWhereUniqueWithoutConversationInput[]
+    updateMany?: PrescriptionUpdateManyWithWhereWithoutConversationInput | PrescriptionUpdateManyWithWhereWithoutConversationInput[]
+    deleteMany?: PrescriptionScalarWhereInput | PrescriptionScalarWhereInput[]
   }
 
   export type SummaryUncheckedUpdateOneWithoutConversationNestedInput = {
@@ -11330,18 +14324,54 @@ export namespace Prisma {
     deleteMany?: MessageScalarWhereInput | MessageScalarWhereInput[]
   }
 
-  export type ConversationCreateNestedOneWithoutActionsInput = {
-    create?: XOR<ConversationCreateWithoutActionsInput, ConversationUncheckedCreateWithoutActionsInput>
-    connectOrCreate?: ConversationCreateOrConnectWithoutActionsInput
+  export type ConversationCreateNestedOneWithoutNotesInput = {
+    create?: XOR<ConversationCreateWithoutNotesInput, ConversationUncheckedCreateWithoutNotesInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutNotesInput
     connect?: ConversationWhereUniqueInput
   }
 
-  export type ConversationUpdateOneRequiredWithoutActionsNestedInput = {
-    create?: XOR<ConversationCreateWithoutActionsInput, ConversationUncheckedCreateWithoutActionsInput>
-    connectOrCreate?: ConversationCreateOrConnectWithoutActionsInput
-    upsert?: ConversationUpsertWithoutActionsInput
+  export type ConversationUpdateOneRequiredWithoutNotesNestedInput = {
+    create?: XOR<ConversationCreateWithoutNotesInput, ConversationUncheckedCreateWithoutNotesInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutNotesInput
+    upsert?: ConversationUpsertWithoutNotesInput
     connect?: ConversationWhereUniqueInput
-    update?: XOR<XOR<ConversationUpdateToOneWithWhereWithoutActionsInput, ConversationUpdateWithoutActionsInput>, ConversationUncheckedUpdateWithoutActionsInput>
+    update?: XOR<XOR<ConversationUpdateToOneWithWhereWithoutNotesInput, ConversationUpdateWithoutNotesInput>, ConversationUncheckedUpdateWithoutNotesInput>
+  }
+
+  export type ConversationCreateNestedOneWithoutFollowUpsInput = {
+    create?: XOR<ConversationCreateWithoutFollowUpsInput, ConversationUncheckedCreateWithoutFollowUpsInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutFollowUpsInput
+    connect?: ConversationWhereUniqueInput
+  }
+
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type ConversationUpdateOneRequiredWithoutFollowUpsNestedInput = {
+    create?: XOR<ConversationCreateWithoutFollowUpsInput, ConversationUncheckedCreateWithoutFollowUpsInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutFollowUpsInput
+    upsert?: ConversationUpsertWithoutFollowUpsInput
+    connect?: ConversationWhereUniqueInput
+    update?: XOR<XOR<ConversationUpdateToOneWithWhereWithoutFollowUpsInput, ConversationUpdateWithoutFollowUpsInput>, ConversationUncheckedUpdateWithoutFollowUpsInput>
+  }
+
+  export type ConversationCreateNestedOneWithoutPrescriptionsInput = {
+    create?: XOR<ConversationCreateWithoutPrescriptionsInput, ConversationUncheckedCreateWithoutPrescriptionsInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutPrescriptionsInput
+    connect?: ConversationWhereUniqueInput
+  }
+
+  export type ConversationUpdateOneRequiredWithoutPrescriptionsNestedInput = {
+    create?: XOR<ConversationCreateWithoutPrescriptionsInput, ConversationUncheckedCreateWithoutPrescriptionsInput>
+    connectOrCreate?: ConversationCreateOrConnectWithoutPrescriptionsInput
+    upsert?: ConversationUpsertWithoutPrescriptionsInput
+    connect?: ConversationWhereUniqueInput
+    update?: XOR<XOR<ConversationUpdateToOneWithWhereWithoutPrescriptionsInput, ConversationUpdateWithoutPrescriptionsInput>, ConversationUncheckedUpdateWithoutPrescriptionsInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -11490,28 +14520,32 @@ export namespace Prisma {
     _min?: NestedBoolFilter<$PrismaModel>
     _max?: NestedBoolFilter<$PrismaModel>
   }
-  export type NestedJsonNullableFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
-        Required<NestedJsonNullableFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>
 
-  export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type NestedFloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
   }
 
   export type ConversationCreateWithoutUserInput = {
@@ -11524,7 +14558,9 @@ export namespace Prisma {
     updatedAt?: Date | string
     patient: PatientCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
-    actions?: ActionCreateNestedManyWithoutConversationInput
+    notes?: NoteCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionCreateNestedManyWithoutConversationInput
     summary?: SummaryCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
@@ -11539,7 +14575,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
-    actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    notes?: NoteUncheckedCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpUncheckedCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionUncheckedCreateNestedManyWithoutConversationInput
     summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
@@ -11595,7 +14633,9 @@ export namespace Prisma {
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
-    actions?: ActionCreateNestedManyWithoutConversationInput
+    notes?: NoteCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionCreateNestedManyWithoutConversationInput
     summary?: SummaryCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
@@ -11610,7 +14650,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
-    actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    notes?: NoteUncheckedCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpUncheckedCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionUncheckedCreateNestedManyWithoutConversationInput
     summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
@@ -11723,31 +14765,93 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
-  export type ActionCreateWithoutConversationInput = {
+  export type NoteCreateWithoutConversationInput = {
     id?: string
-    type: string
+    content: string
     status?: string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: Date | string
-    executedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
-  export type ActionUncheckedCreateWithoutConversationInput = {
+  export type NoteUncheckedCreateWithoutConversationInput = {
     id?: string
-    type: string
+    content: string
     status?: string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: Date | string
-    executedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
-  export type ActionCreateOrConnectWithoutConversationInput = {
-    where: ActionWhereUniqueInput
-    create: XOR<ActionCreateWithoutConversationInput, ActionUncheckedCreateWithoutConversationInput>
+  export type NoteCreateOrConnectWithoutConversationInput = {
+    where: NoteWhereUniqueInput
+    create: XOR<NoteCreateWithoutConversationInput, NoteUncheckedCreateWithoutConversationInput>
   }
 
-  export type ActionCreateManyConversationInputEnvelope = {
-    data: ActionCreateManyConversationInput | ActionCreateManyConversationInput[]
+  export type NoteCreateManyConversationInputEnvelope = {
+    data: NoteCreateManyConversationInput | NoteCreateManyConversationInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type FollowUpCreateWithoutConversationInput = {
+    id?: string
+    duration: number
+    unit: string
+    scheduledFor?: Date | string | null
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type FollowUpUncheckedCreateWithoutConversationInput = {
+    id?: string
+    duration: number
+    unit: string
+    scheduledFor?: Date | string | null
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type FollowUpCreateOrConnectWithoutConversationInput = {
+    where: FollowUpWhereUniqueInput
+    create: XOR<FollowUpCreateWithoutConversationInput, FollowUpUncheckedCreateWithoutConversationInput>
+  }
+
+  export type FollowUpCreateManyConversationInputEnvelope = {
+    data: FollowUpCreateManyConversationInput | FollowUpCreateManyConversationInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type PrescriptionCreateWithoutConversationInput = {
+    id?: string
+    medicationName: string
+    dosage: string
+    frequency: string
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PrescriptionUncheckedCreateWithoutConversationInput = {
+    id?: string
+    medicationName: string
+    dosage: string
+    frequency: string
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PrescriptionCreateOrConnectWithoutConversationInput = {
+    where: PrescriptionWhereUniqueInput
+    create: XOR<PrescriptionCreateWithoutConversationInput, PrescriptionUncheckedCreateWithoutConversationInput>
+  }
+
+  export type PrescriptionCreateManyConversationInputEnvelope = {
+    data: PrescriptionCreateManyConversationInput | PrescriptionCreateManyConversationInput[]
     skipDuplicates?: boolean
   }
 
@@ -11880,33 +14984,94 @@ export namespace Prisma {
     originalMessageId?: StringNullableFilter<"Message"> | string | null
   }
 
-  export type ActionUpsertWithWhereUniqueWithoutConversationInput = {
-    where: ActionWhereUniqueInput
-    update: XOR<ActionUpdateWithoutConversationInput, ActionUncheckedUpdateWithoutConversationInput>
-    create: XOR<ActionCreateWithoutConversationInput, ActionUncheckedCreateWithoutConversationInput>
+  export type NoteUpsertWithWhereUniqueWithoutConversationInput = {
+    where: NoteWhereUniqueInput
+    update: XOR<NoteUpdateWithoutConversationInput, NoteUncheckedUpdateWithoutConversationInput>
+    create: XOR<NoteCreateWithoutConversationInput, NoteUncheckedCreateWithoutConversationInput>
   }
 
-  export type ActionUpdateWithWhereUniqueWithoutConversationInput = {
-    where: ActionWhereUniqueInput
-    data: XOR<ActionUpdateWithoutConversationInput, ActionUncheckedUpdateWithoutConversationInput>
+  export type NoteUpdateWithWhereUniqueWithoutConversationInput = {
+    where: NoteWhereUniqueInput
+    data: XOR<NoteUpdateWithoutConversationInput, NoteUncheckedUpdateWithoutConversationInput>
   }
 
-  export type ActionUpdateManyWithWhereWithoutConversationInput = {
-    where: ActionScalarWhereInput
-    data: XOR<ActionUpdateManyMutationInput, ActionUncheckedUpdateManyWithoutConversationInput>
+  export type NoteUpdateManyWithWhereWithoutConversationInput = {
+    where: NoteScalarWhereInput
+    data: XOR<NoteUpdateManyMutationInput, NoteUncheckedUpdateManyWithoutConversationInput>
   }
 
-  export type ActionScalarWhereInput = {
-    AND?: ActionScalarWhereInput | ActionScalarWhereInput[]
-    OR?: ActionScalarWhereInput[]
-    NOT?: ActionScalarWhereInput | ActionScalarWhereInput[]
-    id?: StringFilter<"Action"> | string
-    conversationId?: StringFilter<"Action"> | string
-    type?: StringFilter<"Action"> | string
-    status?: StringFilter<"Action"> | string
-    metadata?: JsonNullableFilter<"Action">
-    detectedAt?: DateTimeFilter<"Action"> | Date | string
-    executedAt?: DateTimeNullableFilter<"Action"> | Date | string | null
+  export type NoteScalarWhereInput = {
+    AND?: NoteScalarWhereInput | NoteScalarWhereInput[]
+    OR?: NoteScalarWhereInput[]
+    NOT?: NoteScalarWhereInput | NoteScalarWhereInput[]
+    id?: StringFilter<"Note"> | string
+    conversationId?: StringFilter<"Note"> | string
+    content?: StringFilter<"Note"> | string
+    status?: StringFilter<"Note"> | string
+    createdAt?: DateTimeFilter<"Note"> | Date | string
+    updatedAt?: DateTimeFilter<"Note"> | Date | string
+  }
+
+  export type FollowUpUpsertWithWhereUniqueWithoutConversationInput = {
+    where: FollowUpWhereUniqueInput
+    update: XOR<FollowUpUpdateWithoutConversationInput, FollowUpUncheckedUpdateWithoutConversationInput>
+    create: XOR<FollowUpCreateWithoutConversationInput, FollowUpUncheckedCreateWithoutConversationInput>
+  }
+
+  export type FollowUpUpdateWithWhereUniqueWithoutConversationInput = {
+    where: FollowUpWhereUniqueInput
+    data: XOR<FollowUpUpdateWithoutConversationInput, FollowUpUncheckedUpdateWithoutConversationInput>
+  }
+
+  export type FollowUpUpdateManyWithWhereWithoutConversationInput = {
+    where: FollowUpScalarWhereInput
+    data: XOR<FollowUpUpdateManyMutationInput, FollowUpUncheckedUpdateManyWithoutConversationInput>
+  }
+
+  export type FollowUpScalarWhereInput = {
+    AND?: FollowUpScalarWhereInput | FollowUpScalarWhereInput[]
+    OR?: FollowUpScalarWhereInput[]
+    NOT?: FollowUpScalarWhereInput | FollowUpScalarWhereInput[]
+    id?: StringFilter<"FollowUp"> | string
+    conversationId?: StringFilter<"FollowUp"> | string
+    duration?: IntFilter<"FollowUp"> | number
+    unit?: StringFilter<"FollowUp"> | string
+    scheduledFor?: DateTimeNullableFilter<"FollowUp"> | Date | string | null
+    details?: StringNullableFilter<"FollowUp"> | string | null
+    status?: StringFilter<"FollowUp"> | string
+    createdAt?: DateTimeFilter<"FollowUp"> | Date | string
+    updatedAt?: DateTimeFilter<"FollowUp"> | Date | string
+  }
+
+  export type PrescriptionUpsertWithWhereUniqueWithoutConversationInput = {
+    where: PrescriptionWhereUniqueInput
+    update: XOR<PrescriptionUpdateWithoutConversationInput, PrescriptionUncheckedUpdateWithoutConversationInput>
+    create: XOR<PrescriptionCreateWithoutConversationInput, PrescriptionUncheckedCreateWithoutConversationInput>
+  }
+
+  export type PrescriptionUpdateWithWhereUniqueWithoutConversationInput = {
+    where: PrescriptionWhereUniqueInput
+    data: XOR<PrescriptionUpdateWithoutConversationInput, PrescriptionUncheckedUpdateWithoutConversationInput>
+  }
+
+  export type PrescriptionUpdateManyWithWhereWithoutConversationInput = {
+    where: PrescriptionScalarWhereInput
+    data: XOR<PrescriptionUpdateManyMutationInput, PrescriptionUncheckedUpdateManyWithoutConversationInput>
+  }
+
+  export type PrescriptionScalarWhereInput = {
+    AND?: PrescriptionScalarWhereInput | PrescriptionScalarWhereInput[]
+    OR?: PrescriptionScalarWhereInput[]
+    NOT?: PrescriptionScalarWhereInput | PrescriptionScalarWhereInput[]
+    id?: StringFilter<"Prescription"> | string
+    conversationId?: StringFilter<"Prescription"> | string
+    medicationName?: StringFilter<"Prescription"> | string
+    dosage?: StringFilter<"Prescription"> | string
+    frequency?: StringFilter<"Prescription"> | string
+    details?: StringNullableFilter<"Prescription"> | string | null
+    status?: StringFilter<"Prescription"> | string
+    createdAt?: DateTimeFilter<"Prescription"> | Date | string
+    updatedAt?: DateTimeFilter<"Prescription"> | Date | string
   }
 
   export type SummaryUpsertWithoutConversationInput = {
@@ -11970,7 +15135,9 @@ export namespace Prisma {
     user: UserCreateNestedOneWithoutConversationsInput
     patient: PatientCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
-    actions?: ActionCreateNestedManyWithoutConversationInput
+    notes?: NoteCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionCreateNestedManyWithoutConversationInput
     summary?: SummaryCreateNestedOneWithoutConversationInput
   }
 
@@ -11985,7 +15152,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
-    actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    notes?: NoteUncheckedCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpUncheckedCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionUncheckedCreateNestedManyWithoutConversationInput
     summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
   }
 
@@ -12016,7 +15185,9 @@ export namespace Prisma {
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
-    actions?: ActionUpdateManyWithoutConversationNestedInput
+    notes?: NoteUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUpdateManyWithoutConversationNestedInput
     summary?: SummaryUpdateOneWithoutConversationNestedInput
   }
 
@@ -12031,7 +15202,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
-    actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    notes?: NoteUncheckedUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUncheckedUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUncheckedUpdateManyWithoutConversationNestedInput
     summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
   }
 
@@ -12046,7 +15219,9 @@ export namespace Prisma {
     user: UserCreateNestedOneWithoutConversationsInput
     patient: PatientCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
-    actions?: ActionCreateNestedManyWithoutConversationInput
+    notes?: NoteCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionCreateNestedManyWithoutConversationInput
     medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
 
@@ -12061,7 +15236,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
-    actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    notes?: NoteUncheckedCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpUncheckedCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionUncheckedCreateNestedManyWithoutConversationInput
     medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
 
@@ -12092,7 +15269,9 @@ export namespace Prisma {
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
-    actions?: ActionUpdateManyWithoutConversationNestedInput
+    notes?: NoteUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUpdateManyWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
 
@@ -12107,7 +15286,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
-    actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    notes?: NoteUncheckedUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUncheckedUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUncheckedUpdateManyWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
 
@@ -12121,7 +15302,9 @@ export namespace Prisma {
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutConversationsInput
     patient: PatientCreateNestedOneWithoutConversationsInput
-    actions?: ActionCreateNestedManyWithoutConversationInput
+    notes?: NoteCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionCreateNestedManyWithoutConversationInput
     summary?: SummaryCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
@@ -12136,7 +15319,9 @@ export namespace Prisma {
     patientLanguage?: string
     createdAt?: Date | string
     updatedAt?: Date | string
-    actions?: ActionUncheckedCreateNestedManyWithoutConversationInput
+    notes?: NoteUncheckedCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpUncheckedCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionUncheckedCreateNestedManyWithoutConversationInput
     summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
@@ -12230,7 +15415,9 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
-    actions?: ActionUpdateManyWithoutConversationNestedInput
+    notes?: NoteUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUpdateManyWithoutConversationNestedInput
     summary?: SummaryUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
@@ -12245,7 +15432,9 @@ export namespace Prisma {
     patientLanguage?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    notes?: NoteUncheckedUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUncheckedUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUncheckedUpdateManyWithoutConversationNestedInput
     summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
@@ -12301,7 +15490,7 @@ export namespace Prisma {
     data: XOR<MessageUpdateManyMutationInput, MessageUncheckedUpdateManyWithoutOriginalMessageInput>
   }
 
-  export type ConversationCreateWithoutActionsInput = {
+  export type ConversationCreateWithoutNotesInput = {
     id?: string
     startTime?: Date | string
     endTime?: Date | string | null
@@ -12312,11 +15501,13 @@ export namespace Prisma {
     user: UserCreateNestedOneWithoutConversationsInput
     patient: PatientCreateNestedOneWithoutConversationsInput
     messages?: MessageCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionCreateNestedManyWithoutConversationInput
     summary?: SummaryCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
   }
 
-  export type ConversationUncheckedCreateWithoutActionsInput = {
+  export type ConversationUncheckedCreateWithoutNotesInput = {
     id?: string
     userId: string
     patientId: string
@@ -12327,27 +15518,29 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpUncheckedCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionUncheckedCreateNestedManyWithoutConversationInput
     summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
     medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
   }
 
-  export type ConversationCreateOrConnectWithoutActionsInput = {
+  export type ConversationCreateOrConnectWithoutNotesInput = {
     where: ConversationWhereUniqueInput
-    create: XOR<ConversationCreateWithoutActionsInput, ConversationUncheckedCreateWithoutActionsInput>
+    create: XOR<ConversationCreateWithoutNotesInput, ConversationUncheckedCreateWithoutNotesInput>
   }
 
-  export type ConversationUpsertWithoutActionsInput = {
-    update: XOR<ConversationUpdateWithoutActionsInput, ConversationUncheckedUpdateWithoutActionsInput>
-    create: XOR<ConversationCreateWithoutActionsInput, ConversationUncheckedCreateWithoutActionsInput>
+  export type ConversationUpsertWithoutNotesInput = {
+    update: XOR<ConversationUpdateWithoutNotesInput, ConversationUncheckedUpdateWithoutNotesInput>
+    create: XOR<ConversationCreateWithoutNotesInput, ConversationUncheckedCreateWithoutNotesInput>
     where?: ConversationWhereInput
   }
 
-  export type ConversationUpdateToOneWithWhereWithoutActionsInput = {
+  export type ConversationUpdateToOneWithWhereWithoutNotesInput = {
     where?: ConversationWhereInput
-    data: XOR<ConversationUpdateWithoutActionsInput, ConversationUncheckedUpdateWithoutActionsInput>
+    data: XOR<ConversationUpdateWithoutNotesInput, ConversationUncheckedUpdateWithoutNotesInput>
   }
 
-  export type ConversationUpdateWithoutActionsInput = {
+  export type ConversationUpdateWithoutNotesInput = {
     id?: StringFieldUpdateOperationsInput | string
     startTime?: DateTimeFieldUpdateOperationsInput | Date | string
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -12358,11 +15551,13 @@ export namespace Prisma {
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUpdateManyWithoutConversationNestedInput
     summary?: SummaryUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
 
-  export type ConversationUncheckedUpdateWithoutActionsInput = {
+  export type ConversationUncheckedUpdateWithoutNotesInput = {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     patientId?: StringFieldUpdateOperationsInput | string
@@ -12373,6 +15568,176 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUncheckedUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUncheckedUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
+  }
+
+  export type ConversationCreateWithoutFollowUpsInput = {
+    id?: string
+    startTime?: Date | string
+    endTime?: Date | string | null
+    status: string
+    patientLanguage?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutConversationsInput
+    patient: PatientCreateNestedOneWithoutConversationsInput
+    messages?: MessageCreateNestedManyWithoutConversationInput
+    notes?: NoteCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionCreateNestedManyWithoutConversationInput
+    summary?: SummaryCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
+  }
+
+  export type ConversationUncheckedCreateWithoutFollowUpsInput = {
+    id?: string
+    userId: string
+    patientId: string
+    startTime?: Date | string
+    endTime?: Date | string | null
+    status: string
+    patientLanguage?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
+    notes?: NoteUncheckedCreateNestedManyWithoutConversationInput
+    prescriptions?: PrescriptionUncheckedCreateNestedManyWithoutConversationInput
+    summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
+  }
+
+  export type ConversationCreateOrConnectWithoutFollowUpsInput = {
+    where: ConversationWhereUniqueInput
+    create: XOR<ConversationCreateWithoutFollowUpsInput, ConversationUncheckedCreateWithoutFollowUpsInput>
+  }
+
+  export type ConversationUpsertWithoutFollowUpsInput = {
+    update: XOR<ConversationUpdateWithoutFollowUpsInput, ConversationUncheckedUpdateWithoutFollowUpsInput>
+    create: XOR<ConversationCreateWithoutFollowUpsInput, ConversationUncheckedCreateWithoutFollowUpsInput>
+    where?: ConversationWhereInput
+  }
+
+  export type ConversationUpdateToOneWithWhereWithoutFollowUpsInput = {
+    where?: ConversationWhereInput
+    data: XOR<ConversationUpdateWithoutFollowUpsInput, ConversationUncheckedUpdateWithoutFollowUpsInput>
+  }
+
+  export type ConversationUpdateWithoutFollowUpsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    startTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutConversationsNestedInput
+    patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
+    messages?: MessageUpdateManyWithoutConversationNestedInput
+    notes?: NoteUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
+  }
+
+  export type ConversationUncheckedUpdateWithoutFollowUpsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    patientId?: StringFieldUpdateOperationsInput | string
+    startTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
+    notes?: NoteUncheckedUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUncheckedUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
+  }
+
+  export type ConversationCreateWithoutPrescriptionsInput = {
+    id?: string
+    startTime?: Date | string
+    endTime?: Date | string | null
+    status: string
+    patientLanguage?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutConversationsInput
+    patient: PatientCreateNestedOneWithoutConversationsInput
+    messages?: MessageCreateNestedManyWithoutConversationInput
+    notes?: NoteCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpCreateNestedManyWithoutConversationInput
+    summary?: SummaryCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryCreateNestedOneWithoutConversationInput
+  }
+
+  export type ConversationUncheckedCreateWithoutPrescriptionsInput = {
+    id?: string
+    userId: string
+    patientId: string
+    startTime?: Date | string
+    endTime?: Date | string | null
+    status: string
+    patientLanguage?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
+    notes?: NoteUncheckedCreateNestedManyWithoutConversationInput
+    followUps?: FollowUpUncheckedCreateNestedManyWithoutConversationInput
+    summary?: SummaryUncheckedCreateNestedOneWithoutConversationInput
+    medicalHistory?: MedicalHistoryUncheckedCreateNestedOneWithoutConversationInput
+  }
+
+  export type ConversationCreateOrConnectWithoutPrescriptionsInput = {
+    where: ConversationWhereUniqueInput
+    create: XOR<ConversationCreateWithoutPrescriptionsInput, ConversationUncheckedCreateWithoutPrescriptionsInput>
+  }
+
+  export type ConversationUpsertWithoutPrescriptionsInput = {
+    update: XOR<ConversationUpdateWithoutPrescriptionsInput, ConversationUncheckedUpdateWithoutPrescriptionsInput>
+    create: XOR<ConversationCreateWithoutPrescriptionsInput, ConversationUncheckedCreateWithoutPrescriptionsInput>
+    where?: ConversationWhereInput
+  }
+
+  export type ConversationUpdateToOneWithWhereWithoutPrescriptionsInput = {
+    where?: ConversationWhereInput
+    data: XOR<ConversationUpdateWithoutPrescriptionsInput, ConversationUncheckedUpdateWithoutPrescriptionsInput>
+  }
+
+  export type ConversationUpdateWithoutPrescriptionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    startTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutConversationsNestedInput
+    patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
+    messages?: MessageUpdateManyWithoutConversationNestedInput
+    notes?: NoteUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUpdateManyWithoutConversationNestedInput
+    summary?: SummaryUpdateOneWithoutConversationNestedInput
+    medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
+  }
+
+  export type ConversationUncheckedUpdateWithoutPrescriptionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    patientId?: StringFieldUpdateOperationsInput | string
+    startTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    patientLanguage?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
+    notes?: NoteUncheckedUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUncheckedUpdateManyWithoutConversationNestedInput
     summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
@@ -12398,7 +15763,9 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     patient?: PatientUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
-    actions?: ActionUpdateManyWithoutConversationNestedInput
+    notes?: NoteUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUpdateManyWithoutConversationNestedInput
     summary?: SummaryUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
@@ -12413,7 +15780,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
-    actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    notes?: NoteUncheckedUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUncheckedUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUncheckedUpdateManyWithoutConversationNestedInput
     summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
@@ -12450,7 +15819,9 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
     messages?: MessageUpdateManyWithoutConversationNestedInput
-    actions?: ActionUpdateManyWithoutConversationNestedInput
+    notes?: NoteUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUpdateManyWithoutConversationNestedInput
     summary?: SummaryUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUpdateOneWithoutConversationNestedInput
   }
@@ -12465,7 +15836,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
-    actions?: ActionUncheckedUpdateManyWithoutConversationNestedInput
+    notes?: NoteUncheckedUpdateManyWithoutConversationNestedInput
+    followUps?: FollowUpUncheckedUpdateManyWithoutConversationNestedInput
+    prescriptions?: PrescriptionUncheckedUpdateManyWithoutConversationNestedInput
     summary?: SummaryUncheckedUpdateOneWithoutConversationNestedInput
     medicalHistory?: MedicalHistoryUncheckedUpdateOneWithoutConversationNestedInput
   }
@@ -12492,13 +15865,34 @@ export namespace Prisma {
     originalMessageId?: string | null
   }
 
-  export type ActionCreateManyConversationInput = {
+  export type NoteCreateManyConversationInput = {
     id?: string
-    type: string
+    content: string
     status?: string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: Date | string
-    executedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type FollowUpCreateManyConversationInput = {
+    id?: string
+    duration: number
+    unit: string
+    scheduledFor?: Date | string | null
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PrescriptionCreateManyConversationInput = {
+    id?: string
+    medicationName: string
+    dosage: string
+    frequency: string
+    details?: string | null
+    status?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type MessageUpdateWithoutConversationInput = {
@@ -12536,31 +15930,94 @@ export namespace Prisma {
     originalMessageId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
-  export type ActionUpdateWithoutConversationInput = {
+  export type NoteUpdateWithoutConversationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    type?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    executedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type ActionUncheckedUpdateWithoutConversationInput = {
+  export type NoteUncheckedUpdateWithoutConversationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    type?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    executedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type ActionUncheckedUpdateManyWithoutConversationInput = {
+  export type NoteUncheckedUpdateManyWithoutConversationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    type?: StringFieldUpdateOperationsInput | string
+    content?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
-    metadata?: NullableJsonNullValueInput | InputJsonValue
-    detectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    executedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUpUpdateWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    duration?: IntFieldUpdateOperationsInput | number
+    unit?: StringFieldUpdateOperationsInput | string
+    scheduledFor?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUpUncheckedUpdateWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    duration?: IntFieldUpdateOperationsInput | number
+    unit?: StringFieldUpdateOperationsInput | string
+    scheduledFor?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FollowUpUncheckedUpdateManyWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    duration?: IntFieldUpdateOperationsInput | number
+    unit?: StringFieldUpdateOperationsInput | string
+    scheduledFor?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PrescriptionUpdateWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    medicationName?: StringFieldUpdateOperationsInput | string
+    dosage?: StringFieldUpdateOperationsInput | string
+    frequency?: StringFieldUpdateOperationsInput | string
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PrescriptionUncheckedUpdateWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    medicationName?: StringFieldUpdateOperationsInput | string
+    dosage?: StringFieldUpdateOperationsInput | string
+    frequency?: StringFieldUpdateOperationsInput | string
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PrescriptionUncheckedUpdateManyWithoutConversationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    medicationName?: StringFieldUpdateOperationsInput | string
+    dosage?: StringFieldUpdateOperationsInput | string
+    frequency?: StringFieldUpdateOperationsInput | string
+    details?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type MessageCreateManyOriginalMessageInput = {
