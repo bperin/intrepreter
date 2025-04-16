@@ -291,70 +291,103 @@ export class TranscriptionService {
                }
                else if (message.type === 'conversation.item.input_audio_transcription.completed') {
                    const completedText = message.transcript || '';
-                   // const sender = 'user'; // REMOVED: We will determine sender based on language
-
+                   if (!completedText) {
+                       console.log(`[TranscriptionService] Skipping empty completed transcription.`);
+                       return; // Exit if no text
+                   }
+                   
                    console.log(`[TranscriptionService] Received completed transcription for ${targetConversationId}. Text: "${completedText.substring(0,50)}..."`);
+                   const detectedLanguage = await this.detectLanguage(completedText);
+                   const sender = (detectedLanguage === 'en' || detectedLanguage === 'unknown') ? 'patient' : 'user';
+                   let textForTTS: string = completedText; // Initialize TTS text with the original transcription
+                   let savedOriginalMessageId: string | undefined = undefined;
 
-                   if (completedText) { 
-                       const detectedLanguage = await this.detectLanguage(completedText); 
+                   // 1. Save the original message regardless of who spoke
+                   try {
+                       console.log(`[TranscriptionService] Saving original message. Sender: ${sender}, Lang: ${detectedLanguage}...`);
+                       const savedMessage = await this.messageService.createMessage(
+                           targetConversationId,
+                           completedText,
+                           sender, 
+                           detectedLanguage
+                       );
+                       savedOriginalMessageId = savedMessage.id; // Store ID for potential linking
+                       console.log(`[TranscriptionService] Original message saved (ID: ${savedOriginalMessageId}). Broadcasting.`);
+                       this.broadcastToClients(targetConversationId, { type: 'new_message', payload: savedMessage });
+                   } catch (saveError) {
+                       console.error(`[TranscriptionService] Failed to save original message:`, saveError);
+                       this.broadcastToClients(targetConversationId, { type: 'error', message: 'Failed to save transcription.' });
+                       return; // Stop processing if original save fails
+                   }
+
+                   // 2. Handle translation and determine text for TTS based on sender
+                   if (sender === 'user') { // Clinician spoke Non-English
+                       console.log(`[TTS Logic] Clinician spoke ${detectedLanguage}. Translating to English for Patient TTS & saving.`);
+                       const translatedToEnText = await this.translateText(completedText, detectedLanguage, 'en');
                        
-                       // --- Restore Original Sender Logic --- 
-                       // If language is NOT English, assume patient 
-                       // If language IS English (or unknown), assume user/clinician
-                       const sender = (detectedLanguage !== 'en' && detectedLanguage !== 'unknown') ? 'patient' : 'user';
-                       // -----------------------------------
-                       
-                       try {
-                           console.log(`[TranscriptionService] Calling messageService.createMessage for ${targetConversationId}. Sender: ${sender}, Lang: ${detectedLanguage}...`);
-                           const savedMessage = await this.messageService.createMessage(
-                               targetConversationId,
-                               completedText,
-                               sender, // Use determined sender
-                               detectedLanguage 
-                           );
-                           console.log(`[TranscriptionService] Message saved (ID: ${savedMessage.id}). Broadcasting 'new_message' and triggering TTS.`);
-
-                           // Broadcast the newly saved message object
-                           this.broadcastToClients(targetConversationId, {
-                               type: 'new_message',
-                               payload: savedMessage
-                           });
-
-                           // --- Trigger TTS --- 
+                       if (translatedToEnText) {
+                           textForTTS = translatedToEnText; // Patient hears the English translation
+                           console.log(`[TTS Logic] English translation successful: "${translatedToEnText.substring(0, 50)}..."`);
+                           
+                           // Save the English translation message
                            try {
-                               console.log(`[TranscriptionService] Synthesizing speech for message ID: ${savedMessage.id}`);
-                               // Use the completed text (which is what was transcribed)
-                               const audioBuffer = await this.ttsService.synthesizeSpeech(completedText); 
-                               
-                               if (audioBuffer && audioBuffer.length > 0) {
-                                   const audioBase64 = audioBuffer.toString('base64');
-                                   console.log(`[TranscriptionService] Speech synthesized (${audioBuffer.length} bytes). Broadcasting 'tts_audio' event.`);
-                                   
-                                   this.broadcastToClients(targetConversationId, {
-                                       type: 'tts_audio',
-                                       payload: {
-                                           audioBase64: audioBase64,
-                                           format: 'audio/mpeg', 
-                                           originalMessageId: savedMessage.id 
-                                       }
-                                   });
-                               } else {
-                                    console.log('[TranscriptionService] TTS returned empty buffer, skipping broadcast.');
-                               }
-                           } catch (ttsError) {
-                                console.error(`[TranscriptionService] Failed to synthesize or broadcast TTS for message ${savedMessage.id}:`, ttsError);
+                               console.log(`[TranscriptionService] Saving translated (en) message...`);
+                               const savedTranslation = await this.messageService.createMessage(
+                                   targetConversationId,
+                                   translatedToEnText, 
+                                   'translation',    
+                                   'en',             
+                                   savedOriginalMessageId 
+                               );
+                               console.log(`[TranscriptionService] Translated (en) message saved (ID: ${savedTranslation.id}). Broadcasting.`);
+                               this.broadcastToClients(targetConversationId, { type: 'new_message', payload: savedTranslation });
+                           } catch (saveTranslationError) {
+                               console.error(`[TranscriptionService] Failed to save translated (en) message:`, saveTranslationError);
+                               this.broadcastToClients(targetConversationId, { type: 'error', message: 'Failed to save English translation.' });
                            }
-                           // --- End TTS --- 
-
-                       } catch (saveError) {
-                           console.error(`[TranscriptionService] Failed to save or broadcast message for ${targetConversationId}:`, saveError);
-                           this.broadcastToClients(targetConversationId, { 
-                               type: 'error', 
-                               message: 'Failed to save transcription.' 
-                           });
+                       } else {
+                           console.warn(`[TTS Logic] Failed to translate ${detectedLanguage} -> en. Patient TTS will use original ${detectedLanguage} text.`);
+                           // textForTTS remains completedText (non-English)
                        }
+                   } else if (sender === 'patient') { // Patient spoke English
+                       const clinicianTargetLang = 'es'; // <<< Placeholder: Replace with dynamic lookup later
+                       console.log(`[TTS Logic] Patient spoke English. Translating to ${clinicianTargetLang} for Clinician TTS.`);
+                       const translatedToNonEnText = await this.translateText(completedText, 'en', clinicianTargetLang);
+
+                       if (translatedToNonEnText) {
+                           textForTTS = translatedToNonEnText; // Clinician hears the non-English translation
+                           console.log(`[TTS Logic] Translation to ${clinicianTargetLang} successful: "${translatedToNonEnText.substring(0, 50)}..."`);
+                           // Do NOT save this translation as a message
+                       } else {
+                           console.warn(`[TTS Logic] Failed to translate en -> ${clinicianTargetLang}. Clinician TTS will use original English text.`);
+                           // textForTTS remains completedText (English)
+                       }
+                   }
+
+                   // 3. Trigger TTS with the determined text
+                   if (textForTTS) { // Only synthesize if we have some text
+                        try {
+                            console.log(`[TranscriptionService] Synthesizing speech linked to original message ID: ${savedOriginalMessageId}. Using text (first 50): "${textForTTS.substring(0, 50)}..."`);
+                            const audioBuffer = await this.ttsService.synthesizeSpeech(textForTTS);
+                            if (audioBuffer && audioBuffer.length > 0) {
+                                const audioBase64 = audioBuffer.toString('base64');
+                                console.log(`[TranscriptionService] Speech synthesized (${audioBuffer.length} bytes). Broadcasting 'tts_audio' event linked to original message ID: ${savedOriginalMessageId}.`);
+                                this.broadcastToClients(targetConversationId, {
+                                    type: 'tts_audio',
+                                    payload: {
+                                        audioBase64: audioBase64,
+                                        format: 'audio/mpeg',
+                                        originalMessageId: savedOriginalMessageId 
+                                    }
+                                });
+                            } else {
+                                console.log('[TranscriptionService] TTS returned empty buffer, skipping broadcast.');
+                            }
+                        } catch (ttsError) {
+                            console.error(`[TranscriptionService] Failed to synthesize or broadcast TTS for original message ${savedOriginalMessageId}:`, ttsError);
+                        }
                    } else {
-                        console.log(`[TranscriptionService] Skipping save for empty completed transcription for ${targetConversationId}.`);
+                        console.log('[TranscriptionService] Skipping TTS as textForTTS is empty.');
                    }
                } else if (message.type === 'error') {
                     console.error('[TranscriptionService] OpenAI Error:', JSON.stringify(message, null, 2));
@@ -675,5 +708,69 @@ export class TranscriptionService {
           }
           return 'unknown'; // Default on error
       }
+  }
+
+  /**
+   * Translates text from a source language to a target language using OpenAI.
+   * @param text The text to translate.
+   * @param sourceLang ISO 639-1 code of the source language.
+   * @param targetLang ISO 639-1 code of the target language (defaults to 'en').
+   * @returns A promise resolving to the translated text or null if translation fails.
+   */
+  private async translateText(text: string, sourceLang: string, targetLang: string = 'en'): Promise<string | null> {
+    if (!this.openaiApiKey) {
+        console.warn('[TranscriptionService] Cannot translate text: OPENAI_API_KEY not set.');
+        return null;
+    }
+    if (!text || !sourceLang) {
+        console.warn('[TranscriptionService] Cannot translate text: Missing text or source language.');
+        return null;
+    }
+
+    const translationUrl = 'https://api.openai.com/v1/chat/completions';
+    const prompt = `Translate the following text from ${sourceLang} to ${targetLang}: "${text}"`;
+
+    console.log(`[TranscriptionService] Translating text from ${sourceLang} to ${targetLang} (first 50 chars): "${text.substring(0, 50)}..."`);
+
+    try {
+        const response = await axios.post<OpenAIChatCompletionResponse>(
+            translationUrl,
+            {
+                model: 'gpt-4o-mini', // Or consider gpt-4o if higher quality is needed
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: Math.ceil(text.length * 1.5), // Estimate tokens needed, add buffer
+                temperature: 0.3, // Lower temperature for more direct translation
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${this.openaiApiKey}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        const translatedContent = response.data?.choices?.[0]?.message?.content?.trim();
+
+        if (translatedContent) {
+            return translatedContent;
+        } else {
+            console.warn(`[TranscriptionService] Translation API returned empty content. Full response:`, JSON.stringify(response.data));
+            return null;
+        }
+
+    } catch (error) {
+        console.error(`[TranscriptionService] Error calling OpenAI Translation (Chat Completion) API:`);
+         if (error && typeof error === 'object' && 'isAxiosError' in error && error.isAxiosError) {
+            const axiosError = error as { response?: { status?: number; data?: any } }; 
+            console.error('Status:', axiosError.response?.status);
+            if (axiosError.response?.data) {
+                try {
+                     console.error('Data:', JSON.stringify(axiosError.response.data)); 
+                } catch { console.error('Data (raw):', axiosError.response.data); }
+            } else { console.error('No response data received.'); }
+        } else if (error instanceof Error) { console.error(error.message); }
+        else { console.error('An unknown translation error occurred:', String(error)); }
+        return null; 
+    }
   }
 }

@@ -156,7 +156,8 @@ exports.Prisma.MessageScalarFieldEnum = {
   originalText: 'originalText',
   translatedText: 'translatedText',
   language: 'language',
-  isFinal: 'isFinal'
+  isFinal: 'isFinal',
+  originalMessageId: 'originalMessageId'
 };
 
 exports.Prisma.ActionScalarFieldEnum = {
