@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Theme } from "../theme";
 import { useAuth } from "../context/AuthContext";
 import { useError } from "../context/ErrorContext";
-import api from "../lib/api";
 
 // Define a type for the theme prop
 type ThemedProps = { theme: Theme };
@@ -99,15 +98,8 @@ const LoginPage: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const response = await api.post("/auth/login", { username, password });
-            const data = response.data;
-
-            if (data.accessToken && data.refreshToken) {
-                login(data.accessToken, data.refreshToken);
-                navigate("/dashboard");
-            } else {
-                throw new Error("Login successful but tokens not received from server.");
-            }
+            await login(username, password);
+            navigate("/dashboard");
         } catch (err: unknown) {
             showApiError(err, "Login failed");
         } finally {
