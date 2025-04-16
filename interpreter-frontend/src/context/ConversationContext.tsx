@@ -52,6 +52,7 @@ interface ConversationContextType {
     addMessageToConversation: (conversationId: string, message: any) => void; // Placeholder, adjust message type
     fetchConversations: () => Promise<void>;
     isLoading: boolean;
+    isRefreshing: boolean;
 }
 
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
@@ -64,16 +65,62 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const { sendMessage } = useWebSocket();
     const initialListRequested = useRef(false);
     const [conversationVersion, setConversationVersion] = useState<number>(0);
     // Track the most recently created conversation ID to auto-select it
     const newSessionConversationId = useRef<string | null>(null);
+    
+    // Use refs to avoid re-renders when these don't actually change
+    const selectedConversationIdRef = useRef<string | null>(null);
+    const isSessionActiveRef = useRef<boolean>(false);
+
+    // Select conversation logic
+    const selectConversation = useCallback((conversation: Conversation | null) => {
+        if (conversation) {
+            // Only update if it's a different conversation
+            if (selectedConversationIdRef.current !== conversation.id) {
+                // Update refs first to avoid unnecessary re-renders
+                selectedConversationIdRef.current = conversation.id;
+                
+                // Set local state
+                setCurrentConversation(conversation);
+                console.log("[ConversationContext] Selected Conversation:", conversation.id);
+                
+                // Still notify backend via WebSocket for message synchronization
+                sendMessage({ type: 'select_conversation', payload: { conversationId: conversation.id } });
+            } else {
+                console.log("[ConversationContext] Conversation already selected:", conversation.id);
+            }
+        } else {
+            // Handle deselection
+            selectedConversationIdRef.current = null;
+            setCurrentConversation(null);
+            console.log("[ConversationContext] Deselected Conversation");
+        }
+    }, [sendMessage]);
+
+    // Derive selectedConversationId from ref for stability
+    const selectedConversationId = useMemo(() => selectedConversationIdRef.current, []);
+
+    // Session active logic - update ref but keep memo for API consistency
+    const isSessionActive = useMemo(() => {
+        const isActive = !!currentConversation && currentConversation.status?.toLowerCase() === 'active';
+        console.log(`[ConversationContext] Calculating isSessionActive: ${isActive}`);
+        isSessionActiveRef.current = isActive;
+        return isActive;
+    }, [currentConversation]);
 
     // Fetch conversations from REST API
-    const fetchConversations = useCallback(async () => {
+    const fetchConversations = useCallback(async (isRefresh = false) => {
         try {
-            setIsLoading(true);
+            // Only set loading on initial load, not refreshes
+            if (!isRefresh) {
+                setIsLoading(true);
+            } else {
+                setIsRefreshing(true);
+            }
             console.log("[ConversationContext] Fetching conversations from API");
             const response = await api.get('/api/conversations');
             
@@ -84,10 +131,22 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
                 );
                 
                 setConversations(sortedConversations);
+                // Increment version only when conversations change
+                setConversationVersion(v => v + 1);
                 console.log("[ConversationContext] Conversations updated from API:", sortedConversations.length);
                 
+                // Check if there's a new active session that was just created
+                const newestActiveSession = sortedConversations.find(c => 
+                    c.status?.toLowerCase() === 'active' && 
+                    new Date(c.startTime).getTime() > Date.now() - 10000 // Created in the last 10 seconds
+                );
+                
+                if (newestActiveSession) {
+                    console.log("[ConversationContext] Found newly created active session:", newestActiveSession.id);
+                    selectConversation(newestActiveSession);
+                }
                 // Auto-select first conversation if none is selected
-                if (!currentConversation && sortedConversations.length > 0) {
+                else if (!selectedConversationIdRef.current && sortedConversations.length > 0) {
                     console.log("[ConversationContext] Auto-selecting first conversation after API fetch");
                     selectConversation(sortedConversations[0]);
                 }
@@ -96,44 +155,20 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
             console.error("[ConversationContext] Error fetching conversations:", error);
         } finally {
             setIsLoading(false);
+            setIsRefreshing(false);
         }
-    }, [currentConversation]);
+    }, [selectConversation]);
 
     // Fetch conversations on initial load
     useEffect(() => {
-        fetchConversations();
+        fetchConversations(false); // Initial load
         // Set up an interval to refresh conversations every 30 seconds
-        const intervalId = setInterval(fetchConversations, 30000);
+        const intervalId = setInterval(() => fetchConversations(true), 30000); // Refresh
         return () => clearInterval(intervalId);
     }, [fetchConversations]);
 
-    // Select conversation logic
-    const selectConversation = useCallback((conversation: Conversation | null) => {
-        if (conversation) {
-            // Set local state
-            setCurrentConversation(conversation);
-            console.log("[ConversationContext] Selected Conversation:", conversation.id);
-            
-            // Still notify backend via WebSocket for message synchronization
-            sendMessage({ type: 'select_conversation', payload: { conversationId: conversation.id } });
-        } else {
-            // Handle deselection
-            setCurrentConversation(null);
-            console.log("[ConversationContext] Deselected Conversation");
-        }
-    }, [sendMessage]);
-
-    const selectedConversationId = useMemo(() => currentConversation?.id ?? null, [currentConversation]);
-
-    // Session active logic
-    const isSessionActive = useMemo(() => {
-        const isActive = !!currentConversation && currentConversation.status?.toLowerCase() === 'active';
-        console.log(`[ConversationContext] Calculating isSessionActive: ${isActive}`);
-        return isActive;
-    }, [currentConversation]);
-    
-    // End current session via REST API
-    const endCurrentSession = useCallback(async () => {
+    // Stable reference to functions
+    const stableEndCurrentSession = useCallback(async () => {
         if (!currentConversation) return;
         
         try {
@@ -148,49 +183,45 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
             await api.post(`/api/conversations/${currentConversation.id}/end`);
             
             // Refresh conversations to get updated status
-            fetchConversations();
+            fetchConversations(true); // Use refresh mode
         } catch (error) {
             console.error("[ConversationContext] Error ending session:", error);
             // Revert optimistic update on error
-            fetchConversations();
+            fetchConversations(true); // Use refresh mode
         }
     }, [currentConversation, fetchConversations]);
     
-    // Placeholder for message handling - likely handled elsewhere
-    const addMessageToConversation = useCallback((conversationId: string, message: any) => {
+    // Stable no-op for addMessageToConversation
+    const stableAddMessageToConversation = useCallback((conversationId: string, message: any) => {
         console.log(`[ConversationContext] addMessageToConversation called for ${conversationId}`, message);
     }, []);
 
-    // Add debug logging for the conversations state
-    useEffect(() => {
-        console.log("[ConversationContext] conversations updated:", conversations);
-    }, [conversations]);
-
-    const value = useMemo(() => ({
+    // Memoize the context value once to avoid unnecessary re-renders
+    const stableValue = useMemo(() => ({
         conversations,
         conversationVersion,
-        selectedConversationId,
+        selectedConversationId: selectedConversationIdRef.current,
         currentConversation,
         selectConversation,
-        isSessionActive,
-        endCurrentSession,
-        addMessageToConversation,
-        fetchConversations,
-        isLoading
+        isSessionActive: isSessionActiveRef.current,
+        endCurrentSession: stableEndCurrentSession,
+        addMessageToConversation: stableAddMessageToConversation,
+        fetchConversations: (refresh = true) => fetchConversations(refresh),
+        isLoading,
+        isRefreshing
     }), [
-        conversations, 
-        conversationVersion, 
-        selectedConversationId, 
-        currentConversation, 
-        selectConversation, 
-        isSessionActive, 
-        endCurrentSession, 
-        addMessageToConversation,
+        conversations,
+        conversationVersion,
+        currentConversation,
+        selectConversation,
+        stableEndCurrentSession,
+        stableAddMessageToConversation,
         fetchConversations,
-        isLoading
+        isLoading,
+        isRefreshing
     ]);
 
-    return <ConversationContext.Provider value={value}>{children}</ConversationContext.Provider>;
+    return <ConversationContext.Provider value={stableValue}>{children}</ConversationContext.Provider>;
 };
 
 export const useConversation = (): ConversationContextType => {

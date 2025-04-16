@@ -161,7 +161,8 @@ const NewSessionModal: React.FC<NewSessionModalProps> = ({ isOpen, onClose, onSe
             setLastName("");
             setDob("");
             
-            // Notify parent component that session is created
+            // Close modal and notify parent that session is created
+            onClose();
             onSessionCreated();
             
         } catch (error) {

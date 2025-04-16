@@ -213,9 +213,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     
     const handleSessionCreated = useCallback(() => {
         console.log("[DashboardLayout] New session created, refreshing conversations");
-        fetchConversations();
-        handleCloseNewSessionModal();
-    }, [fetchConversations, handleCloseNewSessionModal]);
+        // Use fetchConversations with a slight delay to ensure the backend has time to process
+        setTimeout(() => {
+            fetchConversations(); // Force a full refresh
+        }, 500); // Small delay to ensure backend is ready
+    }, [fetchConversations]);
     
     return (
         <LayoutContainer>

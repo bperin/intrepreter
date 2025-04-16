@@ -9,6 +9,7 @@ import useSpeechToTextBackend from "../hooks/useSpeechToTextBackend";
 // import useTranslation from "../hooks/useTranslation";
 import { useAuth } from '../context/AuthContext'; // <-- Import useAuth
 // import Button from './common/Button'; // TODO: Fix Button import path issue
+import { getSummaryKey } from '../helpers/summaryKey';
 
 // Extend Window interface to include our custom property
 declare global {
@@ -417,6 +418,7 @@ const ChatInterface: React.FC = () => {
     const [currentMedicalHistory, setCurrentMedicalHistory] = useState<string | null>(null);
     const [processingStatus, setProcessingStatus] = useState<'idle' | 'transcribing' | 'translating'>('idle');
     const [renderedSummary, setRenderedSummary] = useState<string | null>(null);
+    const [summaryKey, setSummaryKey] = useState<string>(getSummaryKey());
 
     // Extract patientName and clinicianUsername once
     const patientName = useMemo(() => currentConversation?.patient?.firstName || 'Patient', [currentConversation]);
@@ -574,22 +576,29 @@ const ChatInterface: React.FC = () => {
         console.log('[Effect currentSummary] Summary changed:', currentSummary);
         setRenderedSummary(currentSummary);
         
+        // Generate a new key to force a re-render when the summary changes
+        setSummaryKey(getSummaryKey());
+        
         // If the summary changes while we're on the summary tab, ensure the UI updates
         if (activeTab === 'summary') {
             console.log('[Effect currentSummary] Currently on summary tab, ensuring UI refresh');
-            // Using setTimeout to ensure this runs after the state update is processed
-            setTimeout(() => {
-                const summaryElement = document.querySelector('.summary-area');
-                if (summaryElement) {
-                    // Force a DOM refresh by toggling a class
-                    summaryElement.classList.remove('refreshing');
-                    requestAnimationFrame(() => {
-                        summaryElement.classList.add('refreshing');
-                    });
-                }
-            }, 50);
         }
     }, [currentSummary, activeTab]);
+
+    // Add effect for fetching summary when tab changes
+    useEffect(() => {
+        // If we're on the summary tab and have a conversation selected
+        if (activeTab === 'summary' && selectedConversationId) {
+            console.log(`[ChatInterface] Summary tab active for conversation ${selectedConversationId}. Checking for summary...`);
+            
+            // Request summary via WebSocket
+            console.log(`[ChatInterface] Requesting summary for conversation ${selectedConversationId}`);
+            sendMessage({
+                type: 'get_summary',
+                payload: { conversationId: selectedConversationId }
+            });
+        }
+    }, [activeTab, selectedConversationId, sendMessage]);
 
     // Effect to automatically start/stop recording on session change
     useEffect(() => {
@@ -640,7 +649,10 @@ const ChatInterface: React.FC = () => {
                 type: 'get_messages',
                 payload: { conversationId: selectedConversationId }
             });
-                        } else {
+            
+            // Always switch to chat tab when a conversation is selected
+            setActiveTab('chat');
+        } else {
             console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - RUNNING for null ID. Clearing messages.');
             setDisplayMessages([]); // Clear messages if no conversation is selected
         }
@@ -676,4 +688,169 @@ const ChatInterface: React.FC = () => {
                         .filter((msg): msg is DisplayMessage => msg !== null);
                     console.log(`[ChatInterface] Converted historical messages:`, newDisplayMessages); 
                     setDisplayMessages(newDisplayMessages); 
-                    console.log(`
+                    console.log(`[ChatInterface] Display messages updated to length: ${newDisplayMessages.length}`);
+                }
+            }
+            // Handle new_message - add individual messages as they come in
+            else if (message.type === 'new_message' && message.payload) {
+                console.log('[WS Effect] Received new_message payload:', message.payload);
+                if (message.payload.conversationId === selectedConversationId) {
+                    console.log('[WS Effect] Adding new message to display messages');
+                    // Add the new message
+                    handleNewMessage(message.payload);
+                } else {
+                    console.log(`[WS Effect] Message was for different conversation. Received: ${message.payload.conversationId}, Selected: ${selectedConversationId}`);
+                }
+            }
+            // Handle summary_data - stores the summary for viewing in summary tab
+            else if (message.type === 'summary_data' && message.payload) {
+                console.log('[WS Effect] Received summary data:', message.payload);
+                if (message.payload.conversationId === selectedConversationId) {
+                    console.log('[WS Effect] Updating current summary with new data');
+                    setCurrentSummary(message.payload.summary);
+                }
+            }
+            // Handle medical_history_data - stores medical history for viewing in history tab
+            else if (message.type === 'medical_history_data' && message.payload) {
+                console.log('[WS Effect] Received medical history data');
+                if (message.payload.conversationId === selectedConversationId) {
+                    setCurrentMedicalHistory(message.payload.medicalHistory);
+                }
+            }
+        }
+    }, [lastMessage, selectedConversationId, handleNewMessage]);
+
+    const handleEndSession = async () => {
+        console.log("[ChatInterface] handleEndSession called");
+        if (selectedConversationId) {
+            // Ensure STT is stopped
+            if (status === 'connected') {
+                console.log('[ChatInterface] Stopping STT before ending session');
+                stopRecording();
+            }
+            // End the session at the context level
+            console.log('[ChatInterface] Ending session for conversation:', selectedConversationId);
+            await endCurrentSession();
+            
+            // Switch to summary tab to show the summary
+            console.log('[ChatInterface] Switching to summary tab after ending session');
+            setActiveTab('summary');
+            
+            // Request summary (it may take a moment to generate)
+            setTimeout(() => {
+                console.log('[ChatInterface] Requesting summary after end session timeout');
+                sendMessage({
+                    type: 'get_summary',
+                    payload: { conversationId: selectedConversationId }
+                });
+            }, 2000); // Give the backend some time to generate the summary
+        }
+    };
+
+    // Render appropriate content based on the active tab
+    const renderContent = () => {
+        if (!selectedConversationId) {
+            return (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <NoSessionText>Select a conversation to view its messages</NoSessionText>
+                </div>
+            );
+        }
+
+        switch (activeTab) {
+            case 'chat':
+                return (
+                    <MessageArea ref={messageAreaRef}>
+                        {displayMessages.map((msg, index) => (
+                            <MessageGroup key={`${msg.id}-${index}`} $isSender={msg.sender === 'user'}>
+                                <SenderLabel $isSender={msg.sender === 'user'}>
+                                    {msg.sender === 'user' ? clinicianUsername : patientName}
+                                </SenderLabel>
+                                <Bubble $isSender={msg.sender === 'user'} $type={msg.sender === 'error' ? 'error' : undefined}>
+                                    {msg.text}
+                                </Bubble>
+                                <MessageMeta>
+                                    {new Date(msg.timestamp).toLocaleTimeString()} • {msg.language || 'unknown'}
+                                </MessageMeta>
+                            </MessageGroup>
+                        ))}
+                    </MessageArea>
+                );
+            case 'summary':
+                return (
+                    <SummaryArea key={summaryKey} className={renderedSummary !== currentSummary ? 'refreshing' : ''}>
+                        {renderedSummary || "No summary available yet. End the session to generate a summary."}
+                    </SummaryArea>
+                );
+            case 'history':
+                return (
+                    <MedicalHistoryArea>
+                        {currentMedicalHistory || "No medical history available."}
+                    </MedicalHistoryArea>
+                );
+            default:
+                return <div>Unknown tab</div>;
+        }
+    };
+
+    return (
+        <ChatContainer>
+            <TabContainer>
+                <TabButton 
+                    $isActive={activeTab === 'chat'} 
+                    onClick={() => setActiveTab('chat')}>
+                    Conversation
+                </TabButton>
+                <TabButton 
+                    $isActive={activeTab === 'summary'} 
+                    onClick={() => setActiveTab('summary')}>
+                    Summary
+                </TabButton>
+                <TabButton 
+                    $isActive={activeTab === 'history'} 
+                    onClick={() => setActiveTab('history')}>
+                    Medical History
+                </TabButton>
+            </TabContainer>
+
+            <ContentArea>
+                {renderContent()}
+            </ContentArea>
+
+            <ControlsArea>
+                {isSessionActive && (
+                    <>
+                        {status === 'connected' ? (
+                            <MicControlButton onClick={pauseRecording}>
+                                Pause Mic
+                            </MicControlButton>
+                        ) : hookIsPaused ? (
+                            <MicControlButton onClick={resumeRecording}>
+                                Resume Mic
+                            </MicControlButton>
+                        ) : status !== 'connecting' && (
+                            <MicControlButton onClick={startRecording}>
+                                Start Mic
+                            </MicControlButton>
+                        )}
+                        <EndSessionButton onClick={handleEndSession}>
+                            End Session
+                        </EndSessionButton>
+                    </>
+                )}
+            </ControlsArea>
+
+            {/* Status indicators */}
+            <TopStatusContainer>
+                <SttStatusDisplay $status={status}>
+                    {status === 'connected' ? 'Recording' : 
+                     status === 'connecting' ? 'Connecting...' : 
+                     status === 'error' || status === 'failed' ? 'Error' : 
+                     'Not Recording'}
+                </SttStatusDisplay>
+            </TopStatusContainer>
+        </ChatContainer>
+    );
+};
+
+export default ChatInterface;
