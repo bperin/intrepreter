@@ -13,28 +13,28 @@ export class AuthApplicationService {
     ) {}
 
     async registerUser(command: RegisterUserCommand): Promise<RegisterUserResult> {
-        console.log(`[AuthService] Attempting to register user: ${command.username}`);
+        console.log(`[AuthAppService] Attempting to register user: ${command.username}`);
         try {
-            console.log(`[AuthService] Checking if user ${command.username} exists...`);
+            console.log(`[AuthAppService] Checking if user ${command.username} exists...`);
             const existingUser = await this.userRepository.findByUsername(command.username);
             if (existingUser) {
-                console.error(`[AuthService] Username ${command.username} already exists.`);
+                console.error(`[AuthAppService] Username ${command.username} already exists.`);
                 throw new Error("Username already exists");
             }
-            console.log(`[AuthService] User ${command.username} does not exist. Proceeding...`);
+            console.log(`[AuthAppService] User ${command.username} does not exist. Proceeding...`);
 
-            console.log(`[AuthService] Hashing password for user ${command.username}...`);
+            console.log(`[AuthAppService] Hashing password for user ${command.username}...`);
             const hashedPassword = await bcrypt.hash(command.password, 10);
-            console.log(`[AuthService] Password hashed successfully.`);
+            console.log(`[AuthAppService] Password hashed successfully.`);
 
             const userData = { username: command.username, hashedPassword };
-            console.log(`[AuthService] Attempting to create user in repository with data:`, userData);
+            console.log(`[AuthAppService] Attempting to create user in repository with data:`, userData);
             const user = await this.userRepository.create(userData);
-            console.log(`[AuthService] User created successfully:`, user);
+            console.log(`[AuthAppService] User created successfully:`, user);
             
             return { success: true, userId: user.id };
         } catch (error: any) {
-            console.error(`[AuthService] Error during registration for user ${command.username}:`, error);
+            console.error(`[AuthAppService] Error during registration for user ${command.username}:`, error);
             // Re-throw the error so the caller (e.g., the route handler) can handle it
             throw error;
         }
