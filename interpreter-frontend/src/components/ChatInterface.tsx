@@ -583,25 +583,6 @@ const ChatInterface: React.FC = () => {
         }
     }, [selectedConversationId, sendMessage]); // Depend on selection and sendMessage function
 
-    // Effect to automatically start recording when a session becomes active
-    useEffect(() => {
-        if (selectedConversationId && isSessionActive && (status === 'idle' || status === 'closed')) {
-            console.log(`[ChatInterface] Session active (${selectedConversationId}), auto-starting STT recording.`);
-            startRecording();
-            setIsRecording(true); // Update local state
-            setIsPaused(false);
-        } else if (!selectedConversationId || !isSessionActive) {
-             // Stop recording if conversation is deselected or becomes inactive
-            if (isRecording) {
-                console.log(`[ChatInterface] Session inactive or deselected, stopping STT recording.`);
-                stopRecording();
-                setIsRecording(false);
-                setIsPaused(false);
-            }
-        }
-        // Add startRecording and stopRecording to dependencies if they are stable references (useCallback)
-    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording]); // Added start/stop recording dependencies
-
     const handleEndSession = () => {
         if (selectedConversationId) {
             console.log(`[ChatInterface] User initiated end session for ${selectedConversationId}`);
@@ -675,17 +656,16 @@ const ChatInterface: React.FC = () => {
                     <NoSessionText>No active session.</NoSessionText>
                 ) : (
                     <>
-                        {/* <button onClick={isRecording ? (isPaused ? resumeRecording : pauseRecording) : startRecording} disabled={status === 'connecting'}>
-                             {isRecording ? (isPaused ? 'Resume' : 'Pause') : 'Start Mic'}
-                             {isRecording && !isPaused && ' 🔴'}
-                             {isPaused && ' ⏸️'}
-                        </button> */}
-                        {isRecording && (
-                            <button onClick={isPaused ? resumeRecording : pauseRecording}>
-                                {isPaused ? 'Resume' : 'Pause'}
-                                {isPaused ? ' ⏸️' : ' '}
-                            </button>
-                        )}
+                        {/* Restore original Start/Pause/Resume logic based on status */} 
+                        <button 
+                            onClick={status === 'connected' || status === 'connecting' 
+                                ? (isPaused ? resumeRecording : pauseRecording) 
+                                : startRecording} 
+                            disabled={status === 'connecting' || (!isSessionActive)} // Disable if connecting or no active session
+                        >
+                             {status === 'connected' ? (isPaused ? 'Resume ⏯️' : 'Pause ⏸️') : 'Start Mic 🎤'}
+                             {/* {isRecording && !isPaused && ' 🔴'} */}
+                        </button>
                         <button onClick={stopRecording} disabled={!isRecording}>
                             Stop Mic
                         </button>
