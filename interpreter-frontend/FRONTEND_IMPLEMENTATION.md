@@ -1,6 +1,37 @@
 # Frontend Implementation Overview
 
-This document provides an overview of the frontend implementation, focusing on how the application handles audio recording, communication with the backend pipeline, and displaying results.
+This document provides a high-level overview of the frontend implementation.
+
+## Core Flow & Communication
+
+1.  **Authentication:** User logs in/registers via REST API calls (Axios).
+2.  **WebSocket Connection:** Establishes a persistent WebSocket connection (`/?token=...`) managed by `useWebSocket` hook for control and receiving data.
+3.  **Session Management:** Lists/selects conversations via REST API and WebSocket control messages.
+4.  **Audio Capture:** `useAudioRecorder` hook captures microphone audio using Web Audio API.
+5.  **Audio Streaming:** Audio chunks are Base64 encoded and sent via the main WebSocket connection (directed to backend's `/transcription` handler).
+6.  **Receiving Data:** `useWebSocket` receives broadcast messages (`new_message`, `tts_audio`, `command_executed`, etc.) from the backend.
+7.  **State Update:** React Context (`AuthContext`, `ConversationContext`) is updated based on received data, triggering UI updates.
+8.  **TTS Playback:** `useSynthesizedSpeechPlayer` hook decodes and plays TTS audio received from the backend.
+
+## Key Components & Technologies
+
+- **Framework/Language:** React, TypeScript
+- **State Management:** React Context API (`AuthContext`, `ConversationContext`)
+- **API Client:** Axios (`lib/api.ts`) for REST calls.
+- **WebSockets:** Native Browser WebSocket API (managed via `useWebSocket` hook).
+- **Audio Handling:** Web Audio API (managed via `useAudioRecorder` hook), Browser Audio playback.
+- **UI Components:**
+    - `ChatInterface`: Main view, orchestrates hooks.
+    - `ConversationList`: Lists/selects conversations.
+    - `MessageList`: Displays messages.
+    - `LoginPage`, `NewSessionModal`, etc.
+- **Styling:** Tailwind CSS.
+
+## Key Hooks
+
+- **`useWebSocket`**: Manages WebSocket connection, message sending/receiving, state updates.
+- **`useAudioRecorder`**: Handles microphone input, audio processing/encoding, provides chunks to `useWebSocket`.
+- **`useSynthesizedSpeechPlayer`**: Handles playback of received TTS audio.
 
 ## Core Technologies
 
@@ -48,59 +79,4 @@ This document provides an overview of the frontend implementation, focusing on h
 
 - **Single WebSocket Connection**: Managed by `useWebSocket`, handling different message types for control, audio streaming (forwarded to backend `/transcription`), and receiving results.
 - **Key Message Types (Simplified)**:
-    - **Client -> Server**: `auth`, `select_conversation`, `input_audio_buffer.append`, `input_audio_buffer.finalize`, `input_audio_buffer.pause`, `input_audio_buffer.resume`, `get_messages`, `get_actions`, `get_summary`, `get_medical_history`.
-    - **Server -> Client**: `connection_ack`, `openai_connected`, `openai_disconnected`, `backend_connected`, `new_message`, `tts_audio`, `message_list`, `action_list`, `summary_data`, `medical_history_data`, `command_executed`, `error`.
-
-## Voice Command Integration
-
-- **Display**: Detected commands and their execution results (`command_executed` message) are typically displayed as system messages or updates within the chat interface.
-- **Feedback**: No specific UI feedback implemented beyond displaying the results broadcast by the backend.
-
-## Error Handling
-
-- Handles WebSocket connection errors and attempts reconnection.
-- Handles microphone permission errors.
-- Displays error messages received from the backend via the WebSocket.
-
-## Performance Considerations
-
-- Audio buffering in `useAudioRecorder` ensures smooth transmission.
-- React Context and component memoization help manage re-renders.
-- WebSocket connection is managed efficiently.
-
-## State Management
-
-- **React Context**: Used for global and conversation-specific state (`AuthContext`, `ConversationContext`).
-- **Context Providers**: Wrap relevant parts of the application.
-- **Local Storage**: Used for persisting authentication tokens.
-
-## UI/UX Design
-
-- Responsive design for various screen sizes.
-- Visual indicators for audio recording status.
-- Loading indicators for asynchronous operations (e.g., fetching conversations).
-- User-friendly error messages.
-
-## Security Considerations
-
-- Uses JWT for user authentication via backend API.
-- WebSocket connection requires token for authentication.
-- API keys are managed solely by the backend.
-- Communication uses HTTPS/WSS.
-
-## Connection Status Display
-
-- UI includes indicators for WebSocket connection status (`useWebSocket` state).
-
-## Debugging and Testing
-
-- Extensive console logging for key events, state changes, and WebSocket messages.
-- Standard React testing approaches can be used.
-
-## Future Enhancements
-
-- [ ] **Offline Support**: Add support for offline audio recording and transcription when the network is unavailable.
-- [ ] **Custom Voice Commands**: Allow users to define custom voice commands for their workflow.
-- [ ] **Multi-language Support**: Add support for transcription in multiple languages.
-- [ ] **Advanced Visualization**: Enhance the visualization of audio data and transcription results.
-- [ ] **Mobile Optimization**: Further optimize the application for mobile devices.
+    - **Client -> Server**: `auth`, `select_conversation`, `input_audio_buffer.append`, `input_audio_buffer.finalize`, `input_audio_buffer.pause`, `
