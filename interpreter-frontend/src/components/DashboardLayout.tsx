@@ -246,18 +246,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ leftColumnContent, mi
 
     return (
         <LayoutContainer>
-            <Topbar>
-                <Logo>Clara.ai</Logo>
-                <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
-            </Topbar>
-            <MainContentArea>
+            {/* Removed Topbar related lines */}
+            <MainContentArea> 
                 <LeftColumn>
                     <LeftColumnContent>{leftColumnContent}</LeftColumnContent>
                     <CombinedStatus />
                 </LeftColumn>
-
                 <MiddleColumn>{middleColumnContent}</MiddleColumn>
-
                 <RightColumn>
                     <RightColumnHeader>Actions</RightColumnHeader>
                     <RightColumnContent>{rightColumnContent}</RightColumnContent>

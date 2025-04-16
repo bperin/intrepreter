@@ -5,7 +5,7 @@ export const TYPES = {
   PatientRepository: Symbol.for('PatientRepository'),
 
   // Services
-  AuthService: Symbol.for('AuthService'),
+  // AuthService: Symbol.for('AuthService'), // Remove unused symbol
   ConversationService: Symbol.for('ConversationService'),
   OpenAIService: Symbol.for('OpenAIService'),
   TranslationService: Symbol.for('TranslationService'),

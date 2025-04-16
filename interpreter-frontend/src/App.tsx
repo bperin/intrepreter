@@ -1,15 +1,30 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { createGlobalStyle } from 'styled-components';
 import { ThemeProvider } from 'styled-components';
-import { GlobalStyle, theme } from './theme';
+import { theme } from './theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ErrorProvider } from './context/ErrorContext';
 import { ConversationProvider } from './context/ConversationContext';
 import ErrorDisplay from './components/ErrorDisplay';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
-import RegistrationPage from './pages/RegistrationPage';
+import LandingPage from './pages/LandingPage';
+import RegistrationPage from './pages/RegisterPage';
+
+const GlobalStyle = createGlobalStyle`
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: ${({ theme }) => theme.typography.fontFamily};
+    background-color: ${({ theme }) => theme.colors.background.primary};
+    color: ${({ theme }) => theme.colors.text.primary};
+    box-sizing: border-box;
+  }
+  *, *::before, *::after {
+    box-sizing: inherit;
+  }
+`;
 
 const AppContainer = styled.div`
     min-height: 100vh;
@@ -18,7 +33,7 @@ const AppContainer = styled.div`
 `;
 
 const Header = styled.header`
-    background-color: ${({ theme }) => theme.colors.background.secondary};
+    background-color: ${({ theme }) => theme.colors.background.primary};
     padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.xl};
     border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
     display: flex;
@@ -50,6 +65,7 @@ const NavLink = styled(Link)`
     }
 `;
 
+// Re-add AuthInfo and LogoutButton styled components
 const AuthInfo = styled.div`
     display: flex;
     align-items: center;
@@ -59,16 +75,30 @@ const AuthInfo = styled.div`
 `;
 
 const LogoutButton = styled.button`
-    background: none;
-    border: none;
-    color: ${({ theme }) => theme.colors.status.error};
+    // Adopt styles similar to StartSessionButton but smaller
+    background-color: transparent;
+    color: ${({ theme }) => theme.colors.text.primary}; // White text
+    border: 1px solid ${({ theme }) => theme.colors.text.primary}; // White border
+    border-radius: ${({ theme }) => theme.borderRadius.md};
+    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm}; // Smaller padding
+    font-size: ${({ theme }) => theme.typography.sizes.xs}; // Smaller font size
+    font-weight: ${({ theme }) => theme.typography.weights.medium};
     cursor: pointer;
-    font-size: ${({ theme }) => theme.typography.sizes.sm};
-    padding: 0;
-    transition: color 0.2s ease;
+    transition: all 0.2s ease;
+    line-height: 1; // Ensure text aligns vertically with small padding
 
     &:hover {
-        color: ${({ theme }) => theme.colors.status.error}D0; // Slightly darker on hover
+        background-color: ${({ theme }) => theme.colors.text.primary}; // White background
+        color: ${({ theme }) => theme.colors.background.primary}; // Dark text
+        // Keep border or remove depending on desired hover effect
+    }
+
+    &:disabled { // Keep disabled styles if needed elsewhere, otherwise remove
+        background-color: transparent;
+        border-color: ${({ theme }) => theme.colors.text.secondary}40;
+        color: ${({ theme }) => theme.colors.text.secondary}80;
+        cursor: not-allowed;
+        opacity: 0.6;
     }
 `;
 
@@ -90,13 +120,16 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 // AppLayout including Header
 const AppLayout: React.FC = () => {
-    const { isAuthenticated, user, logout } = useAuth();
+    // Re-add user and logout to useAuth hook
+    const { isAuthenticated, user, logout } = useAuth(); 
 
     return (
         <AppContainer>
             <Header>
-                <Logo to={isAuthenticated ? "/dashboard" : "/"}>Interpreter</Logo>
+                {/* Change Logo text back to Clara.ai */}
+                <Logo to={isAuthenticated ? "/dashboard" : "/"}>Clara.ai</Logo> 
                 <Nav>
+                    {/* Restore conditional rendering for nav links/auth info */}
                     {isAuthenticated ? (
                         <AuthInfo>
                             <span>Logged in as: <strong>{user?.username || 'User'}</strong></span>
@@ -115,15 +148,21 @@ const AppLayout: React.FC = () => {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegistrationPage />} />
                     <Route
-                        path="/dashboard"
+                        path="/dashboard/*"
                         element={
                             <ProtectedRoute>
                                 <DashboardPage />
                             </ProtectedRoute>
                         }
                     />
-                    {/* Redirect root path based on auth status */}
-                    <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+                    <Route 
+                        path="/" 
+                        element={isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />} 
+                    />
+                    <Route 
+                        path="*" 
+                        element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} replace />} 
+                    />
                 </Routes>
             </MainContent>
             <ErrorDisplay />
