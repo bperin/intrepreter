@@ -1,50 +1,47 @@
 import { injectable, inject } from "tsyringe";
-import axios from "axios";
+import { OpenAI } from 'openai';
 import { PrismaClient, Patient, MedicalHistory } from "../../generated/prisma";
+import dotenv from 'dotenv';
+import path from 'path';
 
-// Interface for OpenAI Chat Completion response (can be shared or defined locally)
-interface OpenAIChatCompletionResponse {
-    choices?: [
-        {
-            message?: {
-                content?: string;
-            };
-        }
-    ];
-}
+// Load environment variables (assuming .env is in the root)
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 @injectable()
 export class MedicalHistoryService {
-    private readonly openaiApiKey: string;
-    private readonly openaiUrl = "https://api.openai.com/v1/chat/completions";
+    private readonly openai: OpenAI;
+    private readonly apiKeyPresent: boolean;
 
     constructor(@inject("PrismaClient") private prisma: PrismaClient) {
-        this.openaiApiKey = process.env.OPENAI_API_KEY || "";
-        if (!this.openaiApiKey) {
-            console.error("[MedicalHistoryService] CRITICAL: OPENAI_API_KEY is not set. History generation will fail.");
+        const apiKey = process.env.OPENAI_API_KEY || '';
+        if (!apiKey) {
+            console.error('[MedicalHistoryService] OPENAI_API_KEY is not set! History generation will fail.');
+            this.apiKeyPresent = false;
+            this.openai = new OpenAI({ apiKey: 'dummy-key' }); // Provide dummy
+        } else {
+             this.openai = new OpenAI({ apiKey });
+             this.apiKeyPresent = true;
         }
     }
 
     /**
-     * Generates mock medical history using OpenAI and saves it to the database.
+     * Generates mock medical history using OpenAI SDK and saves it to the database.
      * @param conversationId The ID of the conversation to link the history to.
      * @param patient The patient object containing details for context.
      * @returns The created MedicalHistory object or null if generation/saving fails.
      */
     async generateAndSaveHistory(conversationId: string, patient: Patient): Promise<MedicalHistory | null> {
         console.log(`[MedicalHistoryService] Attempting to generate history for conversation ${conversationId}`);
-        if (!this.openaiApiKey) {
+        if (!this.apiKeyPresent) {
             console.error("[MedicalHistoryService] Cannot generate history: OpenAI API Key missing.");
             return null;
         }
 
-        // TODO: Implement prompt crafting
         const prompt = this._createPrompt(patient);
         console.log(`[MedicalHistoryService] Generated prompt (first 100 chars): ${prompt.substring(0, 100)}...`);
 
         try {
-            // TODO: Implement OpenAI API call
-            const generatedContent = await this._callOpenAI(prompt);
+            const generatedContent = await this._callOpenAIWithSDK(prompt);
 
             if (!generatedContent) {
                 console.error("[MedicalHistoryService] Failed to generate content from OpenAI.");
@@ -52,7 +49,6 @@ export class MedicalHistoryService {
             }
             console.log(`[MedicalHistoryService] Content generated successfully (first 100 chars): ${generatedContent.substring(0, 100)}...`);
 
-            // TODO: Implement Prisma save
             const savedHistory = await this.prisma.medicalHistory.create({
                 data: {
                     content: generatedContent,
@@ -96,12 +92,9 @@ export class MedicalHistoryService {
     // --- Private Helper Methods ---
 
     private _createPrompt(patient: Patient): string {
-        // Calculate age (simple approximation)
         const birthYear = new Date(patient.dateOfBirth).getFullYear();
         const currentYear = new Date().getFullYear();
         const age = currentYear - birthYear;
-
-        // Basic prompt - can be refined significantly
         return `Generate a brief, mock medical history suitable for a primary care setting simulation for the following patient. Be realistic but concise. Include potential common allergies, current medications (if any), and 1-2 relevant past major medical conditions or surgeries. Do NOT include any real patient information or identifiers.
 
 Patient Details:
@@ -111,48 +104,34 @@ Age: Approximately ${age}
 Format the output as plain text sections (e.g., Allergies:, Current Medications:, Past Medical History:).`;
     }
 
-    private async _callOpenAI(prompt: string): Promise<string | null> {
+    private async _callOpenAIWithSDK(prompt: string): Promise<string | null> {
+        if (!this.apiKeyPresent) {
+             console.error("[MedicalHistoryService] Cannot call OpenAI: API key not available.");
+             return null;
+        }
         try {
-            const response = await axios.post<OpenAIChatCompletionResponse>(
-                this.openaiUrl,
-                {
-                    // model: "gpt-4o", // Or use "gpt-4o-mini" for faster/cheaper generation
-                    model: "gpt-4o-mini", 
-                    messages: [{ role: "user", content: prompt }],
-                    max_tokens: 300, // Adjust as needed for desired length
-                    temperature: 0.6, // Moderate temperature for some variability but not too random
-                    n: 1,
-                },
-                {
-                    headers: {
-                        "Authorization": `Bearer ${this.openaiApiKey}`,
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
+            const response = await this.openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [{ role: "user", content: prompt }],
+                max_tokens: 300,
+                temperature: 0.6,
+                n: 1,
+                stream: false,
+            });
 
-            const content = response.data?.choices?.[0]?.message?.content?.trim();
+            const content = response.choices[0]?.message?.content?.trim();
             if (content) {
                 return content;
             } else {
-                console.warn("[MedicalHistoryService] OpenAI response missing expected content.", response.data);
+                console.warn("[MedicalHistoryService] OpenAI SDK response missing expected content.", response);
                 return null;
             }
-        } catch (error: unknown) {
-            console.error("[MedicalHistoryService] Error calling OpenAI API:");
-            // Check if it looks like an Axios error
-            if (typeof error === 'object' && error !== null && 'isAxiosError' in error && error.isAxiosError) {
-                 // Now TypeScript knows it has AxiosError properties (potentially)
-                 // We cast carefully or check for response existence
-                 const axiosError = error as { response?: { status?: number; data?: any } }; 
-                 console.error('Status:', axiosError.response?.status);
-                 console.error('Data:', axiosError.response?.data);
-            } else if (error instanceof Error) {
-                 // Handle generic Error objects
-                 console.error('Message:', error.message);
+        } catch (error: any) {
+            console.error("[MedicalHistoryService] Error calling OpenAI SDK:");
+             if (error instanceof OpenAI.APIError) {
+                 console.error(`OpenAI API Error: Status=${error.status}, Type=${error.type}, Code=${error.code}, Message=${error.message}`);
             } else {
-                 // Handle other types of errors
-                 console.error('An unknown error occurred:', String(error));
+                 console.error('An unknown error occurred:', error?.message || String(error));
             }
             return null;
         }

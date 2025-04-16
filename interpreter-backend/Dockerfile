@@ -13,6 +13,7 @@ RUN apt-get update -y && apt-get install -y openssl --no-install-recommends && r
 COPY package*.json ./
 
 # Install dependencies using npm ci for consistency
+# This will also install the 'openai' package if it's in package-lock.json
 RUN npm ci
 
 # Copy the Prisma schema

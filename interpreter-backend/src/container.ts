@@ -21,6 +21,11 @@ import { IPrescriptionService } from "./domain/services/IPrescriptionService";
 import { INotificationService } from "./domain/services/INotificationService";
 import { IAggregationService } from "./domain/services/IAggregationService";
 import { ILanguageDetectionService } from "./domain/services/ILanguageDetectionService";
+import { ILanguageModelService } from "./domain/services/ILanguageModelService";
+import { ISummaryService } from "./domain/services/ISummaryService";
+import { ITranslationService } from "./domain/services/ITranslationService";
+import { ICommandDetectionService } from "./domain/services/ICommandDetectionService";
+import { ICommandExecutionService } from "./domain/services/ICommandExecutionService";
 
 // Import Implementations
 import { PrismaUserRepository } from "./infrastructure/persistence/PrismaUserRepository";
@@ -34,7 +39,7 @@ import { JwtAuthService } from "./infrastructure/auth/JwtAuthService";
 import { ConversationService } from "./infrastructure/services/ConversationService";
 import { AudioProcessingService } from "./infrastructure/services/AudioProcessingService";
 import { OpenAIClient } from "./infrastructure/openai/OpenAIClient";
-import { TranscriptionService } from "./infrastructure/services/TranscriptionService";
+import { ConversationPipelineService } from "./infrastructure/services/ConversationPipelineService";
 import { MessageService } from "./infrastructure/services/MessageService";
 import { TextToSpeechService } from "./infrastructure/services/TextToSpeechService";
 import { NoteService } from "./infrastructure/services/NoteService";
@@ -42,9 +47,12 @@ import { FollowUpService } from "./infrastructure/services/FollowUpService";
 import { PrescriptionService } from "./infrastructure/services/PrescriptionService";
 import { WebSocketNotificationService } from "./infrastructure/services/WebSocketNotificationService";
 import { MedicalHistoryService } from "./infrastructure/services/MedicalHistoryService";
-import { CommandDetectionService } from "./infrastructure/services/CommandDetectionService";
 import { AggregationService } from "./infrastructure/services/AggregationService";
+import { TranslationService } from "./infrastructure/services/TranslationService";
+import { CommandDetectionService } from "./infrastructure/services/CommandDetectionService";
 import { CommandExecutionService } from "./infrastructure/services/CommandExecutionService";
+import { OpenAILanguageModelService } from "./infrastructure/services/OpenAILanguageModelService";
+import { OpenAISummaryService } from "./infrastructure/services/OpenAISummaryService";
 import { LanguageDetectionService } from "./infrastructure/services/LanguageDetectionService";
 
 // --- Configuration ---
@@ -76,13 +84,16 @@ container.register("IPrescriptionService", { useClass: PrescriptionService });
 container.register("INotificationService", { useClass: WebSocketNotificationService });
 container.register("IAggregationService", { useClass: AggregationService });
 container.register<ILanguageDetectionService>('ILanguageDetectionService', { useClass: LanguageDetectionService });
+container.register<ILanguageModelService>('ILanguageModelService', { useClass: OpenAILanguageModelService });
+container.register<ISummaryService>("ISummaryService", { useClass: OpenAISummaryService });
+container.register<ITranslationService>("ITranslationService", { useClass: TranslationService });
+container.register<ICommandDetectionService>("ICommandDetectionService", { useClass: CommandDetectionService });
+container.register<ICommandExecutionService>("ICommandExecutionService", { useClass: CommandExecutionService });
 
 // Register services that might depend on others (ensure correct order or use singleton for automatic resolution)
 container.registerSingleton(MedicalHistoryService);
-container.registerSingleton(CommandDetectionService);
-container.registerSingleton(CommandExecutionService);
 
-// Finally register TranscriptionService (it now depends on Note/FollowUp/Prescription services)
-container.registerSingleton(TranscriptionService);
+// Finally register ConversationPipelineService (it now depends on Note/FollowUp/Prescription services)
+container.registerSingleton(ConversationPipelineService);
 
 export { container };

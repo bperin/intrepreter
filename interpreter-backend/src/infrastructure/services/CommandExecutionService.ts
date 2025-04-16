@@ -2,109 +2,105 @@ import { injectable, inject } from "tsyringe";
 import { INoteService } from "../../domain/services/INoteService";
 import { IFollowUpService, FollowUpUnit } from "../../domain/services/IFollowUpService";
 import { IPrescriptionService } from "../../domain/services/IPrescriptionService";
-
-export interface CommandExecutionResult {
-    status: 'success' | 'error';
-    name: string; // The name of the command that was executed
-    payload?: any; // Optional data to send back (e.g., created entity ID)
-    message?: string; // Error message if status is 'error'
-}
+import { MedicalHistoryService } from './MedicalHistoryService'; // Assuming direct injection for now
+import { ISummaryService } from '../../domain/services/ISummaryService'; // For requesting summary
+import { ICommandExecutionService, CommandExecutionResult } from '../../domain/services/ICommandExecutionService'; // <-- Import interface
+import { Logger, createLogger } from '../../utils/Logger';
 
 @injectable()
-export class CommandExecutionService {
+export class CommandExecutionService implements ICommandExecutionService { // <-- Implement interface
+    private logger: Logger;
 
     constructor(
         @inject('INoteService') private noteService: INoteService,
         @inject('IFollowUpService') private followUpService: IFollowUpService,
         @inject('IPrescriptionService') private prescriptionService: IPrescriptionService
-    ) {}
+    ) {
+        this.logger = createLogger('CommandExecutionService');
+    }
 
     async executeCommand(conversationId: string, toolName: string, args: any): Promise<CommandExecutionResult> {
-        console.log(`[CommandExecutor][${conversationId}] Attempting execution: ${toolName} with args:`, args);
+        this.logger.log(`Executing command: ${toolName} for conversation ${conversationId} with args:`, args);
 
         try {
             switch (toolName) {
                 case 'take_note':
-                    if (!args || typeof args.note_content !== 'string' || args.note_content.trim() === '') {
-                        throw new Error(`Missing or invalid 'note_content' for take_note`);
+                    if (!args.note_content) {
+                        return { status: 'error', name: toolName, message: 'Missing required argument: note_content' };
                     }
-                    const note = await this.noteService.createNote(conversationId, args.note_content);
-                    console.log(`[CommandExecutor][${conversationId}] Note created successfully (ID: ${note.id}).`);
-                    return { 
-                        status: 'success', 
-                        name: toolName, 
-                        payload: { 
-                            type: 'note', 
-                            data: note 
-                        } 
-                    };
-
+                    const noteResult = await this.noteService.createNote(conversationId, args.note_content);
+                    if (noteResult) {
+                        return { 
+                            status: 'success', 
+                            name: toolName, 
+                            message: 'Note saved successfully.', 
+                            data: { noteId: noteResult.id } // <-- Use data instead of payload
+                        };
+                    } else {
+                         return { status: 'error', name: toolName, message: 'Failed to save note.' };
+                    }
+                
                 case 'schedule_follow_up':
-                    if (args?.duration === undefined || typeof args.duration !== 'number' || args.duration <= 0) {
-                        throw new Error(`Missing or invalid 'duration' for schedule_follow_up`);
+                    if (typeof args.duration !== 'number' || !args.unit || !['day', 'week', 'month'].includes(args.unit)) {
+                        return { status: 'error', name: toolName, message: 'Missing or invalid arguments: duration (number) and unit (day/week/month) required.' };
                     }
-                    const validUnits: FollowUpUnit[] = ['day', 'week', 'month'];
-                    if (!args.unit || !validUnits.includes(args.unit)) {
-                        throw new Error(`Missing or invalid 'unit' (${args.unit}) for schedule_follow_up. Must be one of: ${validUnits.join(', ')}`);
+                    const followUpResult = await this.followUpService.createFollowUp(conversationId, args.duration, args.unit as FollowUpUnit, args.details);
+                     if (followUpResult) {
+                        return { 
+                            status: 'success', 
+                            name: toolName, 
+                            message: `Follow-up scheduled for ${args.duration} ${args.unit}(s).`, 
+                            data: { followUpId: followUpResult.id } // <-- Use data instead of payload
+                        };
+                    } else {
+                         return { status: 'error', name: toolName, message: 'Failed to schedule follow-up.' };
                     }
-                    const details = (typeof args.details === 'string') ? args.details : undefined;
-
-                    const followUp = await this.followUpService.createFollowUp(
-                        conversationId,
-                        args.duration,
-                        args.unit as FollowUpUnit,
-                        details
-                    );
-                    console.log(`[CommandExecutor][${conversationId}] Follow-up scheduled successfully for ${followUp.scheduledFor?.toISOString()} (ID: ${followUp.id}).`);
-                    return { 
-                        status: 'success', 
-                        name: toolName, 
-                        payload: { 
-                            type: 'followup', 
-                            data: followUp 
-                        } 
-                    };
 
                 case 'write_prescription':
-                    if (!args?.medication_name || typeof args.medication_name !== 'string') {
-                        throw new Error(`Missing or invalid 'medication_name' for write_prescription`);
+                     if (!args.medication_name || !args.dosage || !args.frequency) {
+                        return { status: 'error', name: toolName, message: 'Missing required arguments: medication_name, dosage, frequency.' };
                     }
-                    if (!args.dosage || typeof args.dosage !== 'string') {
-                        throw new Error(`Missing or invalid 'dosage' for write_prescription`);
+                    const prescriptionResult = await this.prescriptionService.createPrescription(conversationId, args.medication_name, args.dosage, args.frequency, args.details);
+                    if (prescriptionResult) {
+                        return { 
+                            status: 'success', 
+                            name: toolName, 
+                            message: `Prescription for ${args.medication_name} recorded.`, 
+                            data: { prescriptionId: prescriptionResult.id } // <-- Use data instead of payload
+                        };
+                    } else {
+                        return { status: 'error', name: toolName, message: 'Failed to record prescription.' };
                     }
-                    if (!args.frequency || typeof args.frequency !== 'string') {
-                        throw new Error(`Missing or invalid 'frequency' for write_prescription`);
-                    }
-                    const presDetails = (typeof args.details === 'string') ? args.details : undefined;
 
-                    const prescription = await this.prescriptionService.createPrescription(
-                        conversationId,
-                        args.medication_name,
-                        args.dosage,
-                        args.frequency,
-                        presDetails
-                    );
-                    console.log(`[CommandExecutor][${conversationId}] Prescription created successfully (ID: ${prescription.id}).`);
-                    return { 
-                        status: 'success', 
-                        name: toolName, 
-                        payload: { 
-                            type: 'prescription', 
-                            data: prescription 
-                        } 
-                    };
+                // Add cases for request_summary and request_medical_history
+                case 'request_summary':
+                    // The actual summary generation might be triggered elsewhere or handled by this service
+                    // For now, just acknowledge the request
+                    this.logger.log(`Command acknowledged: ${toolName}`);
+                    // TODO: Potentially trigger ISummaryService.updateSummary(conversationId) here?
+                    // Or maybe this command just tells the *frontend* to request the summary via WebSocket?
+                    return { status: 'success', name: toolName, message: 'Summary request acknowledged.' }; // No specific data
+
+                case 'request_medical_history':
+                    // Similar to summary, this might just be an acknowledgement
+                    // The actual fetching might be done via WebSocket based on frontend request
+                     this.logger.log(`Command acknowledged: ${toolName}`);
+                     // TODO: Fetch history via MedicalHistoryService here?
+                     // const history = await this.medicalHistoryService.getHistory(conversationId);
+                     // return { status: 'success', name: toolName, message: 'Medical history retrieved.', data: { history: history?.content } };
+                    return { status: 'success', name: toolName, message: 'Medical history request acknowledged.' }; // No specific data
 
                 default:
-                    console.warn(`[CommandExecutor][${conversationId}] Attempted to execute unhandled command: ${toolName}`);
-                    throw new Error(`Unhandled command type: ${toolName}`);
+                    this.logger.warn(`Command not found: ${toolName}`);
+                    return { status: 'not_found', name: toolName, message: `Command "${toolName}" is not implemented.` };
             }
-        } catch (error: unknown) {
-            console.error(`[CommandExecutor][${conversationId}] Error executing command ${toolName}:`, error);
-            let errorMessage = 'Failed to execute command.';
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-            return { status: 'error', name: toolName, message: errorMessage };
+        } catch (error) {
+            this.logger.error(`Error executing command ${toolName} for conversation ${conversationId}:`, error);
+            return { 
+                status: 'error', 
+                name: toolName, 
+                message: `An internal error occurred while executing the command: ${error instanceof Error ? error.message : String(error)}` 
+            };
         }
     }
 } 
