@@ -15,9 +15,9 @@ REGION="us-central1"       # e.g., us-central1
 REPO="interpreter-app" # e.g., my-app-repo
 
 # !! SECURITY WARNING: Hardcoding secrets is insecure. Use Secret Manager for production. !!
-DATABASE_URL=""   # e.g., postgresql://user:pass@ip:port/db?schema=public
-JWT_SECRET=""
-OPENAI_API_KEY=""
+DATABASE_URL="postgresql://db_user:C8D7gsHJiv5LXBL35kHsrQ==@34.46.226.55:5432/interpreter_db?schema=public"   # e.g., postgresql://user:pass@ip:port/db?schema=public
+JWT_SECRET="k9+a+sPm9aw8BkdyMabTODJ3MVawLaIsvqQ98ZuSSZI="
+OPENAI_API_KEY="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"
 JWT_ISSUER="interpreter-backend-issuer"
 
 # --- Optional Configuration --- (Uses defaults if not set externally)
