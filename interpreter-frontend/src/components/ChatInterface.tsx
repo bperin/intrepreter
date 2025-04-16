@@ -10,6 +10,7 @@ import useSpeechToTextBackend from "../hooks/useSpeechToTextBackend";
 import { useAuth } from '../context/AuthContext'; // <-- Import useAuth
 // import Button from './common/Button'; // TODO: Fix Button import path issue
 import { getSummaryKey } from '../helpers/summaryKey';
+import { getMedicalHistory } from '../lib/api';
 
 // Extend Window interface to include our custom property
 declare global {
@@ -380,7 +381,7 @@ const SummaryArea = styled.div<ThemedProps>`
     padding: ${({ theme }) => theme.spacing.md};
     overflow-y: auto;
     flex: 1;
-    background-color: ${({ theme }) => theme.colors.background.secondary};
+    background-color: ${({ theme }) => theme.colors.background.primary};
     border-radius: ${({ theme }) => theme.borderRadius.md};
     line-height: 1.5;
     white-space: pre-wrap; // Preserve whitespace and newlines in summary
@@ -397,6 +398,7 @@ const SummaryArea = styled.div<ThemedProps>`
 `;
 
 const MedicalHistoryArea = styled(SummaryArea)``; // Reuse SummaryArea styling for now
+
 // --- End Tabs ---
 
 const ChatInterface: React.FC = () => {
@@ -719,6 +721,21 @@ const ChatInterface: React.FC = () => {
             }
         }
     }, [lastMessage, selectedConversationId, handleNewMessage]);
+
+    // Fetch medical history when conversation is selected and history tab is active
+    useEffect(() => {
+        if (selectedConversationId && activeTab === 'history') {
+            console.log(`[ChatInterface] Fetching medical history for conversation ${selectedConversationId}`);
+            getMedicalHistory(selectedConversationId)
+                .then(data => {
+                    console.log(`[ChatInterface] Received medical history:`, data);
+                    setCurrentMedicalHistory(data.content);
+                })
+                .catch(error => {
+                    console.error(`[ChatInterface] Error fetching medical history:`, error);
+                });
+        }
+    }, [selectedConversationId, activeTab]);
 
     const handleEndSession = async () => {
         console.log("[ChatInterface] handleEndSession called");

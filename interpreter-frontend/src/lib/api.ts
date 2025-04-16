@@ -28,13 +28,15 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
     failedQueue = [];
 };
 
-// Request interceptor to add the auth token header
+// Request interceptor to add the auth token header and handle path compatibility
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
+        // Add auth token
         const accessToken = localStorage.getItem("accessToken");
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
+        
         return config;
     },
     (error: AxiosError) => {
@@ -117,5 +119,15 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+export const getMedicalHistory = async (conversationId: string): Promise<{ content: string }> => {
+    try {
+        const response = await api.get(`/conversations/${conversationId}/medical-history`);
+        return response.data;
+    } catch (error) {
+        console.error(`[API] Error fetching medical history for conversation ${conversationId}:`, error);
+        throw error;
+    }
+};
 
 export default api;

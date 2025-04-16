@@ -36,6 +36,7 @@ import { IFollowUpService } from "./domain/services/IFollowUpService";
 import { IPrescriptionService } from "./domain/services/IPrescriptionService";
 import { IAggregationService } from "./domain/services/IAggregationService";
 import { IUserRepository } from "./domain/repositories/IUserRepository";
+import { SummaryService } from './infrastructure/services/SummaryService';
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -75,6 +76,7 @@ container.register<IMessageService>(IMessageServiceToken, { useClass: MessageSer
 
 // Register TextToSpeechService implementation for ITextToSpeechService
 container.register<ITextToSpeechService>(ITextToSpeechServiceToken, { useClass: TextToSpeechService });
+container.register("SummaryService", { useClass: SummaryService });
 
 const authAppService = container.resolve(AuthApplicationService);
 const authService = container.resolve<IAuthService>("IAuthService");
@@ -248,29 +250,52 @@ interface AuthenticatedWebSocket extends WebSocket {
 wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessage) => {
     console.log("WebSocket: Client attempting to connect...");
 
+    // After parsing URL and query parameters, add debug log
     const parsedUrl = url.parse(req.url || "", true);
     const pathname = parsedUrl.pathname;
     const queryParams = parsedUrl.query;
+    console.debug("[DEBUG] WebSocket connection parsed parameters:", { pathname, tokenPresent: !!queryParams.token, conversationId: queryParams.conversationId || null });
 
-    // Route based on path
+    // --- New code: Verify token for all WebSocket connections ---
+    const token = queryParams.token;
+    if (!token || typeof token !== "string") {
+        console.error("[WebSocket Router] Missing or invalid token in WebSocket connection.");
+        ws.close(4001, "Access token required");
+        return;
+    }
+    try {
+        const payload = await authService.verifyToken(token);
+        console.debug("[DEBUG] Token verification successful. Payload:", { id: payload.id, username: payload.username });
+        if (typeof payload === 'object' && payload !== null && payload.id && payload.username) {
+            ws.userId = payload.id;
+            ws.username = payload.username as string;
+        } else {
+            console.error("[WebSocket Router] Invalid token payload:", payload);
+            ws.close(4001, "Invalid token payload");
+            return;
+        }
+    } catch (error) {
+        console.error("[WebSocket Router] Token verification error:", error);
+        ws.close(4001, "Invalid token");
+        return;
+    }
+    // --- End of new token verification code ---
+
+    // Now handle connection based on pathname
     if (pathname === '/transcription') {
-        // Handle Transcription Stream Connection
+        console.log("[DEBUG] Handling transcription connection for conversation:", queryParams.conversationId);
+        // Handle Transcription Stream Connection (token already verified above)
         console.log("[WebSocket Router] /transcription: Handling connection...");
         const conversationId = queryParams.conversationId;
-
         if (!conversationId || typeof conversationId !== 'string') {
             console.error('[WebSocket Router] /transcription: Missing or invalid conversationId parameter');
             ws.close(1008, 'Missing required parameter: conversationId');
             return;
         }
-
         console.log(`[WebSocket Router] /transcription: New connection for conversation: ${conversationId}`);
-
         try {
-            // Hand off to the TranscriptionService (ensure TranscriptionService expects only ws, conversationId)
             console.log(`[WebSocket Router] /transcription: Calling transcriptionService.handleConnection for ${conversationId}`);
             transcriptionService.handleConnection(ws, conversationId);
-
             // Basic error/close handlers for transcription stream
             ws.on('close', (code, reason) => {
                 console.log(`[WebSocket Router] /transcription: Connection closed for conversation ${conversationId}. Code: ${code}, Reason: ${reason?.toString()}`);
@@ -278,47 +303,14 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
             ws.on('error', (error) => {
                 console.error(`[WebSocket Router] /transcription: Connection error for conversation ${conversationId}:`, error);
             });
-
         } catch (error) {
             console.error(`[WebSocket Router] /transcription: Error handling connection for ${conversationId}:`, error);
             ws.close(1011, 'Server error handling transcription connection');
         }
-
     } else {
-        // Handle Control Channel Connection (Original Logic)
-        console.log("[WebSocket Router] Handling control channel connection (path: ", pathname, ")...");
-        const token = queryParams.token;
-
-        if (!token || typeof token !== "string") {
-            console.log("[WebSocket Router] Control Channel: Connection Rejected - Missing or invalid token format.");
-            ws.close(4001, "Access token required");
-            return;
-        }
-
-        try {
-            // --- Verify token and handle payload --- 
-            const payload = await authService.verifyToken(token);
-            
-            if (typeof payload === 'object' && payload !== null && payload.id && payload.username) {
-                // Assign properties if payload is a valid object with expected claims
-                ws.userId = payload.id;
-                ws.username = payload.username as string;
-            } else {
-                // Handle invalid payload structure
-                console.error("[WebSocket Router] Control Channel: Invalid token payload received:", payload);
-                throw new Error("Invalid token payload"); 
-            }
-            // ---------------------------------------
-
-            console.log(`[WebSocket Router] Control Channel: Client connected and authenticated as ${ws.username} (ID: ${ws.userId})`);
-
-            ws.send(JSON.stringify({ type: "system", text: "Welcome! You are connected via control channel." })); // Adjusted welcome message
-
-        } catch (error) {
-            console.error("[WebSocket Router] Control Channel: Authentication error during connection:", error);
-            ws.close(5000, "Internal server error during authentication");
-            return;
-        }
+        console.log("[DEBUG] Handling control channel connection. Client authenticated as:", { username: ws.username, userId: ws.userId });
+        // Handle Control Channel Connection (token already verified above)
+        ws.send(JSON.stringify({ type: "system", text: "Welcome! You are connected via control channel." }));
 
         // Attach message, close, error handlers for the authenticated control channel
         ws.on("message", async (messageData: WebSocket.Data, isBinary: boolean) => {
@@ -501,58 +493,6 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                     }
                     break;
 
-                // --- REWRITTEN end_session Case --- 
-                case "end_session":
-                    console.log('[WebSocket Router] Control Channel: Entered end_session case.'); 
-                    const conversationIdToEnd = request.payload?.conversationId;
-                    console.log(`[WebSocket Router] Control Channel: Extracted conversationId: ${conversationIdToEnd}`);
-                    
-                    if (conversationIdToEnd && typeof conversationIdToEnd === 'string') {
-                        // Ensure conversationService is available (should be from container.resolve)
-                        if (!conversationService) { 
-                             console.error('[WebSocket Router] Control Channel: CRITICAL ERROR: conversationService is not available!');
-                             ws.send(JSON.stringify({ type: 'error', text: 'Server configuration error processing end_session.'}));
-                             break;
-                        }
-                        console.log(`[WebSocket Router] Control Channel: conversationService instance looks OK. Calling endAndSummarizeConversation for ${conversationIdToEnd}...`);
-
-                        try {
-                            // Call the ConversationService to handle ending and summarizing
-                            const updatedConversation = await conversationService.endAndSummarizeConversation(conversationIdToEnd);
-
-                            console.log(`[WebSocket Router] Control Channel: Conversation ${conversationIdToEnd} successfully ended and summarized. Status: ${updatedConversation.status}`);
-
-                            // Optional: Send confirmation back to the client on the control channel
-                            ws.send(JSON.stringify({
-                                type: 'session_ended_and_summarized',
-                                payload: {
-                                    conversationId: updatedConversation.id,
-                                    summary: updatedConversation.summary?.content || null,
-                                    status: updatedConversation.status
-                                }
-                            }));
-                             // Clear the active conversation ID for this specific connection if it matches
-                             if (ws.currentConversationId === conversationIdToEnd) {
-                                 console.log(`[WebSocket Router] Control Channel: Clearing active conversation ID ${conversationIdToEnd} for connection ${wsIdentifier}.`);
-                                 ws.currentConversationId = undefined;
-                             }
-
-                        } catch (error) {
-                            console.error(`[WebSocket Router] Control Channel: Error processing end_session for ${conversationIdToEnd}:`, error);
-                            // Optional: Send an error message back to the client
-                             ws.send(JSON.stringify({
-                                 type: 'error',
-                                 message: `Failed to end session ${conversationIdToEnd}: ${error instanceof Error ? error.message : String(error)}`
-                             }));
-                        }
-                    } else {
-                        console.error(`[WebSocket Router] Control Channel: Received end_session message from ${wsIdentifier} without valid conversationId.`);
-                         ws.send(JSON.stringify({ type: 'error', message: 'Invalid end_session message: missing conversationId.' }));
-                    }
-                    break;
-                // --- End REWRITTEN end_session Case ---
-
-                // +++ Add get_summary Case +++
                 case "get_summary":
                     console.log('[WebSocket Router] Control Channel: Entered get_summary case.');
                     const conversationIdToSummarize = request.payload?.conversationId;
@@ -617,15 +557,20 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                             const history = await medicalHistoryService.getHistory(conversationIdForHistory);
                             
                             console.log(`[WebSocket Router] Control Channel: Medical history fetched for ${conversationIdForHistory}. Found: ${!!history}`);
+                            if (!history) {
+                                console.log(`[WebSocket Router] Medical history not found for conversation ${conversationIdForHistory}. It should be generated now.`);
+                            } else {
+                                console.log(`[WebSocket Router] Medical history generated for conversation ${conversationIdForHistory} with content: ${history.content}`);
+                            }
                             
-                            // Send the history data back (will be null if not found or not generated yet)
-                            ws.send(JSON.stringify({
+                            // Broadcast the medical history data to all clients for this conversation using the notification service
+                            notificationService.broadcastMessage(conversationIdForHistory, {
                                 type: 'medical_history_data',
                                 payload: {
                                     conversationId: conversationIdForHistory,
-                                    history: history ? history.content : null // Send content or null
+                                    history: history ? history.content : null
                                 }
-                            }));
+                            });
 
                         } catch (error) {
                             console.error(`[WebSocket Router] Control Channel: Error fetching medical history for ${conversationIdForHistory}:`, error);
@@ -707,8 +652,8 @@ process.on('unhandledRejection', (reason, promise) => {
 // ---------------------------------------------------------
 
 
-// Get all conversations for current user
-app.get("/api/conversations", authMiddleware, async (req, res, next) => {
+// Get all conversations for current user - handle both path patterns
+app.get("/conversations", authMiddleware, async (req, res, next) => {
     try {
         const userId = req.user!.id;
         console.log(`[REST API] Fetching conversations for user ${userId}`);
@@ -721,8 +666,8 @@ app.get("/api/conversations", authMiddleware, async (req, res, next) => {
     }
 });
 
-// Get a specific conversation by ID
-app.get("/api/conversations/:id", authMiddleware, async (req, res, next) => {
+// Get a specific conversation by ID - handle both path patterns
+app.get("/conversations/:id", authMiddleware, async (req, res, next) => {
     try {
         const userId = req.user!.id;
         const conversationId = req.params.id;
@@ -748,8 +693,8 @@ app.get("/api/conversations/:id", authMiddleware, async (req, res, next) => {
     }
 });
 
-// Create a new conversation
-app.post("/api/conversations", authMiddleware, async (req, res, next) => {
+// Create a new conversation - handle both path patterns
+app.post("/conversations", authMiddleware, async (req, res, next) => {
     try {
         const userId = req.user!.id;
         const { firstName, lastName, dob, patientLanguage = "es" } = req.body;
@@ -777,8 +722,8 @@ app.post("/api/conversations", authMiddleware, async (req, res, next) => {
     }
 });
 
-// End a conversation
-app.post("/api/conversations/:id/end", authMiddleware, async (req, res, next) => {
+// End a conversation - handle both path patterns
+app.post("/conversations/:id/end", authMiddleware, async (req, res, next) => {
     try {
         const userId = req.user!.id;
         const conversationId = req.params.id;
@@ -804,6 +749,35 @@ app.post("/api/conversations/:id/end", authMiddleware, async (req, res, next) =>
         return;
     } catch (error) {
         console.error(`[REST API] Error ending conversation ${req.params.id}:`, error);
+        next(error);
+    }
+});
+
+/* Add medical history endpoint */
+app.get("/conversations/:id/medical-history", authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user!.id;
+        const conversationId = req.params.id;
+        
+        console.log(`[REST API] Fetching medical history for conversation ${conversationId}`);
+        
+        // Verify ownership
+        const conversation = await conversationRepository.findById(conversationId);
+        if (!conversation) {
+            res.status(404).json({ message: "Conversation not found" });
+            return;
+        }
+        
+        if (conversation.userId !== userId) {
+            res.status(403).json({ message: "Forbidden: You don't have access to this conversation" });
+            return;
+        }
+        
+        const history = await medicalHistoryService.getHistory(conversationId);
+        res.status(200).json(history);
+        return;
+    } catch (error) {
+        console.error(`[REST API] Error fetching medical history for conversation ${req.params.id}:`, error);
         next(error);
     }
 });

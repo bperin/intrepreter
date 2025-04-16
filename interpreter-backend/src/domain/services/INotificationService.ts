@@ -14,4 +14,5 @@ export interface INotificationService {
     notifyActionCreated(conversationId: string, action: AggregatedAction): void;
     registerClient(ws: AuthenticatedWebSocket, conversationId: string): void;
     removeClient(ws: AuthenticatedWebSocket): void;
+    broadcastMessage(conversationId: string, message: any): void;
 } 

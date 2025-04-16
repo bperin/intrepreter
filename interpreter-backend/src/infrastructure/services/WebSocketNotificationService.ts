@@ -76,4 +76,8 @@ export class WebSocketNotificationService implements INotificationService {
             });
         }
     }
+
+    public broadcastMessage(conversationId: string, message: any): void {
+        this.broadcastToConversation(conversationId, message);
+    }
 } 

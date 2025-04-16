@@ -121,16 +121,37 @@ docker push "${FRONTEND_IMAGE_URI}"
 echo "[Frontend] Push complete."
 
 # --- Deploy Frontend --- 
-echo "[Frontend] Deploying to Cloud Run service: ${FRONTEND_SERVICE_NAME}..."
-gcloud run deploy "${FRONTEND_SERVICE_NAME}" \
-  --image "${FRONTEND_IMAGE_URI}" \
-  --platform managed \
-  --region "${REGION}" \
-  --allow-unauthenticated \
-  --port=80 \
-  --quiet
+echo "[Frontend] Deploying to Cloud Run service: $FRONTEND_SERVICE_NAME..."
+gcloud run deploy $FRONTEND_SERVICE_NAME \
+    --image "${IMAGE_REPO_FRONTEND}" \
+    --platform managed \
+    --region $REGION \
+    --allow-unauthenticated \
+    --project $GCP_PROJECT_ID \
+    --set-env-vars="VITE_APP_BACKEND_URL=$BACKEND_URL" \
+    --quiet
 
 echo "[Frontend] Deployment submitted."
+
+# --- Get Frontend URL ---
+echo "[Frontend] Fetching deployed service URL..."
+FRONTEND_URL=$(gcloud run services describe "${FRONTEND_SERVICE_NAME}" --platform managed --region "${REGION}" --format='value(status.url)')
+if [[ -z "$FRONTEND_URL" ]]; then
+    echo "Error: Failed to get deployed frontend URL for service ${FRONTEND_SERVICE_NAME}."
+    exit 1
+fi
+echo "[Frontend] Deployed URL: ${FRONTEND_URL}"
+
+# --- Redeploy Backend with FRONTEND_URL injected ---
+echo "[Backend] Redeploying to inject FRONTEND_URL into backend..."
+gcloud run deploy $BACKEND_SERVICE_NAME \
+    --image "${IMAGE_REPO_BACKEND}" \
+    --platform managed \
+    --region $REGION \
+    --allow-unauthenticated \
+    --project $GCP_PROJECT_ID \
+    --set-env-vars="DATABASE_URL=$DATABASE_URL,JWT_SECRET=$JWT_SECRET,OPENAI_API_KEY=$OPENAI_API_KEY,FRONTEND_URL=${FRONTEND_URL}" \
+    --quiet
 
 # --- Final URLs --- 
 echo "--- Deployment Summary ---"

@@ -57,8 +57,10 @@ const getTranscriptionWsUrl = (baseUrl: string, conversationId: string | null): 
   try {
     const url = new URL(baseUrl); // e.g., http://localhost:8080
     const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use the host and port from the baseUrl (which is localhost:8080)
-    return `${protocol}//${url.host}/transcription?conversationId=${conversationId}`; // e.g., ws://localhost:8080/transcription?...
+    // Sanitize conversationId by removing any query string
+    const sanitizedConversationId = conversationId.split('?')[0];
+    // Use encodeURIComponent to safely append the sanitized conversationId
+    return `${protocol}//${url.host}/transcription?conversationId=${encodeURIComponent(sanitizedConversationId)}`;
   } catch (e) {
     console.error("Failed to parse VITE_APP_BACKEND_URL to derive transcription WebSocket URL:", baseUrl, e);
     throw new Error(`Configuration Error: Invalid VITE_APP_BACKEND_URL format for transcription WebSocket: ${baseUrl}`);
@@ -185,7 +187,17 @@ export const useSpeechToTextBackend = (
     setError(null);
 
     try {
-      const ws = new WebSocket(wsUrl);
+      // New code to append bearer token
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+          logError("WebSocket: No access token, connection aborted.");
+          setError(new Error("Authentication token is missing."));
+          setStatus('failed');
+          return;
+      }
+      const separator = wsUrl.includes('?') ? '&' : '?';
+      const wsWithTokenUrl = `${wsUrl}${separator}token=${token}`;
+      const ws = new WebSocket(wsWithTokenUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
