@@ -407,10 +407,9 @@ export class TranscriptionService {
                     this.commandDetectionService.detectCommand(completedText)
                         .then(commandResult => {
                             if (commandResult) {
-                                // Command detected!
-                                console.log(`[TranscriptionService][${conversationId}][Async] Command detected by service: ${commandResult.toolName}. Routing...`);
-                                // Call the handler for the detected tool
-                                // TODO: Implement command handling logic here
+                                // Command detected! Log it for now.
+                                console.log(`[TranscriptionService][${conversationId}][Async] Command DETECTED by service: ${commandResult.toolName}. Args:`, commandResult.arguments);
+                               
                             } else {
                                 // No command detected by the async check
                                 console.log(`[TranscriptionService][${conversationId}][Async] No command detected by service.`);
@@ -421,11 +420,9 @@ export class TranscriptionService {
                             console.error(`[TranscriptionService][${conversationId}][Async] Error during command detection:`, detectionError);
                         });
                     
-                    // ** IMPORTANT: Do NOT return here. Proceed immediately with regular message handling **
+                   
                 }
-                // --- End command check initiation ---
-
-                // Proceed with standard message processing REGARDLESS of command check outcome
+            
                 
                 // +++ Send transcription_started event +++
                 this.broadcastToClients(conversationId, { type: 'transcription_started' });
