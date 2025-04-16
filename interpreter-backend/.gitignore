@@ -1,0 +1,48 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp.*
+
+# TypeScript
+dist/
+*.tsbuildinfo
+
+# Prisma
+# SQLite database file (if used locally)
+**/prisma/dev.db*
+# Add other Prisma generated files if necessary
+
+# Environment Variables
+# Ignore all .env files except .env.example
+.env*
+!.env.example
+
+# Logs
+logs
+*.log
+*.log.*
+
+# OS / Editor Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+# If you want to commit specific vscode settings, uncomment lines below:
+# !.vscode/settings.json
+# !.vscode/launch.json
+# !.vscode/extensions.json
+
+# Other
+coverage/
+build/
+
+# Keep environment variables out of version control
+.env
+IMPLEMENTATION_PLAN.md
+
+# Test Database Files
+prisma/*.test.db
+prisma/*.test.db-journal
+.env.test
