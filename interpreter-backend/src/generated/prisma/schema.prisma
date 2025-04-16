@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  // Provider defaults to PostgreSQL for Cloud SQL deployment.
+  // To use SQLite locally:
+  // 1. Change provider below to "sqlite".
+  // 2. Set DATABASE_URL in .env.local to "file:./prisma/dev.db".
+  // 3. Run `npm run prisma:migrate`.
+  // REMEMBER to change provider back to "postgresql" before building for production!
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String         @id @default(uuid())
+  username              String         @unique
+  hashedPassword        String
+  refreshToken          String?        @unique
+  refreshTokenExpiresAt DateTime?
+  conversations         Conversation[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+model Patient {
+  id            String         @id @default(cuid())
+  firstName     String
+  lastName      String
+  dateOfBirth   DateTime // Storing as DateTime, handle date-only part in application logic
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  conversations Conversation[]
+
+  @@index([firstName, lastName, dateOfBirth]) // Index for finding patients
+}
+
+model Conversation {
+  id                String    @id @default(cuid())
+  userId            String // Clinician/User who initiated
+  user              User      @relation(fields: [userId], references: [id])
+  patientId         String // Patient involved in the conversation
+  patient           Patient   @relation(fields: [patientId], references: [id])
+  startTime         DateTime  @default(now())
+  endTime           DateTime? // Nullable, set when conversation ends
+  summary           String? // Optional summary generated later
+  status            String    @default("active") // e.g., active, ended, summarized
+  preferredLanguage String? // Clinician's preferred language for interpretation output
+  language1         String? // Detected language 1 (e.g., patient)
+  language2         String? // Detected language 2 (e.g., clinician - maybe fixed like 'en')
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  messages          Message[]
+  actions           Action[]
+
+  @@index([userId])
+  @@index([patientId]) // Add index for patient lookup
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  timestamp      DateTime     @default(now())
+  senderType     String // 'clinician', 'patient', 'system'
+  originalText   String
+  translatedText String? // Nullable if original is already in target language
+  language       String // Language code of originalText (e.g., 'en', 'es')
+  isFinal        Boolean      @default(false) // Flag for intermediate vs final transcription/translation
+}
+
+model Action {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  type           String // e.g., 'schedule_followup', 'send_lab_order', 'write_prescription'
+  status         String       @default("detected") // e.g., detected, pending_review, confirmed, executed, cancelled
+  metadata       Json? // Store details like date, doctor, medication info
+  detectedAt     DateTime     @default(now())
+  executedAt     DateTime?
+
+  @@index([conversationId])
+}
