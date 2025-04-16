@@ -398,7 +398,6 @@ const ChatInterface: React.FC = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
     const [activeTab, setActiveTab] = useState<'chat' | 'summary'>('chat');
     const [currentSummary, setCurrentSummary] = useState<string | null>(null);
-    const [currentConvStatus, setCurrentConvStatus] = useState<string | null>(null);
 
     // Define getAudioContext FIRST
     const getAudioContext = (): AudioContext | null => {
@@ -539,12 +538,12 @@ const ChatInterface: React.FC = () => {
 
     // Effect to automatically start/stop recording on session change
     useEffect(() => {
-        console.log(`[Effect Auto Mic] Running. SelectedID: ${selectedConversationId}, SessionActive: ${isSessionActive}, STT Status: ${status}, ConvStatus: ${currentConvStatus}`);
+        console.log(`[Effect Auto Mic] Running. SelectedID: ${selectedConversationId}, SessionActive: ${isSessionActive}, STT Status: ${status}`);
         // Only act if a conversation is selected and the session is marked active
         if (selectedConversationId && isSessionActive) {
             // <<< ADDED CHECK >>>: Don't auto-start if conversation is already finished
-            if (currentConvStatus === 'summarized' || currentConvStatus === 'ended' || currentConvStatus === 'ended_error') {
-                 console.log(`[Effect Auto Mic] Conversation ${selectedConversationId} has status ${currentConvStatus}. Preventing auto-start.`);
+            if (currentSummary === 'summarized' || currentSummary === 'ended' || currentSummary === 'ended_error') {
+                 console.log(`[Effect Auto Mic] Conversation ${selectedConversationId} has status ${currentSummary}. Preventing auto-start.`);
                  // If STT is somehow running, stop it
                  if (status === 'connected' || status === 'connecting') {
                      console.log(`[Effect Auto Mic] Stopping STT for finished conversation.`);
@@ -566,8 +565,7 @@ const ChatInterface: React.FC = () => {
                 stopRecording();
             }
         }
-    // Add currentConvStatus to dependencies
-    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording, currentConvStatus]);
+    }, [selectedConversationId, isSessionActive, status, startRecording, stopRecording]);
 
     // Effect to fetch historical messages when conversation changes
     useEffect(() => {
@@ -625,29 +623,41 @@ const ChatInterface: React.FC = () => {
                 }
             }
 
-            // --- Updated conversation_selected handler ---
+            // --- Update conversation_selected handler --- 
             else if (message.type === 'conversation_selected') {
                 console.log('[WS Effect] Handling conversation_selected:', message.payload);
-                const { status, summary } = message.payload || {};
-                setCurrentConvStatus(status || null);
+                const { summary } = message.payload || {}; 
+                console.log(`[WS Effect] Received Summary data type: ${typeof summary}, value:`, summary); // Log summary details
                 setCurrentSummary(summary || null);
-                 // Reset to chat tab when selecting a conversation
                 setActiveTab('chat');
             }
             // --- End updated handler ---
 
-            // --- Added session_ended_and_summarized handler ---
+            // --- Update session_ended_and_summarized handler ---
             else if (message.type === 'session_ended_and_summarized') {
                 console.log('[WS Effect] Handling session_ended_and_summarized:', message.payload);
-                const { status, summary } = message.payload || {};
-                setCurrentConvStatus(status || 'summarized'); // Assume summarized if message received
+                const { summary } = message.payload || {};
+                console.log(`[WS Effect] Received Summary data type: ${typeof summary}, value:`, summary); // Log summary details
                 setCurrentSummary(summary || null);
-                // Optionally switch to summary tab automatically
                 if (summary) {
                      setActiveTab('summary');
                 }
             }
-            // --- End added handler ---
+            // --- End updated handler ---
+
+            // +++ Add handler for summary_data +++
+            else if (message.type === 'summary_data') {
+                console.log('[WS Effect] Handling summary_data:', message.payload);
+                const { summary, conversationId } = message.payload || {};
+                // Update summary only if it pertains to the currently selected conversation
+                if (conversationId && conversationId === selectedConversationId) {
+                    console.log(`[WS Effect] Updating summary state for ${conversationId}`);
+                    setCurrentSummary(summary || null);
+                } else {
+                     console.log(`[WS Effect] Received summary_data for non-selected conversation (${conversationId}). Ignoring.`);
+                }
+            }
+            // +++ End handler +++
 
             else if (message.type === 'new_message') {
                 // ... (existing new_message handling)
@@ -662,17 +672,24 @@ const ChatInterface: React.FC = () => {
 
     // Effect to reset summary/status when conversation changes
     useEffect(() => {
-        console.log('[Effect selectedConversationId] Resetting summary and status for new/no selection.');
+        console.log('[Effect selectedConversationId] Resetting summary for new/no selection.');
         setCurrentSummary(null);
-        setCurrentConvStatus(null);
+        // setCurrentConvStatus(null); // Remove status reset
         setActiveTab('chat'); // Reset tab
-        // Fetch messages logic remains here...
+        
         if (selectedConversationId) {
-           // ... fetch messages ...
+            console.log(`🚀 [ChatInterface] useEffect[selectedConversationId] - Fetching messages for ID: ${selectedConversationId}`);
+            setDisplayMessages([]); 
+            sendMessage({
+                type: 'get_messages',
+                payload: { conversationId: selectedConversationId }
+            });
         } else {
-            setDisplayMessages([]);
+            console.log('🧹 [ChatInterface] useEffect[selectedConversationId] - Clearing messages.');
+            setDisplayMessages([]); 
         }
-    }, [selectedConversationId, sendMessage]); // Only depends on these
+        // Update dependency array if needed
+    }, [selectedConversationId, sendMessage]);
 
     // Effect to scroll message area
     useEffect(() => {
@@ -721,8 +738,24 @@ const ChatInterface: React.FC = () => {
         // ... (rest of handler)
     };
 
-    // Determine if Tabs should be shown
-    const showTabs = currentConvStatus === 'summarized' || currentConvStatus === 'ended_error';
+    // Function to handle clicking the summary tab
+    const handleSelectSummaryTab = useCallback(() => {
+        console.log('[handleSelectSummaryTab] Clicked. Current summary:', currentSummary);
+        setActiveTab('summary');
+        // If summary isn't loaded yet and a conversation is selected, request it
+        if (currentSummary === null && selectedConversationId) {
+             console.log(`[handleSelectSummaryTab] Summary not loaded. Requesting for ${selectedConversationId}...`);
+             sendMessage({ 
+                 type: 'get_summary', 
+                 payload: { conversationId: selectedConversationId } 
+             });
+        }
+    }, [currentSummary, selectedConversationId, sendMessage]); // Dependencies
+
+    // Remove showTabs calculation
+    // const showTabs = currentConvStatus === 'summarized' || currentConvStatus === 'ended_error';
+    // console.log(`[Render] currentConvStatus: ${currentConvStatus}, showTabs: ${showTabs}`);
+    console.log(`[Render] SelectedID: ${selectedConversationId}, ActiveTab: ${activeTab}, currentSummary:`, currentSummary); // Simplified log
 
     return (
         <ChatContainer>
@@ -740,25 +773,26 @@ const ChatInterface: React.FC = () => {
                 )}
             </TopStatusContainer>
 
-            {/* Conditionally render Tabs */} 
-            {showTabs && (
+            {/* Always render Tabs if a conversation is selected */} 
+            {selectedConversationId && (
                 <TabContainer>
                     <TabButton $isActive={activeTab === 'chat'} onClick={() => setActiveTab('chat')}>Chat</TabButton>
-                    <TabButton $isActive={activeTab === 'summary'} onClick={() => setActiveTab('summary')}>Summary</TabButton>
+                    <TabButton $isActive={activeTab === 'summary'} onClick={handleSelectSummaryTab}>Summary</TabButton>
                 </TabContainer>
             )}
             
             {/* Content Area: Switches between Chat and Summary */} 
             <ContentArea>
-                {(!showTabs || activeTab === 'chat') && (
+                {/* Show MessageArea if no conversation selected OR chat tab is active */} 
+                {(!selectedConversationId || activeTab === 'chat') && (
                      <MessageArea ref={messageAreaRef}>
-                         {displayMessages.length === 0 && !isSessionActive && (
+                        {displayMessages.length === 0 && !selectedConversationId && (
                             <NoSessionText>Select or start a new conversation to begin.</NoSessionText>
                         )}
-                         {displayMessages.length === 0 && isSessionActive && (
-                            <NoSessionText>Session active. Start speaking or wait for messages.</NoSessionText>
+                         {displayMessages.length === 0 && selectedConversationId && (
+                            <NoSessionText>Session selected. Messages loading or none exist yet.</NoSessionText>
                         )}
-                        {(() => { // Wrap log in an IIFE or similar structure
+                         {(() => { // Wrap log in an IIFE or similar structure
                             console.log('[ChatInterface] About to map messages. Count:', displayMessages.length, 'Value:', JSON.stringify(displayMessages)); // Stringify for better logging
                             return null; // Return null so nothing renders here
                         })()}
@@ -789,9 +823,13 @@ const ChatInterface: React.FC = () => {
                     </MessageArea>
                 )}
                 
-                {(showTabs && activeTab === 'summary') && (
+                {/* Show SummaryArea only if conversation selected AND summary tab is active */} 
+                {(selectedConversationId && activeTab === 'summary') && (
                     <SummaryArea>
-                        {currentSummary || 'Summary not available.'} 
+                        {(() => {
+                            console.log(`[Render SummaryArea] Rendering summary. currentSummary:`, currentSummary);
+                            return currentSummary || 'Summary not available.';
+                        })()}
                     </SummaryArea>
                 )}
             </ContentArea>

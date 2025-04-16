@@ -16,7 +16,7 @@ export class TextToSpeechService implements ITextToSpeechService {
         }
     }
 
-    async synthesizeSpeech(text: string, voice: string = 'alloy'): Promise<Buffer> {
+    async synthesizeSpeech(text: string, voice: string = 'nova'): Promise<Buffer> {
         if (!this.apiKey) {
             throw new Error('OpenAI API key is not configured for TTS.');
         }
