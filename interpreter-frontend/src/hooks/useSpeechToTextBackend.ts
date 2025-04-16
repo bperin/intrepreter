@@ -288,14 +288,31 @@ export const useSpeechToTextBackend = (
                   logError('Received tts_audio message without valid audioBase64 payload', data.payload);
               }
           }
+          // +++ Handle Command Execution Result +++
+          else if (data.type === 'command_executed') {
+              console.log('🚀 [useSpeechToTextBackend] ====== RECEIVED COMMAND_EXECUTED ====== ');
+              console.log('📄 [useSpeechToTextBackend] Payload:', JSON.stringify(data.payload, null, 2));
+              if (data.payload?.status === 'success' && data.payload.payload) {
+                  console.log('✅ [useSpeechToTextBackend] Command successful. Extracted entity:', data.payload.payload);
+                  if (onNewMessage) {
+                      console.log('🔄 [useSpeechToTextBackend] Calling onNewMessage with command result entity...');
+                      onNewMessage(data.payload.payload); // Pass the created entity (Note, FollowUp, Prescription)
+                      console.log('✅ [useSpeechToTextBackend] onNewMessage callback executed for command result.');
+                  } else {
+                      console.warn('⚠️ [useSpeechToTextBackend] onNewMessage callback NOT PROVIDED - command result not handled by parent!');
+                  }
+              } else if (data.payload?.status === 'error') {
+                  logError(`Command execution failed: ${data.payload.name}`, data.payload.message);
+                  // Optionally, notify the parent component of the error?
+                  // Maybe call an onError callback if it existed, or use setError state?
+                  setError(new Error(`Command execution failed: ${data.payload.message || 'Unknown error'}`));
+              } else {
+                  logError('Received command_executed message with unexpected payload format', data.payload);
+              }
+              console.log('🚀 [useSpeechToTextBackend] ====== COMMAND_EXECUTED HANDLING COMPLETE ======');
+          }
           // +++ End TTS Audio Handling +++
           
-          /* --- Remove OLD Event Handling ---
-          // Handle transcription updates from OpenAI via backend
-          if (data.type === 'transcription.partial') { ... }
-          // Handle final transcription from OpenAI via backend
-          if (data.type === 'transcription.final') { ... }
-          */
           
         } catch (err) {
           logError("Error parsing WebSocket message", err);
