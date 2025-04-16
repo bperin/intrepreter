@@ -95,6 +95,8 @@ export const useSpeechToTextBackend = (
   
   // Accumulated transcript ref
   const accumulatedTranscriptRef = useRef<string>('');
+  // Flag to track if pause was triggered by visibility change
+  const pausedByVisibilityRef = useRef<boolean>(false);
 
   // Constants for WebSocket connection
   const getBackendWsUrl = useCallback(() => {
@@ -580,6 +582,42 @@ export const useSpeechToTextBackend = (
       setIsPaused(false);
     }
   }, []);
+
+  // --- Visibility Handling --- 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab became hidden
+        console.log('[Visibility] Tab hidden. Current status:', status);
+        if (status === 'connected' && !isPaused) { // Check if actively recording
+          console.log('[Visibility] Pausing recording due to tab inactivity...');
+          pausedByVisibilityRef.current = true; // Mark pause as visibility-related
+          pauseRecording(); // Call the existing pause function
+        }
+      } else {
+        // Tab became visible
+        console.log('[Visibility] Tab visible. Current status:', status, 'Paused by visibility:', pausedByVisibilityRef.current);
+        // Resume only if it was paused by visibility and hook wasn't manually paused
+        if (pausedByVisibilityRef.current && isPaused) { 
+            console.log('[Visibility] Resuming recording automatically...');
+            resumeRecording();
+        }
+        // Always reset the flag when tab becomes visible
+        pausedByVisibilityRef.current = false;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    console.log('[Visibility] Event listener added.');
+
+    // Cleanup listener on unmount
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      console.log('[Visibility] Event listener removed.');
+    };
+    // Dependencies: status and isPaused to check current state, pause/resume functions to call them
+  }, [status, isPaused, pauseRecording, resumeRecording]); 
+  // --- End Visibility Handling ---
 
   // Clean up resources on unmount
   useEffect(() => {

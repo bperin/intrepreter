@@ -1,12 +1,13 @@
-import { Conversation, Prisma, User, Patient, Message, Action } from "../../generated/prisma";
+import { Conversation, Prisma, User, Patient, Message, Action, Summary, MedicalHistory } from "../../generated/prisma";
 
-// Define the type for a conversation including its relations
-// This should match the 'include' used in the repository implementation
+// Define a type that includes the relations we commonly need
 export type ConversationWithRelations = Conversation & {
-    user: User;
+    user: { username: string }; // Example: Assuming we only need username from user
     patient: Patient;
     messages: Message[];
     actions: Action[];
+    summary: Summary | null; // <-- Include Summary relation (nullable)
+    medicalHistory: MedicalHistory | null; // <-- Include MedicalHistory relation (nullable)
 };
 
 export interface IConversationRepository {

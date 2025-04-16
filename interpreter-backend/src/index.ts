@@ -27,6 +27,7 @@ import { IActionRepository } from "./domain/repositories/IActionRepository";
 import { IActionService } from "./domain/services/IActionService";
 import { INotificationService } from "./domain/services/INotificationService";
 import { WebSocketNotificationService } from "./infrastructure/services/WebSocketNotificationService";
+import { MedicalHistoryService } from "./infrastructure/services/MedicalHistoryService";
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ const conversationRepository = container.resolve<IConversationRepository>("IConv
 const transcriptionService = container.resolve(TranscriptionService);
 const actionService = container.resolve<IActionService>("IActionService");
 const notificationService = container.resolve<INotificationService>("INotificationService");
+const medicalHistoryService = container.resolve(MedicalHistoryService);
 const prisma = container.resolve<PrismaClient>("PrismaClient");
 
 app.use(express.json());
@@ -573,7 +575,7 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                                 type: 'session_ended_and_summarized',
                                 payload: {
                                     conversationId: updatedConversation.id,
-                                    summary: updatedConversation.summary,
+                                    summary: updatedConversation.summary?.content || null,
                                     status: updatedConversation.status
                                 }
                             }));
@@ -624,7 +626,7 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                                 type: 'summary_data',
                                 payload: {
                                     conversationId: conversation.id,
-                                    summary: conversation.summary || null // Ensure null is sent if undefined
+                                    summary: conversation.summary?.content || null
                                 }
                             }));
 
@@ -641,6 +643,54 @@ wss.on("connection", async (ws: AuthenticatedWebSocket, req: http.IncomingMessag
                     }
                     break;
                 // +++ End get_summary Case +++
+
+                // +++ Add get_medical_history Case +++
+                case "get_medical_history":
+                    console.log('[WebSocket Router] Control Channel: Entered get_medical_history case.');
+                    const conversationIdForHistory = request.payload?.conversationId;
+                    console.log(`[WebSocket Router] Control Channel: Fetching history for conversation: ${conversationIdForHistory}`);
+
+                    if (conversationIdForHistory && typeof conversationIdForHistory === 'string') {
+                        try {
+                            // Optional: Verify user has access to this conversation if needed
+                            const conversation = await conversationRepository.findById(conversationIdForHistory); // Re-use existing repo
+                            if (!conversation) {
+                                throw new Error(`Conversation not found: ${conversationIdForHistory}`);
+                            }
+                            if (conversation.userId !== ws.userId) {
+                                throw new Error(`Access denied to medical history for conversation ${conversationIdForHistory}`);
+                            }
+
+                            // Fetch history using the service
+                            const history = await medicalHistoryService.getHistory(conversationIdForHistory);
+                            
+                            console.log(`[WebSocket Router] Control Channel: Medical history fetched for ${conversationIdForHistory}. Found: ${!!history}`);
+                            
+                            // Send the history data back (will be null if not found or not generated yet)
+                            ws.send(JSON.stringify({
+                                type: 'medical_history_data',
+                                payload: {
+                                    conversationId: conversationIdForHistory,
+                                    history: history ? history.content : null // Send content or null
+                                }
+                            }));
+
+                        } catch (error) {
+                            console.error(`[WebSocket Router] Control Channel: Error fetching medical history for ${conversationIdForHistory}:`, error);
+                            ws.send(JSON.stringify({
+                                type: 'error',
+                                message: `Failed to fetch medical history: ${error instanceof Error ? error.message : String(error)}`
+                            }));
+                        }
+                    } else {
+                        console.error(`[WebSocket Router] Control Channel: Received get_medical_history without valid conversationId from ${wsIdentifier}`);
+                        ws.send(JSON.stringify({ 
+                            type: 'error', 
+                            message: 'Invalid get_medical_history message: missing conversationId.' 
+                        }));
+                    }
+                    break;
+                // +++ End get_medical_history Case +++
 
                 default:
                     console.log(`[WebSocket Router] Control Channel: Received unknown message type from ${wsIdentifier}:`, request.type);
